@@ -219,17 +219,17 @@ onMounted(cargarDatos)
         </div>
 
         <!-- Mermas: decomiso y picadas -->
-        <div class="card section-card">
-          <div class="card-header border-bottom pb-2 mb-2">
-            <h3 class="card-title"><i class="ph ph-warning-circle text-red mr-1"></i>Stock de mermas</h3>
-          </div>
-          <div v-if="isLoading" class="mini-loading"><i class="ph ph-spinner spinner"></i></div>
-          <template v-else>
-            <p class="merma-subtitle">Decomiso</p>
-            <table v-if="mermasStock.decomiso.length" class="data-table mb-3">
+        <div class="mermas-row" style="display: flex; gap: 1rem;">
+          <!-- Decomiso -->
+          <div class="card section-card" style="flex: 1;">
+            <div class="card-header border-bottom pb-2 mb-2">
+              <h3 class="card-title"><i class="ph ph-warning-circle text-red mr-1"></i>Decomiso (stock)</h3>
+            </div>
+            <div v-if="isLoading" class="mini-loading"><i class="ph ph-spinner spinner"></i></div>
+            <table v-else-if="mermasStock.decomiso.length" class="data-table mb-3">
               <thead><tr><th>Código</th><th>Producto</th><th class="text-right">Kg</th></tr></thead>
               <tbody>
-                <tr v-for="d in mermasStock.decomiso" :key="d.codigo">
+                <tr v-for="d in mermasStock.decomiso.slice(0, 5)" :key="d.codigo">
                   <td class="code-cell">{{ d.codigo }}</td>
                   <td>{{ d.nombre }}</td>
                   <td class="text-right fw-bold text-red">{{ Number(d.peso).toFixed(2) }}</td>
@@ -237,12 +237,17 @@ onMounted(cargarDatos)
               </tbody>
             </table>
             <div v-else class="empty-mini mb-3">Sin decomiso</div>
-
-            <p class="merma-subtitle">Picadas</p>
-            <table v-if="mermasStock.picadas.length" class="data-table">
+          </div>
+          <!-- Picadas -->
+          <div class="card section-card" style="flex: 1;">
+            <div class="card-header border-bottom pb-2 mb-2">
+              <h3 class="card-title"><i class="ph ph-funnel text-orange mr-1"></i>Picadas (stock)</h3>
+            </div>
+            <div v-if="isLoading" class="mini-loading"><i class="ph ph-spinner spinner"></i></div>
+            <table v-else-if="mermasStock.picadas.length" class="data-table">
               <thead><tr><th>Código</th><th>Producto</th><th class="text-right">Kg</th></tr></thead>
               <tbody>
-                <tr v-for="p in mermasStock.picadas" :key="p.codigo">
+                <tr v-for="p in mermasStock.picadas.slice(0, 5)" :key="p.codigo">
                   <td class="code-cell">{{ p.codigo }}</td>
                   <td>{{ p.nombre }}</td>
                   <td class="text-right fw-bold text-orange">{{ Number(p.peso).toFixed(2) }}</td>
@@ -250,7 +255,7 @@ onMounted(cargarDatos)
               </tbody>
             </table>
             <div v-else class="empty-mini">Sin picadas</div>
-          </template>
+          </div>
         </div>
       </div>
 
@@ -273,8 +278,14 @@ onMounted(cargarDatos)
                 <td class="fw-bold">{{ op.operador }}</td>
                 <td v-for="dia in DIAS" :key="dia" class="text-center">
                   <div v-if="op.dias[dia] && (op.dias[dia].feteado_kilos > 0 || op.dias[dia].feteado_bolsitas > 0 || op.dias[dia].envasado_bolsitas > 0)">
-                    <div class="text-green fw-bold">{{ Number(op.dias[dia].feteado_kilos).toFixed(2) }} Kg</div>
-                    <div class="text-xs text-muted mt-1">{{ op.dias[dia].feteado_bolsitas }} FB / {{ op.dias[dia].envasado_bolsitas }} EB</div>
+                    <div style="display: flex; flex-direction: column; gap: 2px; align-items: center;">
+                      <div style="background: #f3f3f3; border-radius: 4px; padding: 2px 6px; font-size: 0.78em; color: #222; font-weight: 700; min-width: 60px;">
+                        {{ Number((op.dias[dia].feteado_kilos || 0) + (op.dias[dia].envasado_kilos || 0)).toFixed(2) }} Kg
+                      </div>
+                      <div style="background: #e0e0e0; border-radius: 4px; padding: 2px 6px; font-size: 0.78em; color: #222; font-weight: 700; min-width: 60px;">
+                        {{ (op.dias[dia].feteado_bolsitas || 0) + (op.dias[dia].envasado_bolsitas || 0) }} unid.
+                      </div>
+                    </div>
                   </div>
                   <span v-else class="text-muted">-</span>
                 </td>
@@ -422,7 +433,7 @@ onMounted(cargarDatos)
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: #b0b0b0; /* Más claro que --text-muted */
   padding: 0.3rem 0.5rem;
   border-bottom: 1px solid var(--bg-tertiary);
   text-align: left;

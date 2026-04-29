@@ -20,7 +20,7 @@ const allMenuItems = [
   { name: 'Envasado', path: '/envasado', icon: 'ph-package', roles: ['Admin', 'Envasador', 'Referente'] },
   { name: 'Pedido Sucursales', path: '/pedidos-sucursales', icon: 'ph-storefront', roles: ['Admin', 'Preparador', 'Referente'] },
   { name: 'Historial Despachos', path: '/despachos', icon: 'ph-truck', roles: ['Admin'] },
-  { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Feteador', 'Envasador', 'Referente'] },
+  { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Referente'] },
   { name: 'Stock de Piezas', path: '/piezas', icon: 'ph-puzzle-piece', roles: ['Admin', 'Referente'] },
   { name: 'Ingreso Proveedores', path: '/ingreso-proveedores', icon: 'ph-download-simple', roles: ['Admin'] },
   { name: 'ABM Globales', path: '/abm-globales', icon: 'ph-database', roles: ['Admin'] },
@@ -52,7 +52,7 @@ const isActive = (path) => {
     <div class="sidebar-header">
       <div class="logo-container">
         <i class="ph ph-fill ph-cheese logo-icon"></i>
-        <h1 class="logo-text">CDF <span class="text-gradient">CRM</span></h1>
+        <h1 class="logo-text">CDF <span class="text-gradient">Gestion</span></h1>
       </div>
       <button class="close-btn" @click="emit('close')" aria-label="Cerrar menú">
         <i class="ph ph-x"></i>

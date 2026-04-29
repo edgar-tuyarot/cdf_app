@@ -19,7 +19,7 @@ export default defineConfig({
   },
   server: {
     host: true,        // Escucha en 0.0.0.0 → accesible desde la red local
-    port: 5173,
+    port: 5174,
     allowedHosts: [
       'app.envioslibres.lat'
     ],

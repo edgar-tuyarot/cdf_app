@@ -1,4 +1,4 @@
-const { IngresoProveedor, Producto, sequelize } = require('../models');
+const { IngresoProveedor, Producto, StockKilos, sequelize } = require('../models');
 
 // Obtener historial de ingresos
 exports.obtenerIngresos = async (req, res) => {
@@ -55,6 +55,19 @@ exports.crearIngreso = async (req, res) => {
     // 3. Sumar los kilos al stock actual (stock en kilos)
     producto.stock = parseFloat(producto.stock) + parseFloat(kilos_totales);
     await producto.save({ transaction: t });
+
+    // 4. Sumar los kilos al stock_kilos (por codigo_interno)
+    const codigoProducto = producto.codigo_interno;
+    let stockKilos = await StockKilos.findOne({ where: { codigo_producto: codigoProducto }, transaction: t });
+    if (stockKilos) {
+      stockKilos.cantidad_kilos = parseFloat(stockKilos.cantidad_kilos) + parseFloat(kilos_totales);
+      await stockKilos.save({ transaction: t });
+    } else {
+      await StockKilos.create({
+        codigo_producto: codigoProducto,
+        cantidad_kilos: parseFloat(kilos_totales)
+      }, { transaction: t });
+    }
 
     // Confirmar transacción
     await t.commit();

@@ -75,7 +75,7 @@ const router = createRouter({
       path: '/conversiones',
       name: 'conversiones',
       component: () => import('../views/Conversiones.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Feteador', 'Envasador', 'Referente'] },
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
     },
   ],
 })
