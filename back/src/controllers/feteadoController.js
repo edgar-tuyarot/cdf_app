@@ -1,4 +1,5 @@
 const { DetalleFeteado, ProduccionFeteado, StockAFetear, StockAPicada, StockADecomiso, Producto } = require('../models');
+const { sumarAPicadas } = require('../utils/picadas');
 
 // --- DETALLES HISTÓRICOS ---
 exports.obtenerDetalles = async (req, res) => {

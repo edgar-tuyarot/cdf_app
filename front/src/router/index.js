@@ -83,6 +83,12 @@ const router = createRouter({
       component: () => import('../views/FeteadoExterno.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
     },
+    {
+      path: '/recepcion-recortes',
+      name: 'recepcion-recortes',
+      component: () => import('../views/RecepcionRecortes.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
+    },
   ],
 })
 

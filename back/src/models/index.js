@@ -58,7 +58,10 @@ const PedidoSucursal = sequelize.define('PedidoSucursal', {
   estado: { type: DataTypes.STRING }
 }, { tableName: 'pedidos_sucursales', timestamps: false });
 
-// 7. Items de Pedido (Detalle)
+// 7. Recorte Recepcion
+const RecorteRecepcion = require('./recorteRecepcion');
+
+// 8. Items de Pedido (Detalle)
 const ItemPedido = sequelize.define('ItemPedido', {
   id_item: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   id_pedido: { type: DataTypes.STRING }, // Debe coincidir con PedidoSucursal
@@ -67,7 +70,7 @@ const ItemPedido = sequelize.define('ItemPedido', {
   cantidad_fraccionado: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 }
 }, { tableName: 'items_pedidos', timestamps: false });
 
-// 8. Despachos
+// 9. Despachos
 const Despacho = sequelize.define('Despacho', {
   id_despacho: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   fecha_hora: { type: DataTypes.DATE },
@@ -77,7 +80,7 @@ const Despacho = sequelize.define('Despacho', {
   peso_despachado: { type: DataTypes.DECIMAL(10, 2) }
 }, { tableName: 'despachos', timestamps: false });
 
-// 9. Usuarios
+// 10. Usuarios
 const Usuario = sequelize.define('Usuario', {
   id_usuario: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   usuario: { type: DataTypes.STRING, unique: true, allowNull: false },
@@ -85,7 +88,7 @@ const Usuario = sequelize.define('Usuario', {
   rol: { type: DataTypes.STRING, defaultValue: 'operario' }
 }, { tableName: 'usuarios', timestamps: false });
 
-// 10. Detalle de Feteado (Control de mermas)
+// 11. Detalle de Feteado (Control de mermas)
 const DetalleFeteado = sequelize.define('DetalleFeteado', {
   id_detalle: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   codigo_producto: { type: DataTypes.STRING, allowNull: false },
@@ -98,7 +101,7 @@ const DetalleFeteado = sequelize.define('DetalleFeteado', {
   fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { tableName: 'detalles_feteado', timestamps: false });
 
-// 11. Producción Feteados
+// 12. Producción Feteados
 const ProduccionFeteado = sequelize.define('ProduccionFeteado', {
   id_feteado: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   codigo_producto: { type: DataTypes.STRING, allowNull: false },
@@ -111,7 +114,7 @@ const ProduccionFeteado = sequelize.define('ProduccionFeteado', {
   fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { tableName: 'produccion_feteados', timestamps: false });
 
-// 12. Stock a Fetear
+// 13. Stock a Fetear
 const StockAFetear = sequelize.define('StockAFetear', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   codigo: { type: DataTypes.STRING, unique: true, allowNull: false },
@@ -119,14 +122,14 @@ const StockAFetear = sequelize.define('StockAFetear', {
   cantidad: { type: DataTypes.INTEGER, defaultValue: 0 }
 }, { tableName: 'stock_a_fetear', timestamps: false });
 
-// 13. Stock a Picada
+// 14. Stock a Picada
 const StockAPicada = sequelize.define('StockAPicada', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   codigo: { type: DataTypes.STRING, unique: true, allowNull: false },
   peso: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 }
 }, { tableName: 'stock_a_picada', timestamps: false });
 
-// 14. Stock a Decomiso
+// 15. Stock a Decomiso
 const StockADecomiso = sequelize.define('StockADecomiso', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   codigo: { type: DataTypes.STRING, allowNull: false },
@@ -134,7 +137,7 @@ const StockADecomiso = sequelize.define('StockADecomiso', {
   motivo: { type: DataTypes.STRING }
 }, { tableName: 'stock_a_decomiso', timestamps: false });
 
-// 15. Stock Envasados
+// 16. Stock Envasados
 const StockEnvasado = sequelize.define('StockEnvasado', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   codigo: { type: DataTypes.STRING, unique: true, allowNull: false },
@@ -143,7 +146,7 @@ const StockEnvasado = sequelize.define('StockEnvasado', {
   fecha_ultimo_registro: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { tableName: 'stock_envasados', timestamps: false });
 
-// 16. Stock Piezas
+// 17. Stock Piezas
 const StockPiezas = sequelize.define('StockPiezas', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   codigo: { type: DataTypes.STRING, unique: true, allowNull: false },
@@ -248,6 +251,7 @@ module.exports = {
   IngresoProveedor,
   RegistroProduccion,
   PedidoSucursal,
+  RecorteRecepcion,
   ItemPedido,
   Despacho,
   StockProduccion,

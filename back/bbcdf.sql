@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
 -- Host:                         127.0.0.1
--- Versión del servidor:        11.8.6-MariaDB-0+deb13u1 from Debian - -- Please help get to 10k stars at https://github.com/MariaDB/Server
--- SO del servidor:              debian-linux-gnu
--- HeidiSQL Versión:            12.17.1.1
+-- Versión del servidor:         12.2.2-MariaDB - MariaDB Server
+-- SO del servidor:              Win64
+-- HeidiSQL Versión:             12.17.0.7270
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -14,7 +14,7 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- Volcando datos para la tabla cdf_crm.colaboradores: ~5 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.colaboradores: ~5 rows (aproximadamente)
 REPLACE INTO `colaboradores` (`id_colaborador`, `nombre`, `rol`, `password`) VALUES
 	(1, 'Mauricio', 'Referente', '1015'),
 	(2, 'Juan', 'Feteador', '1016'),
@@ -22,11 +22,11 @@ REPLACE INTO `colaboradores` (`id_colaborador`, `nombre`, `rol`, `password`) VAL
 	(4, 'Braian', 'Envasador', '1018'),
 	(5, 'Repo Externo', 'Feteador', '0000');
 
--- Volcando datos para la tabla cdf_crm.despachos: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.despachos: ~0 rows (aproximadamente)
 
--- Volcando datos para la tabla cdf_crm.detalles_feteado: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.detalles_feteado: ~0 rows (aproximadamente)
 
--- Volcando datos para la tabla cdf_crm.ingresos_proveedores: ~12 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.ingresos_proveedores: ~21 rows (aproximadamente)
 REPLACE INTO `ingresos_proveedores` (`id_ingreso`, `fecha`, `proveedor`, `nro_factura`, `id_producto_proveedor`, `id_producto`, `kilos_totales`, `bultos`, `vencimiento`) VALUES
 	(1, '2026-04-29 16:16:53', 'TREGAR', '156661357', '1098', 117, 49.64, 3, '2026-09-09'),
 	(2, '2026-04-29 16:16:53', 'TREGAR', '156661357', '9', 115, 164.25, 10, '2026-06-10'),
@@ -39,9 +39,25 @@ REPLACE INTO `ingresos_proveedores` (`id_ingreso`, `fecha`, `proveedor`, `nro_fa
 	(9, '2026-04-29 20:18:00', 'LARIO', '70188302', '41', 184, 4.78, 1, '2026-07-24'),
 	(10, '2026-04-29 20:18:00', 'LARIO', '70188302', '39', 183, 4.96, 1, '2026-07-24'),
 	(11, '2026-04-29 20:18:00', 'LARIO', '70188302', '547', 179, 2.85, 1, '2026-07-31'),
-	(12, '2026-04-29 20:18:00', 'LARIO', '70188302', '27', 180, 7.82, 1, '2026-07-31');
+	(12, '2026-04-29 20:18:00', 'LARIO', '70188302', '27', 180, 7.82, 1, '2026-07-31'),
+	(13, '2026-04-30 16:27:49', 'Recreo', '1100212137', '12101', 126, 171.41, 8, '2026-07-20'),
+	(14, '2026-04-30 16:27:49', 'Recreo', '1100212137', '12315', 125, 64.41, 3, '2026-08-12'),
+	(15, '2026-04-30 16:27:49', 'Recreo', '1100212137', '15610', 128, 15.85, 2, '2026-06-29'),
+	(16, '2026-04-30 16:27:49', 'Recreo', '1100212137', '10200', 124, 11.28, 1, '2026-09-09'),
+	(17, '2026-04-30 16:27:49', 'Recreo', '1100212137', '14200', 130, 28.13, 1, '2026-09-08'),
+	(18, '2026-04-30 16:27:49', 'Recreo', '1100212137', '14110', 129, 25.80, 1, '2026-07-07'),
+	(19, '2026-04-30 17:54:00', 'Jotabe', '17112149', '749', 38, 96.18, 16, '2026-08-13'),
+	(20, '2026-04-30 17:54:00', 'Jotabe', '17112149', '2173', 42, 48.33, 8, '2026-08-06'),
+	(21, '2026-04-30 17:54:00', 'Jotabe', '17112149', '2172', 53, 88.19, 24, '2026-08-06'),
+	(22, '2026-04-30 17:54:00', 'Jotabe', '17112149', '450', 55, 42.59, 12, '2026-07-17'),
+	(23, '2026-04-30 17:54:00', 'Jotabe', '17112149', '2340', 51, 20.89, 1, '2026-09-23'),
+	(24, '2026-04-30 17:54:00', 'Jotabe', '17112149', '2072', 56, 63.30, 18, '2026-08-20'),
+	(25, '2026-04-30 17:54:00', 'Jotabe', '17112149', '1882', 39, 14.95, 5, '2026-08-20'),
+	(26, '2026-04-30 17:54:00', 'Jotabe', '17112149', '853', 41, 9.65, 2, '2026-06-03'),
+	(27, '2026-04-30 17:54:00', 'Jotabe', '17112149', '2171', 52, 89.32, 20, '2026-06-24'),
+	(28, '2026-04-30 17:54:00', 'Jotabe', '17112149', '2070', 58, 17.26, 4, '2026-06-26');
 
--- Volcando datos para la tabla cdf_crm.items_pedidos: ~1.265 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.items_pedidos: ~1.265 rows (aproximadamente)
 REPLACE INTO `items_pedidos` (`id_item`, `id_pedido`, `id_producto`, `cantidad_piezas`, `cantidad_fraccionado`) VALUES
 	(2, 'PED-1776165180417', 26, 0, 10.000),
 	(3, 'PED-1776165180417', 148, 0, 35.000),
@@ -1309,7 +1325,7 @@ REPLACE INTO `items_pedidos` (`id_item`, `id_pedido`, `id_producto`, `cantidad_p
 	(2182, 'PED-1777458847525', 37, 0, 20.000),
 	(2183, 'PED-1777458847525', 33, 0, 8.000);
 
--- Volcando datos para la tabla cdf_crm.pedidos_sucursales: ~27 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.pedidos_sucursales: ~27 rows (aproximadamente)
 REPLACE INTO `pedidos_sucursales` (`id_pedido`, `codigo_pedido`, `id_sucursal`, `fecha_pedido`, `estado`) VALUES
 	('PED-1776165180417', 'PED-1776165180417', 2, '2026-04-14 03:00:00', 'Enviado'),
 	('PED-1776166239217', 'PED-1776166239217', 3, '2026-04-14 03:00:00', 'Enviado'),
@@ -1339,7 +1355,7 @@ REPLACE INTO `pedidos_sucursales` (`id_pedido`, `codigo_pedido`, `id_sucursal`, 
 	('PED-1777390698818', 'PED-1777390698818', 3, '2026-04-28 03:00:00', 'Despachado'),
 	('PED-1777458847525', 'PED-1777458847525', 7, '2026-04-29 03:00:00', 'Despachado');
 
--- Volcando datos para la tabla cdf_crm.preparacion_pedidos: ~102 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.preparacion_pedidos: ~102 rows (aproximadamente)
 REPLACE INTO `preparacion_pedidos` (`id`, `codigo_de_pedido`, `codigo_producto`, `cantidad_piezas_pedida`, `cantidad_fracciones_pedidas`, `peso_piezas_preparadas`, `peso_fracciones_preparadas`, `cantidad_bolsitas_preparadas`, `timestamp`) VALUES
 	(1, 'PED-1776166239217', '2422', 0, 250, 0.000, 3.750, 17, '2026-04-26 22:24:34'),
 	(2, 'PED-1776166239217', '1218', 0, 50, 0.000, 8.750, 45, '2026-04-26 22:39:35'),
@@ -1444,7 +1460,31 @@ REPLACE INTO `preparacion_pedidos` (`id`, `codigo_de_pedido`, `codigo_producto`,
 	(101, 'PED-1777458847525', '2379', 0, 50, 0.000, 18.230, 48, '2026-04-29 17:09:42'),
 	(102, 'PED-1777458847525', '2379', 0, 50, 0.000, 18.230, 48, '2026-04-29 17:09:49');
 
--- Volcando datos para la tabla cdf_crm.produccion_feteados: ~54 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.produccion_envasados: ~21 rows (aproximadamente)
+REPLACE INTO `produccion_envasados` (`id_envasado`, `codigo_producto`, `cantidad`, `peso`, `envasador`, `fecha`) VALUES
+	(1, '2925', 36, 4.485, 'Sistema', '2026-04-28 15:38:30'),
+	(2, '3781', 62, 10.165, 'Sistema', '2026-04-28 15:43:56'),
+	(3, '1218', 132, 20.390, 'Sistema', '2026-04-28 16:20:15'),
+	(4, '1922', 52, 19.370, 'Sistema', '2026-04-28 16:54:31'),
+	(5, '4787', 118, 21.930, 'Sistema', '2026-04-28 17:11:40'),
+	(6, '7700', 56, 10.580, 'Sistema', '2026-04-29 10:33:50'),
+	(7, '6572', 145, 20.275, 'Sistema', '2026-04-29 11:08:58'),
+	(8, '5446', 56, 8.750, 'Sistema', '2026-04-29 11:48:25'),
+	(9, '2250', 74, 12.630, 'Sistema', '2026-04-29 11:48:52'),
+	(10, '6055', 20, 3.105, 'Sistema', '2026-04-29 13:11:01'),
+	(11, '4116', 88, 11.195, 'Sistema', '2026-04-29 13:24:44'),
+	(12, '2254', 118, 22.475, 'Sistema', '2026-04-29 13:25:16'),
+	(13, '2250', 68, 12.365, 'Sistema', '2026-04-29 14:32:17'),
+	(14, '4787', 117, 22.290, 'Sistema', '2026-04-29 14:44:26'),
+	(15, '6598', 87, 10.925, 'Sistema', '2026-04-29 15:40:50'),
+	(16, '4116', 72, 11.245, 'Sistema', '2026-04-29 16:07:29'),
+	(17, '4787', 96, 21.895, 'Sistema', '2026-04-29 16:07:52'),
+	(18, '2264', 29, 4.400, 'Sistema', '2026-04-29 16:08:42'),
+	(19, '2379', 52, 18.545, 'Sistema', '2026-04-29 16:10:41'),
+	(20, '2435', 102, 18.505, 'Sistema', '2026-04-29 16:28:53'),
+	(21, '2379', 48, 17.960, 'Sistema', '2026-04-29 17:11:10');
+
+-- Volcando datos para la tabla cdf_app.produccion_feteados: ~54 rows (aproximadamente)
 REPLACE INTO `produccion_feteados` (`id_feteado`, `codigo_producto`, `peso_bruto`, `peso_decomiso`, `peso_recorte`, `peso_feteado`, `cantidad_bolsitas`, `feteador`, `fecha`) VALUES
 	(3, '8010', 3.750, 0.200, 0.380, 3.170, 18, 'Juan', '2026-04-26 12:33:54'),
 	(4, '8010', 3.780, 0.150, 0.350, 3.280, 18, 'Juan', '2026-04-26 12:37:48'),
@@ -1499,9 +1539,10 @@ REPLACE INTO `produccion_feteados` (`id_feteado`, `codigo_producto`, `peso_bruto
 	(53, '4787', 23.870, 0.365, 1.610, 21.895, 96, 'Repo-Jotabe', '2026-04-29 16:00:13'),
 	(54, '4116', 12.120, 0.385, 0.490, 11.245, 72, 'Repo-Jotabe', '2026-04-29 16:00:19'),
 	(55, '2435', 19.875, 0.340, 1.030, 18.505, 102, 'Repo-Jotabe', '2026-04-29 16:14:20'),
-	(56, '2379', 17.960, 0.000, 0.000, 17.960, 48, 'Ulises', '2026-04-29 17:04:56');
+	(56, '2379', 17.960, 0.000, 0.000, 17.960, 48, 'Ulises', '2026-04-29 17:04:56'),
+	(57, '3755', 23.860, 0.210, 0.990, 22.660, 136, 'Juan', '2026-04-30 15:38:27');
 
--- Volcando datos para la tabla cdf_crm.productos: ~208 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.productos: ~208 rows (aproximadamente)
 REPLACE INTO `productos` (`id_producto`, `codigo_interno`, `descripcion`, `categoria`, `stock`, `codigo_proveedor`) VALUES
 	(1, '3102', 'FIAM CANCIANI SALAME BASTON X KG', 'FIAM', 0.000, NULL),
 	(2, '2257', 'FIAM MAGRET JAMON CRUDO XKG', 'FIAM', 0.000, NULL),
@@ -1540,11 +1581,11 @@ REPLACE INTO `productos` (`id_producto`, `codigo_interno`, `descripcion`, `categ
 	(35, '6436', 'FIAM CAGNOLI FUET SERRANO SALAMIN 150X', 'FIAM', 0.000, NULL),
 	(36, '6406', 'FIAM CAGNOLI FUET TANDIL SALAMIN 150X', 'FIAM', 0.000, NULL),
 	(37, '7700', 'FIAM CAGNOLI JAM COCIDO C.LENTA 5.5X', 'FIAM', 0.000, NULL),
-	(38, '3755', 'FIAM CAGNOLI JAM COCIDO. X KG', 'FIAM', 0.000, NULL),
-	(39, '4116', 'FIAM CAGNOLI MILAN X KG', 'FIAM', 0.000, NULL),
+	(38, '3755', 'FIAM CAGNOLI JAM COCIDO. X KG', 'FIAM', 96.180, NULL),
+	(39, '4116', 'FIAM CAGNOLI MILAN X KG', 'FIAM', 14.950, NULL),
 	(40, '664379', 'FIAM CAGNOLI MORTADELA C/PISTA  250X', 'FIAM', 0.000, NULL),
-	(41, '5446', 'FIAM CAGNOLI MORTADELA x KG', 'FIAM', 0.000, NULL),
-	(42, '4787', 'FIAM CAGNOLI PALETA CERDO X KG', 'FIAM', 0.000, NULL),
+	(41, '5446', 'FIAM CAGNOLI MORTADELA x KG', 'FIAM', 9.650, NULL),
+	(42, '4787', 'FIAM CAGNOLI PALETA CERDO X KG', 'FIAM', 4833.000, NULL),
 	(43, '6598', 'FIAM CAGNOLI PANCETA AHUM X KG', 'FIAM', 0.000, NULL),
 	(44, '5045', 'FIAM CAGNOLI PEPPERONI X KG', 'FIAM', 0.000, NULL),
 	(45, '4898', 'FIAM CAGNOLI SALAME BAST P/F  X KG', 'FIAM', 0.000, NULL),
@@ -1553,14 +1594,14 @@ REPLACE INTO `productos` (`id_producto`, `codigo_interno`, `descripcion`, `categ
 	(48, '1806', 'FIAM CAGNOLI SALAMIN P/G x KG', 'FIAM', 0.000, NULL),
 	(49, '2831', 'FIQU LEGENDARIO SARDO X KG', 'FIQU', 0.000, NULL),
 	(50, '6442', 'FIQU PAULINA AZUL X KG', 'FIQU', 0.000, NULL),
-	(51, '6572', 'FIQU PAULINA CHEDDAR X KG', 'FIQU', 0.000, NULL),
-	(52, '2379', 'FIQU PAULINA CREMOSO X KG', 'FIQU', 0.000, NULL),
-	(53, '2435', 'FIQU PAULINA DAMBO X KG', 'FIQU', 0.000, NULL),
+	(51, '6572', 'FIQU PAULINA CHEDDAR X KG', 'FIQU', 20.890, NULL),
+	(52, '2379', 'FIQU PAULINA CREMOSO X KG', 'FIQU', 89.320, NULL),
+	(53, '2435', 'FIQU PAULINA DAMBO X KG', 'FIQU', 88.190, NULL),
 	(54, '2073', 'FIQU PAULINA GOUDA X KG', 'FIQU', 0.000, NULL),
-	(55, '1218', 'FIQU PAULINA MUZZARELLA  P/FETEAR X KG', 'FIQU', 0.000, NULL),
-	(56, '8010', 'FIQU PAULINA PAT. P/ SAND x KG', 'FIQU', 0.000, NULL),
+	(55, '1218', 'FIQU PAULINA MUZZARELLA  P/FETEAR X KG', 'FIQU', 42.590, NULL),
+	(56, '8010', 'FIQU PAULINA PAT. P/ SAND x KG', 'FIQU', 63.300, NULL),
 	(57, '2190', 'FIQU PAULINA PATEGRAS X KG', 'FIQU', 0.000, NULL),
-	(58, '4929', 'FIQU PAULINA PORT SALUT X KG', 'FIQU', 0.000, NULL),
+	(58, '4929', 'FIQU PAULINA PORT SALUT X KG', 'FIQU', 17.260, NULL),
 	(59, '7770', 'FIQU PAULINA PROVOLONE PARRI X KG', 'FIQU', 0.000, NULL),
 	(60, '5409', 'FIQU PAULINA REGGIANITO X KG', 'FIQU', 0.000, NULL),
 	(61, '7105', 'FIQU PAULINA SARDO X KG', 'FIQU', 0.000, NULL),
@@ -1626,13 +1667,13 @@ REPLACE INTO `productos` (`id_producto`, `codigo_interno`, `descripcion`, `categ
 	(121, '2431', 'FIQU TREGAR PATEGRAS X KG', 'FIQU', 9.380, NULL),
 	(122, '2441', 'FIQU TREGAR PORT SALUT DIET X KG', 'FIQU', 30.380, NULL),
 	(123, '2440', 'FIQU TREGAR PORT SALUT X KG', 'FIQU', 31.980, NULL),
-	(124, '8016', 'FIAM RECREO BONDIOLA X KG', 'FIAM', 0.000, NULL),
-	(125, '2912', 'FIAM RECREO FIAMB COC PATA CERDO(405)', 'FIAM', 0.000, NULL),
-	(126, '3781', 'FIAM RECREO JAM COCIDO X KG', 'FIAM', 0.000, NULL),
+	(124, '8016', 'FIAM RECREO BONDIOLA X KG', 'FIAM', 11.280, NULL),
+	(125, '2912', 'FIAM RECREO FIAMB COC PATA CERDO(405)', 'FIAM', 64.410, NULL),
+	(126, '3781', 'FIAM RECREO JAM COCIDO X KG', 'FIAM', 171.410, NULL),
 	(127, '2925', 'FIAM RECREO JAMON CRUDO', 'FIAM', 0.000, NULL),
-	(128, '6152', 'FIAM RECREO MILAN X KG', 'FIAM', 0.000, NULL),
-	(129, '2914', 'FIAM RECREO MORTADELA BOLG VEJ', 'FIAM', 0.000, NULL),
-	(130, '3817', 'FIAM RECREO SALCHICHON PRIMAVERA', 'FIAM', 0.000, NULL),
+	(128, '6152', 'FIAM RECREO MILAN X KG', 'FIAM', 15.850, NULL),
+	(129, '2914', 'FIAM RECREO MORTADELA BOLG VEJ', 'FIAM', 25.800, NULL),
+	(130, '3817', 'FIAM RECREO SALCHICHON PRIMAVERA', 'FIAM', 28.130, NULL),
 	(131, '2919', 'INSU RECREO FIAMBRE PATA X KG', 'INSU', 0.000, NULL),
 	(132, '5651', 'INSU RECREO PANCETA AHUMADA', 'INSU', 0.000, NULL),
 	(133, '5933', 'FRAC RECREO SALCHICHON PRIMAVERA X KG', 'FRAC', 0.000, NULL),
@@ -1712,9 +1753,17 @@ REPLACE INTO `productos` (`id_producto`, `codigo_interno`, `descripcion`, `categ
 	(207, '5948', 'INSU PAULINA PARMESANO X KG', 'INSU', 0.000, NULL),
 	(208, '667085', 'INSU PAULINA CREMA POUCH 5X', 'INSU', 0.000, NULL);
 
--- Volcando datos para la tabla cdf_crm.registro_produccion: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.recortes_recepcion: ~5 rows (aproximadamente)
+REPLACE INTO `recortes_recepcion` (`id`, `id_sucursal`, `sucursal_nombre`, `id_producto`, `producto_nombre`, `codigo_interno`, `peso`, `tipo`, `fecha`) VALUES
+	(2, 4, 'Depot 12-Cordoba', 117, 'FIQU TREGAR DANBO X KG.', '2420', 0.285, 'decomisos', '2026-04-30 14:29:52'),
+	(3, 4, 'Depot 12-Cordoba', 101, 'FIAM PALADINI JAM COCIDO', '2254', 0.465, 'decomisos', '2026-04-30 14:29:52'),
+	(4, 4, 'Depot 12-Cordoba', 38, 'FIAM CAGNOLI JAM COCIDO. X KG', '3755', 0.070, 'decomisos', '2026-04-30 14:29:52'),
+	(5, 6, 'Depot 09-Barranqueras', 38, 'FIAM CAGNOLI JAM COCIDO. X KG', '3755', 0.600, 'decomisos', '2026-04-30 14:29:52'),
+	(6, 6, 'Depot 09-Barranqueras', 125, 'FIAM RECREO FIAMB COC PATA CERDO(405)', '2912', 0.420, 'decomisos', '2026-04-30 14:29:52');
 
--- Volcando datos para la tabla cdf_crm.stock_a_decomiso: ~42 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.registro_produccion: ~0 rows (aproximadamente)
+
+-- Volcando datos para la tabla cdf_app.stock_a_decomiso: ~42 rows (aproximadamente)
 REPLACE INTO `stock_a_decomiso` (`id`, `codigo`, `peso`, `motivo`) VALUES
 	(1, '1218', 0.175, 'Feteado'),
 	(2, '3755', 0.125, 'Feteado'),
@@ -1757,15 +1806,16 @@ REPLACE INTO `stock_a_decomiso` (`id`, `codigo`, `peso`, `motivo`) VALUES
 	(39, '6598', 0.200, 'Feteado'),
 	(40, '4787', 0.365, 'Feteado'),
 	(41, '4116', 0.385, 'Feteado'),
-	(42, '2435', 0.340, 'Feteado');
+	(42, '2435', 0.340, 'Feteado'),
+	(43, '3755', 0.210, 'Feteado');
 
--- Volcando datos para la tabla cdf_crm.stock_a_fetear: ~21 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.stock_a_fetear: ~21 rows (aproximadamente)
 REPLACE INTO `stock_a_fetear` (`id`, `codigo`, `peso`, `cantidad`) VALUES
 	(1, '2435', 0.000, 0),
 	(2, '2190', 0.000, 0),
 	(3, '2379', 0.000, 0),
 	(4, '8010', 0.000, 0),
-	(5, '3755', 0.000, 0),
+	(5, '3755', 22.660, 136),
 	(6, '1922', 0.000, 0),
 	(7, '6442', 0.000, 0),
 	(8, '3781', 0.000, 0),
@@ -1783,11 +1833,11 @@ REPLACE INTO `stock_a_fetear` (`id`, `codigo`, `peso`, `cantidad`) VALUES
 	(20, '2264', 0.000, 0),
 	(21, '6598', 0.000, 0);
 
--- Volcando datos para la tabla cdf_crm.stock_a_picada: ~26 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.stock_a_picada: ~26 rows (aproximadamente)
 REPLACE INTO `stock_a_picada` (`id`, `codigo`, `peso`) VALUES
 	(1, '2435', 1.030),
 	(2, '8010', 0.000),
-	(3, '3755', 0.000),
+	(3, '3755', 0.990),
 	(4, '5052', 0.000),
 	(5, '8016', 0.000),
 	(6, '3781', 0.000),
@@ -1812,10 +1862,10 @@ REPLACE INTO `stock_a_picada` (`id`, `codigo`, `peso`) VALUES
 	(38, '2254', 1.535),
 	(39, '2264', 0.155);
 
--- Volcando datos para la tabla cdf_crm.stock_envasados: ~26 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.stock_envasados: ~26 rows (aproximadamente)
 REPLACE INTO `stock_envasados` (`id`, `codigo`, `cantidad`, `peso`, `fecha_ultimo_registro`) VALUES
 	(1, '2190', 21, 15.810, '2026-04-27 11:44:03'),
-	(2, '2379', -94, 123.675, '2026-04-29 17:11:10'),
+	(2, '2379', 2, 0.867, '2026-04-29 17:11:10'),
 	(3, '2435', 114, 78.105, '2026-04-29 16:28:53'),
 	(4, '8010', 114, 65.060, '2026-04-28 14:06:38'),
 	(5, '3755', 31, 66.740, '2026-04-28 13:28:59'),
@@ -1824,11 +1874,11 @@ REPLACE INTO `stock_envasados` (`id`, `codigo`, `cantidad`, `peso`, `fecha_ultim
 	(8, '3781', 49, 19.165, '2026-04-28 15:43:56'),
 	(9, '7700', 25, 12.200, '2026-04-29 10:33:50'),
 	(10, '8016', 23, 6.105, '2026-04-28 15:37:49'),
-	(11, '8663', -1, 1.000, '2026-04-28 08:48:46'),
+	(11, '8663', 0, 1.000, '2026-04-28 08:48:46'),
 	(12, '2914', 0, 1.300, '2026-04-28 08:49:55'),
 	(13, '2925', 24, 5.445, '2026-04-28 15:38:30'),
 	(14, '7105', 0, 5.400, '2026-04-28 08:50:24'),
-	(15, '8974', -1, 3.780, '2026-04-28 08:52:52'),
+	(15, '8974', 0, 3.780, '2026-04-28 08:52:52'),
 	(16, '7718', 0, 22.500, '2026-04-28 08:55:34'),
 	(17, '1218', 27, 20.390, '2026-04-28 16:20:15'),
 	(18, '4787', 78, 66.115, '2026-04-29 16:07:52'),
@@ -1839,75 +1889,77 @@ REPLACE INTO `stock_envasados` (`id`, `codigo`, `cantidad`, `peso`, `fecha_ultim
 	(23, '4116', 72, 22.440, '2026-04-29 16:07:29'),
 	(24, '2254', 48, 22.475, '2026-04-29 13:25:16'),
 	(25, '6598', 50, 10.925, '2026-04-29 15:40:50'),
-	(26, '2264', 0, 4.400, '2026-04-29 16:08:42');
+	(26, '2264', 0, 0.000, '2026-04-29 16:08:42');
 
--- Volcando datos para la tabla cdf_crm.stock_kilos: ~63 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.stock_kilos: ~64 rows (aproximadamente)
 REPLACE INTO `stock_kilos` (`id`, `codigo_producto`, `cantidad_kilos`) VALUES
-	(34, '2255', 0.310),
-	(39, '1866', 0.110),
-	(41, '8654', 1.135),
-	(117, '2379', 58.450),
-	(118, '2381', 4.310),
-	(119, '2420', 0.755),
-	(120, '2427', 8.905),
-	(121, '2434', 16.420),
-	(122, '2435', 108.477),
-	(123, '2438', 0.090),
-	(124, '2440', 0.010),
-	(125, '2912', 0.005),
-	(126, '2914', 0.000),
-	(127, '2925', 10.260),
-	(128, '8974', 4.895),
-	(129, '9778', 0.010),
-	(130, '1806', 0.150),
-	(131, '1816', 0.005),
-	(132, '1218', 12.520),
-	(133, '5915', 0.100),
-	(134, '6011', 5.920),
-	(135, '6055', 33.845),
-	(136, '6152', 1.090),
-	(137, '6253', 0.225),
-	(138, '4116', 2.910),
-	(139, '4318', 0.010),
-	(140, '4787', 21.465),
-	(141, '7700', 5.000),
-	(142, '7718', 36.835),
-	(143, '8010', 120.970),
-	(144, '8016', 3.395),
-	(145, '8085', 8.910),
-	(146, '3483', 2.850),
-	(147, '3755', 138.575),
-	(148, '3781', 13.986),
-	(149, '3817', 0.005),
-	(150, '2073', 5.110),
-	(151, '2187', 2.230),
-	(152, '2190', 33.455),
-	(153, '2250', 0.090),
-	(154, '2254', -4.365),
-	(155, '2264', -4.280),
-	(156, '2266', 0.740),
-	(157, '6442', 5.440),
-	(158, '6572', 14.130),
-	(159, '4898', 3.075),
-	(160, '4998', 3.065),
-	(161, '5048', 32.820),
-	(162, '5052', 25.220),
-	(163, '5072', 10.740),
-	(164, '5075', 11.710),
-	(165, '5076', 12.880),
-	(166, '5409', 1.985),
-	(167, '5446', 9.100),
-	(168, '6598', -4.820),
-	(169, '8663', 15.360),
-	(170, '7105', 15.775),
-	(171, '1541', 0.705),
-	(172, '1611', 2.835),
-	(173, '1617', 12.820),
-	(174, '1922', 294.695),
-	(175, '2424', 16.440),
-	(176, '2374', 4.780);
+	(177, '2374', 4.980),
+	(178, '2379', 238.310),
+	(179, '2381', 4.310),
+	(180, '2420', 50.295),
+	(181, '2422', 156.320),
+	(182, '2424', 16.350),
+	(183, '2427', 8.905),
+	(184, '2431', 9.420),
+	(185, '2434', 16.460),
+	(186, '2435', 225.812),
+	(187, '2438', 0.090),
+	(188, '2440', 31.850),
+	(189, '2441', 30.270),
+	(190, '2912', 64.415),
+	(191, '2925', 11.520),
+	(192, '8974', 7.990),
+	(193, '9778', 0.010),
+	(194, '1806', 0.150),
+	(195, '1816', 0.005),
+	(196, '1218', 60.045),
+	(197, '5915', 0.100),
+	(198, '6011', 5.960),
+	(199, '6055', 33.845),
+	(200, '6152', 16.940),
+	(201, '6253', 0.225),
+	(202, '4116', 42.165),
+	(203, '4318', 20.090),
+	(204, '4787', 155.380),
+	(205, '7700', 9.060),
+	(206, '7718', 43.380),
+	(207, '8010', 200.000),
+	(208, '8016', 16.090),
+	(209, '8085', 8.910),
+	(210, '3483', 3.045),
+	(211, '3755', 230.485),
+	(212, '3781', 185.396),
+	(213, '3817', 28.135),
+	(214, '2073', 5.110),
+	(215, '2187', 2.230),
+	(216, '2190', 39.625),
+	(217, '2250', 15.585),
+	(218, '2254', 25.710),
+	(219, '2264', 0.435),
+	(220, '2266', 1.820),
+	(221, '6442', 6.315),
+	(222, '6572', 35.020),
+	(223, '4898', 3.700),
+	(224, '4998', 3.750),
+	(225, '5048', 32.820),
+	(226, '5052', 27.220),
+	(227, '5072', 10.770),
+	(228, '5075', 11.710),
+	(229, '5076', 12.880),
+	(230, '5409', 1.985),
+	(231, '5446', 18.750),
+	(232, '6598', 3.475),
+	(233, '8663', 15.360),
+	(234, '7105', 16.950),
+	(235, '1541', 0.705),
+	(236, '1611', 2.835),
+	(237, '1617', 12.820),
+	(238, '1922', 301.490),
+	(239, '663717', 2500.000),
+	(240, '2914', 25.800),
+	(241, '4929', 17.260);
 
--- Volcando datos para la tabla cdf_crm.stock_piezas: ~208 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.stock_piezas: ~208 rows (aproximadamente)
 REPLACE INTO `stock_piezas` (`id`, `codigo`, `cantidad`, `fecha_ultimo_registro`, `vencimiento`) VALUES
 	(1, '1000', 7, '2026-04-26 14:22:16', '30-04-20'),
 	(2, '1057', 4, '2026-04-26 21:16:34', '26-5-26'),
@@ -1990,7 +2042,7 @@ REPLACE INTO `stock_piezas` (`id`, `codigo`, `cantidad`, `fecha_ultimo_registro`
 	(79, '366', 0, '2026-04-26 14:06:50', NULL),
 	(80, '3740', 0, '2026-04-26 14:06:50', NULL),
 	(81, '3756', 0, '2026-04-26 14:06:50', NULL),
-	(82, '3755', 4, '2026-04-28 12:56:08', '31-5-202'),
+	(82, '3755', 0, '2026-04-30 15:38:29', '31-5-202'),
 	(83, '3757', 0, '2026-04-26 14:06:50', NULL),
 	(84, '3782', 0, '2026-04-26 14:06:50', NULL),
 	(85, '3781', 0, '2026-04-28 15:18:14', NULL),
@@ -2118,9 +2170,9 @@ REPLACE INTO `stock_piezas` (`id`, `codigo`, `cantidad`, `fecha_ultimo_registro`
 	(207, '9778', 0, '2026-04-26 14:06:50', NULL),
 	(208, '9842', 0, '2026-04-26 14:06:50', NULL);
 
--- Volcando datos para la tabla cdf_crm.stock_produccion: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.stock_produccion: ~0 rows (aproximadamente)
 
--- Volcando datos para la tabla cdf_crm.sucursales: ~7 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.sucursales: ~7 rows (aproximadamente)
 REPLACE INTO `sucursales` (`id_sucursal`, `nombre`, `ubicacion`) VALUES
 	(1, 'Sucursal Centro', 'Pendiente de actualizar'),
 	(2, 'Depot 16-Ameghino', ''),
@@ -2130,7 +2182,7 @@ REPLACE INTO `sucursales` (`id_sucursal`, `nombre`, `ubicacion`) VALUES
 	(6, 'Depot 09-Barranqueras', ''),
 	(7, 'Depot 03-Italia', '');
 
--- Volcando datos para la tabla cdf_crm.usuarios: ~8 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.usuarios: ~9 rows (aproximadamente)
 REPLACE INTO `usuarios` (`id_usuario`, `usuario`, `password`, `rol`) VALUES
 	(1, 'Edgar', 'legolas01', 'Admin'),
 	(2, 'Mauricio', '1015', 'Referente'),
@@ -2138,8 +2190,9 @@ REPLACE INTO `usuarios` (`id_usuario`, `usuario`, `password`, `rol`) VALUES
 	(4, 'Ulises', '1017', 'Referente'),
 	(5, 'Braian', '1018', 'Envasador'),
 	(6, 'Repo-Jotabe', '0000', 'Feteador'),
-	(7, 'maxi', '1099', 'Admin'),
-	(8, 'Repo-Paladini', '0000', 'Feteador');
+	(7, 'Maxii', '1099', 'Admin'),
+	(8, 'Repo-Paladini', '0000', 'Feteador'),
+	(9, 'Repo-Tregar', '0000', 'Feteador');
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

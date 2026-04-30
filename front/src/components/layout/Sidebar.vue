@@ -20,6 +20,7 @@ const allMenuItems = [
   { name: 'Feteado Externo', path: '/feteado-externo', icon: 'ph-users', roles: ['Admin', 'Referente'] },
   { name: 'Envasado', path: '/envasado', icon: 'ph-package', roles: ['Admin', 'Envasador', 'Referente'] },
   { name: 'Pedido Sucursales', path: '/pedidos-sucursales', icon: 'ph-storefront', roles: ['Admin', 'Preparador', 'Referente'] },
+  { name: 'Recepción Recortes', path: '/recepcion-recortes', icon: 'ph-recycle', roles: ['Admin', 'Referente'] },
   { name: 'Historial Despachos', path: '/despachos', icon: 'ph-truck', roles: ['Admin'] },
   { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Referente'] },
   { name: 'Stock de Piezas', path: '/piezas', icon: 'ph-puzzle-piece', roles: ['Admin', 'Referente'] },

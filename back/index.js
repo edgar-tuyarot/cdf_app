@@ -23,6 +23,7 @@ const piezasRoutes = require('./src/routes/piezas');
 const stockKilosRoutes = require('./src/routes/stockKilos');
 const preparacionPedidosRoutes = require('./src/routes/preparacionPedidos');
 const dashboardRoutes = require('./src/routes/dashboard');
+const recortesRoutes = require('./src/routes/recortes');
 
 app.use('/api/productos', productosRoutes);
 app.use('/api/colaboradores', colaboradoresRoutes);
@@ -38,6 +39,7 @@ app.use('/api/piezas', piezasRoutes);
 app.use('/api/stock-kilos', stockKilosRoutes);
 app.use('/api/preparacion-pedidos', preparacionPedidosRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/recortes', recortesRoutes);
 
 // Arrancar servidor
 const PORT = process.env.PORT || 3000;
