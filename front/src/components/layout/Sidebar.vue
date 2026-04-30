@@ -17,6 +17,7 @@ const allMenuItems = [
   { name: 'Dashboard', path: '/', icon: 'ph-squares-four', roles: ['Admin', 'Preparador', 'Feteador', 'Referente'] },
   { name: 'Stock de Productos', path: '/stock-feteados', icon: 'ph-scales', roles: ['Admin', 'Preparador', 'Feteador', 'Referente'] },
   { name: 'Fraccionado', path: '/feteado', icon: 'ph-knife', roles: ['Admin', 'Feteador', 'Envasador', 'Referente'] },
+  { name: 'Feteado Externo', path: '/feteado-externo', icon: 'ph-users', roles: ['Admin', 'Referente'] },
   { name: 'Envasado', path: '/envasado', icon: 'ph-package', roles: ['Admin', 'Envasador', 'Referente'] },
   { name: 'Pedido Sucursales', path: '/pedidos-sucursales', icon: 'ph-storefront', roles: ['Admin', 'Preparador', 'Referente'] },
   { name: 'Historial Despachos', path: '/despachos', icon: 'ph-truck', roles: ['Admin'] },
@@ -43,7 +44,8 @@ const handleLogout = () => {
 
 const isActive = (path) => {
   if (path === '/') return route.path === '/'
-  return route.path.startsWith(path)
+  // Si la ruta es exacta o si es una sub-ruta pero no coincide parcialmente con otra (ej: /feteado vs /feteado-externo)
+  return route.path === path || (route.path.startsWith(path + '/') && path !== '/')
 }
 </script>
 

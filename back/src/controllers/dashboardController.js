@@ -270,3 +270,48 @@ exports.obtenerProduccionSemanal = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener producción semanal' });
   }
 };
+
+// 5. Feteado del día por feteador
+exports.obtenerFeteadoDelDiaPorFeteador = async (req, res) => {
+  try {
+    const start = getStartOfDay();
+    const end = getEndOfDay();
+
+    const feteados = await ProduccionFeteado.findAll({
+      where: {
+        fecha: {
+          [Op.gte]: start,
+          [Op.lte]: end
+        }
+      },
+      include: [{
+        model: Producto,
+        attributes: ['descripcion']
+      }]
+    });
+
+    const feteadores = {};
+
+    for (const f of feteados) {
+      const nombre = f.feteador || 'Desconocido';
+      if (!feteadores[nombre]) {
+        feteadores[nombre] = {
+          feteador: nombre,
+          productos: []
+        };
+      }
+
+      feteadores[nombre].productos.push({
+        codigo: f.codigo_producto,
+        producto: f.Producto ? f.Producto.descripcion : 'Desconocido',
+        peso_feteado: parseFloat(f.peso_feteado || 0),
+        cantidad_bolsitas: parseInt(f.cantidad_bolsitas || 0)
+      });
+    }
+
+    res.json(Object.values(feteadores));
+  } catch (error) {
+    console.error('Error al obtener feteado del día por feteador:', error);
+    res.status(500).json({ error: 'Error al obtener feteado del día por feteador' });
+  }
+};

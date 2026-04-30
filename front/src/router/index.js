@@ -77,6 +77,12 @@ const router = createRouter({
       component: () => import('../views/Conversiones.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
     },
+    {
+      path: '/feteado-externo',
+      name: 'feteado-externo',
+      component: () => import('../views/FeteadoExterno.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
+    },
   ],
 })
 

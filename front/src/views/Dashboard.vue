@@ -34,6 +34,23 @@ const produccionDia    = ref({ feteados: [], envasados: [] })
 const produccionOperador = ref([])
 const mermasStock      = ref({ decomiso: [], picadas: [] })
 const produccionSemanal = ref([])
+const stockAFetear      = ref([])
+
+const filteredStockAFetear = computed(() => 
+  stockAFetear.value.filter(item => (Number(item.cantidad) || 0) > 0)
+)
+
+const totalStockAFetearKg = computed(() =>
+  filteredStockAFetear.value.reduce((acc, item) => acc + (Number(item.peso) || 0), 0)
+)
+
+const totalOperadores = computed(() => {
+  return produccionOperador.value.reduce((acc, op) => ({
+    feteadoKg: acc.feteadoKg + (Number(op.total_feteado_kilos) || 0),
+    feteadoBols: acc.feteadoBols + (Number(op.total_feteado_bolsitas) || 0),
+    envasadoBols: acc.envasadoBols + (Number(op.total_envasado_bolsitas) || 0)
+  }), { feteadoKg: 0, feteadoBols: 0, envasadoBols: 0 })
+})
 
 // KPIs Admin
 const adminTotalFeteadoKg  = computed(() =>
@@ -57,16 +74,18 @@ const DIAS = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado']
 
 // ─── CARGA DE DATOS ──────────────────────────────────────────────
 const cargarDatosAdmin = async () => {
-  const [resDia, resOp, resMermas, resSemanal] = await Promise.all([
+  const [resDia, resOp, resMermas, resSemanal, resStock] = await Promise.all([
     fetch('/api/dashboard/produccion-dia'),
     fetch('/api/dashboard/produccion-operador'),
     fetch('/api/dashboard/mermas-stock'),
-    fetch('/api/dashboard/produccion-semanal')
+    fetch('/api/dashboard/produccion-semanal'),
+    fetch('/api/feteado/stock-a-fetear')
   ])
   if (resDia.ok)     produccionDia.value     = await resDia.json()
   if (resOp.ok)      produccionOperador.value = await resOp.json()
   if (resMermas.ok)  mermasStock.value        = await resMermas.json()
   if (resSemanal.ok) produccionSemanal.value  = await resSemanal.json()
+  if (resStock.ok)   stockAFetear.value       = await resStock.json()
 }
 
 const cargarDatosOperario = async () => {
@@ -163,8 +182,42 @@ onMounted(cargarDatos)
                 <td class="text-right fw-bold text-accent">{{ f.cantidad_bolsitas }}</td>
               </tr>
             </tbody>
+            <tfoot class="total-row">
+              <tr>
+                <td colspan="2" class="fw-bold">TOTALES</td>
+                <td class="text-right fw-bold text-green">{{ adminTotalFeteadoKg.toFixed(2) }}</td>
+                <td class="text-right fw-bold text-accent">{{ adminTotalFeteadoBolsitas }}</td>
+              </tr>
+            </tfoot>
           </table>
           <div v-else class="empty-mini">Sin registros hoy</div>
+        </div>
+
+        <!-- Stock a Fetear (MEDIO) -->
+        <div class="card section-card">
+          <div class="card-header border-bottom pb-2 mb-2">
+            <h3 class="card-title"><i class="ph ph-package text-accent mr-1"></i>Stock a Fetear</h3>
+          </div>
+          <div v-if="isLoading" class="mini-loading"><i class="ph ph-spinner spinner"></i></div>
+          <table v-else-if="filteredStockAFetear.length" class="data-table">
+            <thead>
+              <tr><th>Código</th><th>Producto</th><th class="text-right">Kg</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in filteredStockAFetear" :key="s.id">
+                <td class="code-cell">{{ s.codigo }}</td>
+                <td class="truncate-text" :title="s.Producto?.descripcion">{{ s.Producto?.descripcion || '—' }}</td>
+                <td class="text-right fw-bold text-green">{{ Number(s.peso).toFixed(2) }}</td>
+              </tr>
+            </tbody>
+            <tfoot class="total-row">
+              <tr>
+                <td colspan="2" class="fw-bold">TOTAL</td>
+                <td class="text-right fw-bold text-green">{{ totalStockAFetearKg.toFixed(2) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <div v-else class="empty-mini">Sin stock a fetear</div>
         </div>
 
         <!-- Envasados del día -->
@@ -184,6 +237,12 @@ onMounted(cargarDatos)
                 <td class="text-right fw-bold text-blue">{{ e.cantidad_bolsitas }}</td>
               </tr>
             </tbody>
+            <tfoot class="total-row">
+              <tr>
+                <td colspan="2" class="fw-bold">TOTAL</td>
+                <td class="text-right fw-bold text-blue">{{ adminTotalEnvasado }}</td>
+              </tr>
+            </tfoot>
           </table>
           <div v-else class="empty-mini">Sin registros hoy</div>
         </div>
@@ -214,6 +273,14 @@ onMounted(cargarDatos)
                 <td class="text-right text-blue">{{ op.total_envasado_bolsitas }}</td>
               </tr>
             </tbody>
+            <tfoot class="total-row">
+              <tr>
+                <td class="fw-bold">TOTALES</td>
+                <td class="text-right fw-bold text-green">{{ totalOperadores.feteadoKg.toFixed(2) }}</td>
+                <td class="text-right fw-bold text-accent">{{ totalOperadores.feteadoBols }}</td>
+                <td class="text-right fw-bold text-blue">{{ totalOperadores.envasadoBols }}</td>
+              </tr>
+            </tfoot>
           </table>
           <div v-else class="empty-mini">Sin datos de operadores hoy</div>
         </div>
@@ -235,6 +302,12 @@ onMounted(cargarDatos)
                   <td class="text-right fw-bold text-red">{{ Number(d.peso).toFixed(2) }}</td>
                 </tr>
               </tbody>
+              <tfoot class="total-row">
+                <tr>
+                  <td colspan="2" class="fw-bold">TOTAL</td>
+                  <td class="text-right fw-bold text-red">{{ adminTotalDecomiso.toFixed(2) }}</td>
+                </tr>
+              </tfoot>
             </table>
             <div v-else class="empty-mini mb-3">Sin decomiso</div>
           </div>
@@ -253,6 +326,12 @@ onMounted(cargarDatos)
                   <td class="text-right fw-bold text-orange">{{ Number(p.peso).toFixed(2) }}</td>
                 </tr>
               </tbody>
+              <tfoot class="total-row">
+                <tr>
+                  <td colspan="2" class="fw-bold">TOTAL</td>
+                  <td class="text-right fw-bold text-orange">{{ adminTotalPicadas.toFixed(2) }}</td>
+                </tr>
+              </tfoot>
             </table>
             <div v-else class="empty-mini">Sin picadas</div>
           </div>
@@ -453,6 +532,21 @@ onMounted(cargarDatos)
 .text-orange { color: #d97706; }
 .text-accent { color: var(--accent-primary); }
 
+.total-row td {
+  background: var(--bg-tertiary);
+  border-top: 2px solid var(--bg-tertiary);
+  border-bottom: none !important;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.truncate-text {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .merma-subtitle {
   font-size: 0.68rem;
   font-weight: 800;
@@ -518,7 +612,9 @@ onMounted(cargarDatos)
 /* ─── Responsive ─────────────────────────────────── */
 @media (min-width: 640px) {
   .kpi-grid    { grid-template-columns: repeat(4, 1fr); }
-  .tables-row  { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .tables-row  { grid-template-columns: repeat(3, 1fr); }
 }
 @media (min-width: 768px) {
   .d-none-mobile { display: table-cell; }

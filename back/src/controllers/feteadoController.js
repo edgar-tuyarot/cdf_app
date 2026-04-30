@@ -77,7 +77,12 @@ exports.eliminarProduccionFeteado = async (req, res) => {
 // --- STOCK A FETEAR (ADITIVO) ---
 exports.obtenerStockAFetear = async (req, res) => {
   try {
-    const stock = await StockAFetear.findAll();
+    const stock = await StockAFetear.findAll({
+      include: [{
+        model: Producto,
+        attributes: ['descripcion']
+      }]
+    });
     res.json(stock);
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener el stock' });

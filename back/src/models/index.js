@@ -232,6 +232,14 @@ Despacho.belongsTo(PedidoSucursal, { foreignKey: 'id_pedido' });
 Producto.hasOne(StockProduccion, { foreignKey: 'codigo', sourceKey: 'codigo_interno' });
 StockProduccion.belongsTo(Producto, { foreignKey: 'codigo', targetKey: 'codigo_interno' });
 
+// Producto <-> ProduccionFeteado (1:N por código)
+ProduccionFeteado.belongsTo(Producto, { foreignKey: 'codigo_producto', targetKey: 'codigo_interno' });
+Producto.hasMany(ProduccionFeteado, { foreignKey: 'codigo_producto', sourceKey: 'codigo_interno' });
+
+// Producto <-> StockAFetear (1:1 por código)
+StockAFetear.belongsTo(Producto, { foreignKey: 'codigo', targetKey: 'codigo_interno' });
+Producto.hasOne(StockAFetear, { foreignKey: 'codigo', sourceKey: 'codigo_interno' });
+
 module.exports = {
   sequelize,
   Producto,

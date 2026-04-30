@@ -81,6 +81,7 @@ const registrarEnvasado = async () => {
     const payload = {
       codigo: codigo.value,
       peso: Number(form.value.peso),
+      envasador: authStore.user?.usuario,
       cantidad: Number(form.value.cantidad)
     }
 
