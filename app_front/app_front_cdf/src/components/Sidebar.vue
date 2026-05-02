@@ -1,3 +1,28 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+
+defineProps({
+  isOpen: Boolean
+})
+const emit = defineEmits(['close'])
+
+const router = useRouter()
+const authStore = useAuthStore()
+const isProductosOpen = ref(false)
+
+const handleLogout = () => {
+  authStore.logout()
+  emit('close')
+  router.push('/login')
+}
+
+const toggleProductos = () => {
+  isProductosOpen.value = !isProductosOpen.value
+}
+</script>
+
 <template>
   <div>
     <!-- Backdrop -->
@@ -20,6 +45,33 @@
           <RouterLink to="/envasado" class="nav-item" @click="$emit('close')">
             <span class="icon">📦</span> Envasado
           </RouterLink>
+          
+          <!-- Menu Productos con Submenu -->
+          <div class="menu-group">
+            <button 
+              class="nav-item group-toggle" 
+              :class="{ 'is-active': isProductosOpen }"
+              @click="toggleProductos"
+            >
+              <span class="icon">🍎</span> Productos
+              <span class="arrow" :class="{ 'is-rotated': isProductosOpen }">▼</span>
+            </button>
+            
+            <Transition name="expand">
+              <div v-if="isProductosOpen" class="submenu">
+                <RouterLink to="/productos/nuevo" class="submenu-item" @click="$emit('close')">
+                  <span class="dot">•</span> Alta de producto
+                </RouterLink>
+                <RouterLink to="/productos" class="submenu-item" @click="$emit('close')">
+                  <span class="dot">•</span> Ver Productos
+                </RouterLink>
+                <RouterLink to="/productos/editar" class="submenu-item" @click="$emit('close')">
+                  <span class="dot">•</span> Modificar Producto
+                </RouterLink>
+              </div>
+            </Transition>
+          </div>
+
           <RouterLink to="/inventario" class="nav-item" @click="$emit('close')">
             <span class="icon">📋</span> Inventario
           </RouterLink>
@@ -32,25 +84,6 @@
     </Transition>
   </div>
 </template>
-
-<script setup>
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-
-defineProps({
-  isOpen: Boolean
-})
-const emit = defineEmits(['close'])
-
-const router = useRouter()
-const authStore = useAuthStore()
-
-const handleLogout = () => {
-  authStore.logout()
-  emit('close')
-  router.push('/login')
-}
-</script>
 
 <style scoped>
 .sidebar-backdrop {
@@ -132,6 +165,76 @@ const handleLogout = () => {
   border-color: var(--color-border);
 }
 
+/* Submenu Styles */
+.menu-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-toggle {
+  width: 100%;
+  background: none;
+  cursor: pointer;
+  border: 2px solid transparent;
+  justify-content: space-between;
+}
+
+.group-toggle.is-active {
+  background-color: #F8F8F8;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.arrow {
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+  opacity: 0.5;
+}
+
+.arrow.is-rotated {
+  transform: rotate(180deg);
+}
+
+.submenu {
+  display: flex;
+  flex-direction: column;
+  background-color: #FAFAFA;
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+  padding: 4px;
+  border: 2px solid #F0F0F0;
+  border-top: none;
+}
+
+.submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  padding-left: 24px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.submenu-item:hover {
+  background-color: #F0F0F0;
+  color: var(--color-primary);
+}
+
+.submenu-item.router-link-active {
+  color: var(--color-primary);
+  background-color: white;
+}
+
+.dot {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
 .logout-btn {
   width: 100%;
   background: none;
@@ -166,5 +269,17 @@ const handleLogout = () => {
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+/* Expand Transition */
+.expand-enter-active, .expand-leave-active {
+  transition: all 0.3s ease-out;
+  max-height: 200px;
+  overflow: hidden;
+}
+.expand-enter-from, .expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

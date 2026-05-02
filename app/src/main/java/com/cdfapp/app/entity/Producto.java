@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Data
@@ -38,5 +39,8 @@ public class Producto {
     @JoinColumn(name = "proveedor_id")
     private Proveedor proveedor;
 
-    
+    @OneToMany
+    @JoinColumn(name = "producto_id")
+    private List<PedidoProducto> pedidoProducto;
+
 }

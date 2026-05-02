@@ -1,10 +1,13 @@
 package com.cdfapp.app.service;
 
+import com.cdfapp.app.dto.CrearProductoDto;
+import com.cdfapp.app.dto.ProductoDtoResponse;
 import com.cdfapp.app.entity.Producto;
 import com.cdfapp.app.repository.ProductoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,17 +21,41 @@ public class ProductoService {
         this.productoRepository = productoRepository;
     }
 
-    public List<Producto> obtenerTodosLosProductos() {
-        return productoRepository.findAll();
+    public List<ProductoDtoResponse> obtenerTodosLosProductos() {
+        List<ProductoDtoResponse> productos = new ArrayList<>();
+
+        productoRepository.findAll().forEach(producto -> {
+            ProductoDtoResponse dto = new ProductoDtoResponse(
+                    producto.getCodigo(),
+                    producto.getNombre(),
+                    producto.getPicable(),
+                    producto.getFeteable(),
+                    producto.getKilosPorBolsita()
+            );
+            productos.add(dto);
+        });
+
+        return productos;
     }
 
     public Optional<Producto> obtenerProductoPorId(Long id) {
         return productoRepository.findById(id);
     }
 
-    public Producto crearProducto(Producto producto) {
-        // Aquí podrías añadir lógica para validar que el 'codigo' no exista ya
-        return productoRepository.save(producto);
+    public Producto crearProducto(CrearProductoDto producto) {
+
+        if(productoRepository.findByCodigo(producto.codigo()).isPresent()){
+            return null;
+        };
+
+        Producto nuevoProducto = Producto.builder()
+                .nombre(producto.nombre())
+                .codigo(producto.codigo())
+                .picable(producto.picable())
+                .feteable(producto.feteable())
+                .kilosPorBolsita(producto.kilosPorBolsita())
+                .build();
+        return productoRepository.save(nuevoProducto);
     }
 
     public Producto actualizarProducto(Long id, Producto productoDetails) {
