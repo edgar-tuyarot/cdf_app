@@ -9,6 +9,8 @@ const isLoading = ref(true)
 const error = ref('')
 const searchQuery = ref('')
 const expandedRow = ref(null)
+const sortKey = ref('nombre')
+const sortOrder = ref('asc')
 
 const fetchProductos = async () => {
   isLoading.value = true
@@ -22,27 +24,51 @@ const fetchProductos = async () => {
     productos.value = data
   } catch (err) {
     error.value = err.message
-    // Mock data for demo/fallback
-    productos.value = [
-      { codigo: '8010', nombre: 'Queso Tybo', picable: true, feteable: true, kilosPorBolsita: 3.5 },
-      { codigo: '8020', nombre: 'Queso Danbo', picable: false, feteable: true, kilosPorBolsita: 4.2 },
-      { codigo: '1005', nombre: 'Salame Milán', picable: false, feteable: true, kilosPorBolsita: 1.8 }
-    ]
   } finally {
     isLoading.value = false
   }
 }
 
-const filteredProductos = computed(() => {
-  if (!searchQuery.value) return productos.value
-  const query = searchQuery.value.toLowerCase()
-  return productos.value.filter(p => 
-    p.codigo.toLowerCase().includes(query) || 
-    p.nombre.toLowerCase().includes(query)
-  )
+const filteredAndSortedProductos = computed(() => {
+  let result = [...productos.value]
+  
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(p => 
+      p.codigo.toLowerCase().includes(query) || 
+      p.nombre.toLowerCase().includes(query)
+    )
+  }
+  
+  result.sort((a, b) => {
+    let valA = a[sortKey.value]
+    let valB = b[sortKey.value]
+    
+    if (typeof valA === 'string') {
+      valA = valA.toLowerCase()
+      valB = valB.toLowerCase()
+    }
+    
+    if (valA < valB) return sortOrder.value === 'asc' ? -1 : 1
+    if (valA > valB) return sortOrder.value === 'asc' ? 1 : -1
+    return 0
+  })
+  
+  return result
 })
 
+const sortBy = (key) => {
+  if (sortKey.value === key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortOrder.value = 'asc'
+  }
+}
+
 const toggleRow = (codigo) => {
+  if (window.innerWidth >= 1024) return // No expand on desktop
+  
   if (expandedRow.value === codigo) {
     expandedRow.value = null
   } else {
@@ -77,7 +103,7 @@ onMounted(() => {
       />
     </div>
 
-    <BaseCard>
+    <div class="list-container">
       <div v-if="isLoading" class="loading-state">
         <div class="spinner"></div>
         <p>Cargando productos...</p>
@@ -93,39 +119,68 @@ onMounted(() => {
         <table class="modern-table">
           <thead>
             <tr>
-              <th>Cód.</th>
-              <th>Nombre</th>
-              <th class="text-right"></th>
+              <th @click="sortBy('codigo')" class="sortable">
+                Cód. <span v-if="sortKey === 'codigo'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('nombre')" class="sortable">
+                Nombre <span v-if="sortKey === 'nombre'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('pesoPorBolsita')" class="desktop-only sortable">
+                Peso x Bolsa <span v-if="sortKey === 'pesoPorBolsita'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('feteable')" class="desktop-only sortable">
+                ¿Se Fetea? <span v-if="sortKey === 'feteable'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('picable')" class="desktop-only sortable">
+                ¿Deja Recorte? <span v-if="sortKey === 'picable'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th class="text-right desktop-only">Acciones</th>
+              <th class="text-right mobile-only"></th>
             </tr>
           </thead>
-          <tbody v-for="p in filteredProductos" :key="p.codigo">
+          <tbody v-for="p in filteredAndSortedProductos" :key="p.codigo">
             <tr class="main-row" @click="toggleRow(p.codigo)" :class="{ 'is-expanded': expandedRow === p.codigo }">
               <td><strong>{{ p.codigo }}</strong></td>
               <td>{{ p.nombre }}</td>
-              <td class="text-right">
+              <td class="desktop-only">{{ p.pesoPorBolsita?.toFixed(2) }} KG</td>
+              <td class="desktop-only">
+                <span :class="['status-dot', p.feteable ? 'yes' : 'no']"></span>
+                {{ p.feteable ? 'Sí' : 'No' }}
+              </td>
+              <td class="desktop-only">
+                <span :class="['status-dot', p.picable ? 'yes' : 'no']"></span>
+                {{ p.picable ? 'Sí' : 'No' }}
+              </td>
+              <td class="text-right desktop-only">
+                <BaseButton variant="secondary" size="small">
+                  <span class="material-icons">edit</span>
+                </BaseButton>
+              </td>
+              <td class="text-right mobile-only">
                 <span class="expand-icon">{{ expandedRow === p.codigo ? '▲' : '▼' }}</span>
               </td>
             </tr>
-            <tr v-if="expandedRow === p.codigo" class="details-row">
-              <td colspan="3">
+            <tr v-if="expandedRow === p.codigo" class="details-row mobile-only">
+              <td colspan="6">
                 <div class="details-content fade-in">
-                  <div class="details-grid">
-                    <div class="detail-item">
-                      <span class="detail-label">Kilos por Bolsita</span>
-                      <span class="detail-value">{{ p.kilosPorBolsita }} kg</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">Propiedades</span>
-                      <div class="badge-group">
-                        <span v-if="p.picable" class="badge badge-picable">Picable</span>
-                        <span v-if="p.feteable" class="badge badge-feteable">Feteable</span>
-                        <span v-if="!p.picable && !p.feteable" class="badge badge-none">Ninguna</span>
-                      </div>
-                    </div>
-                  </div>
+                  <table class="detail-mini-table">
+                    <tr>
+                      <th>Peso por bolsa</th>
+                      <td>{{ p.pesoPorBolsita?.toFixed(2) }} KG</td>
+                    </tr>
+                    <tr>
+                      <th>¿Se fetea?</th>
+                      <td><strong>{{ p.feteable ? 'SÍ' : 'NO' }}</strong></td>
+                    </tr>
+                    <tr>
+                      <th>¿Deja recorte?</th>
+                      <td><strong>{{ p.picable ? 'SÍ' : 'NO' }}</strong></td>
+                    </tr>
+                  </table>
+                  
                   <div class="details-actions">
-                    <BaseButton variant="secondary" size="small" fullWidth>
-                      ✏️ Modificar Producto
+                    <BaseButton variant="secondary" size="small" class="btn-mini">
+                      <span class="material-icons">edit</span> Modificar
                     </BaseButton>
                   </div>
                 </div>
@@ -138,7 +193,7 @@ onMounted(() => {
           No se encontraron productos que coincidan con "{{ searchQuery }}".
         </div>
       </div>
-    </BaseCard>
+    </div>
   </div>
 </template>
 
@@ -186,6 +241,15 @@ onMounted(() => {
   transition: background-color 0.2s ease;
 }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable:hover {
+  background-color: #F0F0F0 !important;
+}
+
 .main-row:hover {
   background-color: #FAFAFA;
 }
@@ -209,46 +273,52 @@ onMounted(() => {
 .details-row td {
   padding: 0;
   border-bottom: 1px solid #EEE;
-  background-color: #FCFCFC;
+  background-color: #FAFAFA;
+  width: 100%;
 }
 
 .details-content {
-  padding: 20px;
+  padding: 16px;
   border-left: 4px solid var(--color-primary);
+  background-color: #FAFAFA;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.details-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-md);
+.detail-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
 }
 
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.detail-label {
-  font-size: 0.75rem;
-  font-weight: 600;
+.detail-mini-table th {
+  text-align: left;
+  padding: 8px;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
-  text-transform: uppercase;
+  width: 40%;
+  border-bottom: 1px solid #EEE;
 }
 
-.detail-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--color-text);
+.detail-mini-table td {
+  padding: 8px;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #EEE;
+}
+
+.btn-mini {
+  padding: 6px 12px !important;
+  font-size: 0.75rem !important;
+  width: auto !important;
 }
 
 .details-actions {
-  margin-top: var(--space-md);
+  display: flex;
+  justify-content: flex-end;
 }
 
 .text-right {
-  text-align: right;
+  text-align: right !important;
 }
 
 .badge-group {
@@ -257,27 +327,34 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 
-.badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
 }
 
-.badge-picable {
-  background-color: #E3F2FD;
-  color: #1976D2;
+.status-dot.yes { background-color: #4CAF50; box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2); }
+.status-dot.no { background-color: #F44336; box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2); }
+
+.detail-status-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
 }
 
-.badge-feteable {
-  background-color: #E8F5E9;
-  color: #2E7D32;
+.status-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed #EEE;
 }
 
-.badge-none {
-  background-color: #F5F5F5;
-  color: #9E9E9E;
+.status-line strong {
+  color: var(--color-primary);
 }
 
 .loading-state, .error-state, .empty-state {
@@ -298,6 +375,28 @@ onMounted(() => {
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: var(--space-md);
+}
+
+.desktop-only { display: none !important; }
+
+@media (min-width: 1024px) {
+  th.desktop-only, td.desktop-only { 
+    display: table-cell !important; 
+  }
+  .desktop-only:not(th):not(td) {
+    display: block !important;
+  }
+  .mobile-only { 
+    display: none !important; 
+  }
+  
+  .main-row {
+    cursor: default;
+  }
+  
+  .main-row:hover {
+    background-color: transparent;
+  }
 }
 
 @keyframes spin {

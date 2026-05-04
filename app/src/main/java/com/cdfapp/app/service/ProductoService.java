@@ -2,23 +2,32 @@ package com.cdfapp.app.service;
 
 import com.cdfapp.app.dto.CrearProductoDto;
 import com.cdfapp.app.dto.ProductoDtoResponse;
+import com.cdfapp.app.dto.ProductoFeteadoDTO;
 import com.cdfapp.app.entity.Producto;
+import com.cdfapp.app.entity.Proveedor;
+import com.cdfapp.app.repository.ExistenciaRepository;
 import com.cdfapp.app.repository.ProductoRepository;
+import com.cdfapp.app.repository.ProveedorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductoService {
 
     private final ProductoRepository productoRepository;
+    private final ProveedorRepository proveedorRepository;
+    private final ExistenciaRepository existenciaRepository;
 
     @Autowired
-    public ProductoService(ProductoRepository productoRepository) {
+    public ProductoService(ProductoRepository productoRepository, ProveedorRepository proveedorRepository, ExistenciaRepository existenciaRepository) {
         this.productoRepository = productoRepository;
+        this.proveedorRepository = proveedorRepository;
+        this.existenciaRepository = existenciaRepository;
     }
 
     public List<ProductoDtoResponse> obtenerTodosLosProductos() {
@@ -38,6 +47,11 @@ public class ProductoService {
         return productos;
     }
 
+    public List<ProductoFeteadoDTO> obtenerProductosFeteados() {
+        // Devuelve el reporte calculado directamente desde la base de datos
+        return existenciaRepository.getProductosFeteadosStatus();
+    }
+
     public Optional<Producto> obtenerProductoPorId(Long id) {
         return productoRepository.findById(id);
     }
@@ -48,12 +62,15 @@ public class ProductoService {
             return null;
         };
 
+        Proveedor proveedor = proveedorRepository.getById(producto.proveedorId());
+
         Producto nuevoProducto = Producto.builder()
                 .nombre(producto.nombre())
                 .codigo(producto.codigo())
                 .picable(producto.picable())
                 .feteable(producto.feteable())
                 .kilosPorBolsita(producto.kilosPorBolsita())
+                .proveedor(proveedor)
                 .build();
         return productoRepository.save(nuevoProducto);
     }

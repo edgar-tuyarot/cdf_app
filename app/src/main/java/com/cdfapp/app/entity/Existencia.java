@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Table(
         name = "existencias",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"producto_id", "estado", "ubicacion"})
+                @UniqueConstraint(columnNames = {"producto_id", "estado", "ubicacion_id"})
         }
 )
 public class Existencia {
@@ -24,28 +24,24 @@ public class Existencia {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    //
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto;
 
-    // Estado interno del stock
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EstadoProducto estado;
 
-    // Cantidades separadas por naturaleza
     @Column(precision = 19, scale = 3)
     private BigDecimal kilos;
 
     @Column
     private Integer unidades;
 
-    // Ubicación física
-    @Column(nullable = false)
-    private Long ubicacion;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ubicacion_id", nullable = false)
+    private Ubicacion ubicacion;
 
-    // Auditoría
     @Column
     private LocalDateTime ultimaActualizacion;
 
@@ -54,6 +50,4 @@ public class Existencia {
     public void preUpdate() {
         this.ultimaActualizacion = LocalDateTime.now();
     }
-
-
 }

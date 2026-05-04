@@ -1,9 +1,8 @@
 package com.cdfapp.app.controller;
 
-import com.cdfapp.app.entity.Usuario;
+import com.cdfapp.app.dto.UsuarioRequestDTO;
+import com.cdfapp.app.dto.UsuarioResponseDTO;
 import com.cdfapp.app.service.UsuarioService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,37 +14,32 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
 
-    @Autowired
     public UsuarioController(UsuarioService usuarioService) {
         this.usuarioService = usuarioService;
     }
 
+    @PostMapping
+    public ResponseEntity<UsuarioResponseDTO> crearUsuario(@RequestBody UsuarioRequestDTO dto) {
+        UsuarioResponseDTO nuevoUsuario = usuarioService.crearUsuario(dto);
+        return ResponseEntity.ok(nuevoUsuario);
+    }
+
     @GetMapping
-    public List<Usuario> obtenerTodosLosUsuarios() {
-        return usuarioService.obtenerTodosLosUsuarios();
+    public ResponseEntity<List<UsuarioResponseDTO>> getAllUsuarios() {
+        List<UsuarioResponseDTO> usuarios = usuarioService.getAllUsuarios();
+        return ResponseEntity.ok(usuarios);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Usuario> obtenerUsuarioPorId(@PathVariable Long id) {
-        return usuarioService.obtenerUsuarioPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public ResponseEntity<Usuario> crearUsuario(@RequestBody Usuario usuario) {
-        Usuario nuevoUsuario = usuarioService.crearUsuario(usuario);
-        return new ResponseEntity<>(nuevoUsuario, HttpStatus.CREATED);
+    public ResponseEntity<UsuarioResponseDTO> getUsuarioById(@PathVariable Long id) {
+        UsuarioResponseDTO usuario = usuarioService.getUsuarioById(id);
+        return ResponseEntity.ok(usuario);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Usuario> actualizarUsuario(@PathVariable Long id, @RequestBody Usuario usuarioDetails) {
-        try {
-            Usuario usuarioActualizado = usuarioService.actualizarUsuario(id, usuarioDetails);
-            return ResponseEntity.ok(usuarioActualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<UsuarioResponseDTO> actualizarUsuario(@PathVariable Long id, @RequestBody UsuarioRequestDTO dto) {
+        UsuarioResponseDTO usuarioActualizado = usuarioService.actualizarUsuario(id, dto);
+        return ResponseEntity.ok(usuarioActualizado);
     }
 
     @DeleteMapping("/{id}")

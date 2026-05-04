@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
+import TopNavbar from '../components/TopNavbar.vue'
 
 const isSidebarOpen = ref(false)
 
@@ -16,12 +17,21 @@ const toggleSidebar = () => {
 
     <!-- Top Navigation -->
     <header class="app-header">
-      <button class="menu-trigger" @click="toggleSidebar">
-        ☰
-      </button>
-      <div class="header-logo">CDF APP</div>
-      <div class="header-actions">
-        <div class="user-avatar">👤</div>
+      <!-- Mobile Trigger & Logo -->
+      <div class="mobile-header-content mobile-only">
+        <button class="menu-trigger" @click="toggleSidebar">☰</button>
+        <div class="header-logo">CDF APP</div>
+      </div>
+
+      <!-- Desktop Navbar -->
+      <div class="desktop-only w-full">
+        <TopNavbar />
+      </div>
+
+      <div class="header-actions mobile-only">
+        <div class="user-avatar">
+          <span class="material-icons">person</span>
+        </div>
       </div>
     </header>
 
@@ -52,6 +62,31 @@ const toggleSidebar = () => {
   position: sticky;
   top: 0;
   z-index: 900;
+}
+
+.mobile-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.w-full { width: 100%; }
+
+.mobile-only { display: block; }
+.desktop-only { display: none; }
+
+@media (min-width: 1024px) {
+  .mobile-only { display: none !important; }
+  .desktop-only { display: block !important; }
+  
+  .app-header {
+    padding-left: var(--space-md);
+  }
+  
+  .main-content {
+    padding-left: 0;
+  }
 }
 
 .menu-trigger {
@@ -98,7 +133,7 @@ const toggleSidebar = () => {
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 800px;
+    max-width: 1200px;
   }
 }
 </style>

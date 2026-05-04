@@ -11,6 +11,8 @@ const emit = defineEmits(['close'])
 const router = useRouter()
 const authStore = useAuthStore()
 const isProductosOpen = ref(false)
+const isExistenciasOpen = ref(false)
+const isUsuariosOpen = ref(false)
 
 const handleLogout = () => {
   authStore.logout()
@@ -21,67 +23,131 @@ const handleLogout = () => {
 const toggleProductos = () => {
   isProductosOpen.value = !isProductosOpen.value
 }
+
+const toggleExistencias = () => {
+  isExistenciasOpen.value = !isExistenciasOpen.value
+}
+
+const toggleUsuarios = () => {
+  isUsuariosOpen.value = !isUsuariosOpen.value
+}
 </script>
 
 <template>
   <div>
     <!-- Backdrop -->
-    <Transition name="fade">
-      <div v-if="isOpen" class="sidebar-backdrop" @click="$emit('close')"></div>
-    </Transition>
+    <div v-if="isOpen" class="sidebar-backdrop mobile-only" @click="$emit('close')"></div>
 
     <!-- Sidebar -->
-    <Transition name="slide">
-      <aside v-if="isOpen" class="sidebar">
+    <aside class="sidebar" :class="{ 'is-open': isOpen }">
         <div class="sidebar-header">
           <div class="logo">CDF APP</div>
-          <button class="close-btn" @click="$emit('close')">×</button>
+          <button class="close-btn mobile-only" @click="$emit('close')">×</button>
         </div>
 
         <nav class="sidebar-nav">
-          <RouterLink to="/" class="nav-item" @click="$emit('close')">
-            <span class="icon">🏠</span> Dashboard
+          <!-- Vista para Colaboradores -->
+          <RouterLink v-if="authStore.isColaborador" to="/produccion" class="nav-item" @click="$emit('close')">
+            <span class="material-icons">precision_manufacturing</span> Producción
           </RouterLink>
-          <RouterLink to="/envasado" class="nav-item" @click="$emit('close')">
-            <span class="icon">📦</span> Envasado
-          </RouterLink>
-          
-          <!-- Menu Productos con Submenu -->
-          <div class="menu-group">
-            <button 
-              class="nav-item group-toggle" 
-              :class="{ 'is-active': isProductosOpen }"
-              @click="toggleProductos"
-            >
-              <span class="icon">🍎</span> Productos
-              <span class="arrow" :class="{ 'is-rotated': isProductosOpen }">▼</span>
-            </button>
-            
-            <Transition name="expand">
-              <div v-if="isProductosOpen" class="submenu">
-                <RouterLink to="/productos/nuevo" class="submenu-item" @click="$emit('close')">
-                  <span class="dot">•</span> Alta de producto
-                </RouterLink>
-                <RouterLink to="/productos" class="submenu-item" @click="$emit('close')">
-                  <span class="dot">•</span> Ver Productos
-                </RouterLink>
-                <RouterLink to="/productos/editar" class="submenu-item" @click="$emit('close')">
-                  <span class="dot">•</span> Modificar Producto
-                </RouterLink>
-              </div>
-            </Transition>
-          </div>
 
-          <RouterLink to="/inventario" class="nav-item" @click="$emit('close')">
-            <span class="icon">📋</span> Inventario
-          </RouterLink>
+          <!-- Vistas para Admin -->
+          <template v-if="!authStore.isColaborador">
+            <RouterLink to="/" class="nav-item" @click="$emit('close')">
+              <span class="material-icons">dashboard</span> Dashboard
+            </RouterLink>
+            <RouterLink to="/envasado" class="nav-item" @click="$emit('close')">
+              <span class="material-icons">inventory_2</span> Envasado
+            </RouterLink>
+            
+            <!-- Menu Productos con Submenu -->
+            <div class="menu-group">
+              <button 
+                class="nav-item group-toggle" 
+                :class="{ 'is-active': isProductosOpen }"
+                @click="toggleProductos"
+              >
+                <span class="material-icons">category</span> Productos
+                <span class="material-icons arrow" :class="{ 'is-rotated': isProductosOpen }">expand_more</span>
+              </button>
+              
+              <Transition name="expand">
+                <div v-if="isProductosOpen" class="submenu">
+                  <RouterLink to="/productos/nuevo" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Alta de producto
+                  </RouterLink>
+                  <RouterLink to="/productos" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Ver Productos
+                  </RouterLink>
+                  <RouterLink to="/productos/editar" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Modificar Producto
+                  </RouterLink>
+                </div>
+              </Transition>
+            </div>
+            
+            <!-- Menu Existencias con Submenu -->
+            <div class="menu-group">
+              <button 
+                class="nav-item group-toggle" 
+                :class="{ 'is-active': isExistenciasOpen }"
+                @click="toggleExistencias"
+              >
+                <span class="material-icons">store</span> Existencias
+                <span class="material-icons arrow" :class="{ 'is-rotated': isExistenciasOpen }">expand_more</span>
+              </button>
+              
+              <Transition name="expand">
+                <div v-if="isExistenciasOpen" class="submenu">
+                  <RouterLink to="/existencias/nuevo" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Agregar Existencia
+                  </RouterLink>
+                  <RouterLink to="/existencias/ver" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Ver Existencias
+                  </RouterLink>
+                </div>
+              </Transition>
+            </div>
+            
+            <RouterLink to="/ubicaciones" class="nav-item" @click="$emit('close')">
+              <span class="material-icons">place</span> Ubicaciones
+            </RouterLink>
+
+            <RouterLink to="/proveedores" class="nav-item" @click="$emit('close')">
+              <span class="material-icons">local_shipping</span> Proveedores
+            </RouterLink>
+
+            <!-- Menu Usuarios con Submenu -->
+            <div class="menu-group">
+              <button 
+                class="nav-item group-toggle" 
+                :class="{ 'is-active': isUsuariosOpen }"
+                @click="toggleUsuarios"
+              >
+                <span class="material-icons">people</span> Usuarios
+                <span class="material-icons arrow" :class="{ 'is-rotated': isUsuariosOpen }">expand_more</span>
+              </button>
+              
+              <Transition name="expand">
+                <div v-if="isUsuariosOpen" class="submenu">
+                  <RouterLink to="/usuarios" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Gestión de Usuarios
+                  </RouterLink>
+                  <RouterLink to="/roles" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Gestión de Roles
+                  </RouterLink>
+                </div>
+              </Transition>
+            </div>
+
+            </template>
+
           <div class="nav-spacer"></div>
           <button class="nav-item logout-btn" @click="handleLogout">
-            <span class="icon">🚪</span> Salir
+            <span class="material-icons">logout</span> Salir
           </button>
         </nav>
       </aside>
-    </Transition>
   </div>
 </template>
 
@@ -108,6 +174,18 @@ const toggleProductos = () => {
   z-index: 1001;
   display: flex;
   flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.is-open {
+  transform: translateX(0);
+}
+
+@media (min-width: 1024px) {
+  .sidebar {
+    display: none; /* Hide sidebar on desktop, we'll use top nav */
+  }
 }
 
 .sidebar-header {

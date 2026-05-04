@@ -2,6 +2,7 @@ package com.cdfapp.app.controller;
 
 import com.cdfapp.app.dto.CrearProductoDto;
 import com.cdfapp.app.dto.ProductoDtoResponse;
+import com.cdfapp.app.dto.ProductoFeteadoDTO;
 import com.cdfapp.app.entity.Producto;
 import com.cdfapp.app.service.ProductoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,12 @@ public class ProductoController {
     @GetMapping
     public List<ProductoDtoResponse> obtenerTodosLosProductos() {
         return productoService.obtenerTodosLosProductos();
+    }
+
+    @GetMapping("/feteados")
+    public ResponseEntity<List<ProductoFeteadoDTO>> obtenerProductosFeteados() {
+        List<ProductoFeteadoDTO> productos = productoService.obtenerProductosFeteados();
+        return ResponseEntity.ok(productos);
     }
 
     @GetMapping("/{id}")

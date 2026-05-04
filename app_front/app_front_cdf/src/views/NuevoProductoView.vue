@@ -1,23 +1,40 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
 import BaseCheckbox from '../components/BaseCheckbox.vue'
+import BaseSelect from '../components/BaseSelect.vue'
 
 const router = useRouter()
 const isSubmitting = ref(false)
 const error = ref('')
 const success = ref(false)
+const proveedores = ref([])
 
 const form = ref({
   codigo: '',
   nombre: '',
   picable: false,
   feteable: false,
-  kilosPorBolsita: ''
+  kilosPorBolsita: '',
+  proveedorId: ''
 })
+
+const fetchProveedores = async () => {
+  try {
+    const res = await fetch('/api/proveedores')
+    if (res.ok) {
+      const data = await res.json()
+      proveedores.value = data.map(p => ({ value: p.id, label: p.nombre }))
+    }
+  } catch (err) {
+    console.error('Error fetching suppliers:', err)
+  }
+}
+
+onMounted(fetchProveedores)
 
 const handleSubmit = async () => {
   isSubmitting.value = true
@@ -29,11 +46,11 @@ const handleSubmit = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // 'Authorization': `Bearer ${token}` // Add auth if needed, assuming handled by interceptors or similar
       },
       body: JSON.stringify({
         ...form.value,
-        kilosPorBolsita: parseFloat(form.value.kilosPorBolsita) || 0
+        kilosPorBolsita: parseFloat(form.value.kilosPorBolsita) || 0,
+        proveedorId: Number(form.value.proveedorId)
       })
     })
 
@@ -48,7 +65,8 @@ const handleSubmit = async () => {
       nombre: '',
       picable: false,
       feteable: false,
-      kilosPorBolsita: ''
+      kilosPorBolsita: '',
+      proveedorId: ''
     }
     
     setTimeout(() => {
@@ -87,6 +105,14 @@ const handleSubmit = async () => {
           v-model="form.nombre" 
           label="Nombre del Producto" 
           placeholder="Ej: Queso Tybo" 
+          required
+        />
+
+        <BaseSelect 
+          v-model="form.proveedorId" 
+          label="Proveedor *" 
+          placeholder="Selecciona un proveedor"
+          :options="proveedores"
           required
         />
 

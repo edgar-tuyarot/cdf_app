@@ -5,6 +5,13 @@ import LoginView from '../views/LoginView.vue'
 import NuevoProductoView from '../views/NuevoProductoView.vue'
 import ListaProductosView from '../views/ListaProductosView.vue'
 import ModificarProductoView from '../views/ModificarProductoView.vue'
+import ExistenciasView from '../views/ExistenciasView.vue'
+import ListaExistenciasView from '../views/ListaExistenciasView.vue'
+import UbicacionesView from '../views/UbicacionesView.vue'
+import UsuariosView from '../views/UsuariosView.vue'
+import RolesView from '../views/RolesView.vue'
+import ProveedoresView from '../views/ProveedoresView.vue'
+import ProduccionView from '../views/ProduccionView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -19,6 +26,12 @@ const router = createRouter({
       path: '/',
       name: 'dashboard',
       component: DashboardView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/produccion',
+      name: 'produccion',
+      component: ProduccionView,
       meta: { requiresAuth: true }
     },
     {
@@ -44,17 +57,66 @@ const router = createRouter({
       name: 'modificar-producto',
       component: ModificarProductoView,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/existencias/nuevo',
+      name: 'nueva-existencia',
+      component: ExistenciasView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/existencias/ver',
+      name: 'ver-existencias',
+      component: ListaExistenciasView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/ubicaciones',
+      name: 'ubicaciones',
+      component: UbicacionesView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/usuarios',
+      name: 'usuarios',
+      component: UsuariosView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/roles',
+      name: 'roles',
+      component: RolesView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/proveedores',
+      name: 'proveedores',
+      component: ProveedoresView,
+      meta: { requiresAuth: true }
     }
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const authStore = useAuthStore()
+  
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
-  } else {
-    next()
+    return '/login'
   }
+
+  // Redirección por Rol: Colaborador solo puede ver Producción
+  if (authStore.isAuthenticated && authStore.isColaborador) {
+    if (to.path !== '/produccion') {
+      return '/produccion'
+    }
+  }
+
+  // Redirección de Dashboard para Admin (opcional, si queremos que Admin vea el Dashboard)
+  if (authStore.isAuthenticated && !authStore.isColaborador && to.path === '/produccion') {
+    return '/'
+  }
+
+  return true
 })
 
 export default router

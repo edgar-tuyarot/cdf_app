@@ -7,6 +7,7 @@ public record CrearProductoDto(
         String nombre,
         Boolean picable,
         Boolean feteable,
-        BigDecimal kilosPorBolsita
+        BigDecimal kilosPorBolsita,
+        Long proveedorId
 ) {
 }

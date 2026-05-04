@@ -42,7 +42,11 @@ const buscarStock = async () => {
 const registrarEnvasado = async () => {
   isSubmitting.value = true
   setTimeout(() => {
-    console.log('Envasado registrado', { ...form.value, codigo: codigo.value })
+    console.log('Envasado registrado', { 
+      ...form.value, 
+      codigo_producto: codigo.value,
+      envasador: authStore.user?.usuario 
+    })
     isSubmitting.value = false
     stockDisponible.value = null
     codigo.value = ''

@@ -5,6 +5,8 @@
       :type="type" 
       :placeholder="placeholder"
       :value="modelValue"
+      :list="list"
+      :disabled="disabled"
       @input="$emit('update:modelValue', $event.target.value)"
       class="base-input"
     />
@@ -13,9 +15,11 @@
 
 <script setup>
 defineProps({
-  modelValue: String,
+  modelValue: [String, Number],
   label: String,
   placeholder: String,
+  list: String,
+  disabled: Boolean,
   type: {
     type: String,
     default: 'text'
@@ -53,5 +57,13 @@ defineEmits(['update:modelValue'])
 .base-input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 4px rgba(230, 107, 30, 0.1);
+}
+
+.base-input:disabled {
+  background-color: #F5F5F5;
+  border-color: #E0E0E0;
+  color: #9E9E9E;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 </style>
