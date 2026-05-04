@@ -749,10 +749,15 @@ onMounted(refreshData)
 }
 
 /* Cards */
+.search-section {
+  margin-top: var(--space-md);
+}
+
 .content-scroll-area {
   flex: 1;
   overflow-y: auto;
   padding-bottom: 20px;
+  margin-top: var(--space-md);
 }
 
 .mobile-card {

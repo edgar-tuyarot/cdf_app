@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
@@ -9,8 +10,12 @@ const isLoading = ref(true)
 const error = ref('')
 const searchQuery = ref('')
 const expandedRow = ref(null)
+const router = useRouter()
 const sortKey = ref('nombre')
 const sortOrder = ref('asc')
+const fileInput = ref(null)
+const isUploading = ref(false)
+const uploadMessage = ref({ text: '', type: '' })
 
 const fetchProductos = async () => {
   isLoading.value = true
@@ -30,21 +35,21 @@ const fetchProductos = async () => {
 }
 
 const filteredAndSortedProductos = computed(() => {
-  let result = [...productos.value]
+  let result = Array.isArray(productos.value) ? [...productos.value] : []
   
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     result = result.filter(p => 
-      p.codigo.toLowerCase().includes(query) || 
-      p.nombre.toLowerCase().includes(query)
+      (p.codigo?.toLowerCase() || '').includes(query) || 
+      (p.nombre?.toLowerCase() || '').includes(query)
     )
   }
   
   result.sort((a, b) => {
-    let valA = a[sortKey.value]
-    let valB = b[sortKey.value]
+    let valA = a[sortKey.value] ?? ''
+    let valB = b[sortKey.value] ?? ''
     
-    if (typeof valA === 'string') {
+    if (typeof valA === 'string' && typeof valB === 'string') {
       valA = valA.toLowerCase()
       valB = valB.toLowerCase()
     }
@@ -76,6 +81,48 @@ const toggleRow = (codigo) => {
   }
 }
 
+const triggerFileInput = () => {
+  fileInput.value.click()
+}
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  isUploading.value = true
+  uploadMessage.value = { text: 'Subiendo archivo...', type: 'info' }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const response = await fetch('/api/productos/upload', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || 'Error al subir el archivo')
+    }
+
+    uploadMessage.value = { text: '¡Archivo subido y procesado con éxito!', type: 'success' }
+    fetchProductos() // Recargar la lista
+    
+    // Limpiar mensaje después de unos segundos
+    setTimeout(() => {
+      uploadMessage.value = { text: '', type: '' }
+    }, 5000)
+
+  } catch (err) {
+    uploadMessage.value = { text: err.message, type: 'error' }
+  } finally {
+    isUploading.value = false
+    // Limpiar el input para permitir subir el mismo archivo si es necesario
+    if (event.target) event.target.value = ''
+  }
+}
+
 onMounted(() => {
   fetchProductos()
 })
@@ -89,9 +136,21 @@ onMounted(() => {
           <h2>Listado de Productos</h2>
           <p>Consulta todos los productos registrados</p>
         </div>
-        <BaseButton @click="fetchProductos" variant="secondary" :disabled="isLoading">
-          {{ isLoading ? '...' : '🔄 Actualizar' }}
-        </BaseButton>
+        <div class="header-actions">
+          <input 
+            type="file" 
+            ref="fileInput" 
+            @change="handleFileUpload" 
+            style="display: none" 
+            accept=".xlsx, .xls"
+          >
+          <BaseButton @click="triggerFileInput" variant="minimal" size="small" :disabled="isUploading || isLoading">
+            {{ isUploading ? 'Subiendo...' : 'Importar Excel' }}
+          </BaseButton>
+          <BaseButton @click="fetchProductos" variant="minimal" size="small" :disabled="isLoading">
+            {{ isLoading ? '...' : 'Actualizar' }}
+          </BaseButton>
+        </div>
       </div>
     </header>
 
@@ -101,6 +160,13 @@ onMounted(() => {
         placeholder="🔍 Buscar por código o nombre..." 
         class="search-input"
       />
+    </div>
+
+    <!-- Notification Area -->
+    <div v-if="uploadMessage.text" :class="['upload-notification', uploadMessage.type]">
+      <span class="icon">{{ uploadMessage.type === 'success' ? '✅' : (uploadMessage.type === 'error' ? '⚠️' : 'ℹ️') }}</span>
+      <p>{{ uploadMessage.text }}</p>
+      <button class="close-btn" @click="uploadMessage.text = ''">×</button>
     </div>
 
     <div class="list-container">
@@ -152,8 +218,8 @@ onMounted(() => {
                 {{ p.picable ? 'Sí' : 'No' }}
               </td>
               <td class="text-right desktop-only">
-                <BaseButton variant="secondary" size="small">
-                  <span class="material-icons">edit</span>
+                <BaseButton variant="minimal" size="small" @click.stop="router.push('/productos/editar/' + p.codigo)">
+                  Editar
                 </BaseButton>
               </td>
               <td class="text-right mobile-only">
@@ -179,8 +245,8 @@ onMounted(() => {
                   </table>
                   
                   <div class="details-actions">
-                    <BaseButton variant="secondary" size="small" class="btn-mini">
-                      <span class="material-icons">edit</span> Modificar
+                    <BaseButton variant="minimal" size="small" @click.stop="router.push('/productos/editar/' + p.codigo)">
+                      Modificar
                     </BaseButton>
                   </div>
                 </div>
@@ -189,7 +255,7 @@ onMounted(() => {
           </tbody>
         </table>
         
-        <div v-if="filteredProductos.length === 0" class="empty-state">
+        <div v-if="filteredAndSortedProductos.length === 0" class="empty-state">
           No se encontraron productos que coincidan con "{{ searchQuery }}".
         </div>
       </div>
@@ -207,6 +273,65 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-md);
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.upload-notification {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border);
+  animation: fadeIn 0.3s ease;
+}
+
+.upload-notification.info {
+  background-color: #E3F2FD;
+  color: #1976D2;
+  border-color: #BBDEFB;
+}
+
+.upload-notification.success {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  border-color: #C8E6C9;
+}
+
+.upload-notification.error {
+  background-color: #FFEBEE;
+  color: #C62828;
+  border-color: #FFCDD2;
+}
+
+.upload-notification p {
+  flex: 1;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.close-btn:hover {
+  opacity: 1;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .search-bar {

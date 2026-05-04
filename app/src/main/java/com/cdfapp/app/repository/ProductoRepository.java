@@ -11,6 +11,8 @@ import java.util.Optional;
 @Repository
 public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
+    @Query("SELECT p FROM Producto p LEFT JOIN FETCH p.proveedor")
+    List<Producto> findAllWithProveedor();
 
     Optional<Producto> findByCodigo(String codigo);
 

@@ -3,14 +3,20 @@ package com.cdfapp.app.repository;
 import com.cdfapp.app.dto.ExistenciaSummaryDTO;
 import com.cdfapp.app.dto.ProductoFeteadoDTO;
 import com.cdfapp.app.entity.Existencia;
+import com.cdfapp.app.entity.Producto;
+import com.cdfapp.app.entity.Ubicacion;
+import com.cdfapp.app.enums.EstadoProducto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ExistenciaRepository extends JpaRepository<Existencia, Long> {
+
+    Optional<Existencia> findByProductoAndEstadoAndUbicacion(Producto producto, EstadoProducto estado, Ubicacion ubicacion);
 
     @Query("SELECT new com.cdfapp.app.dto.ExistenciaSummaryDTO(" +
             "p.codigo, " +

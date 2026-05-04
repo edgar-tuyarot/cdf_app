@@ -129,8 +129,8 @@ const deleteUsuario = async (id) => {
         <h2>Usuarios</h2>
         <p>Gestión de accesos y roles del sistema</p>
       </div>
-      <BaseButton v-if="!showForm" @click="openCreate">
-        <span class="material-icons">person_add</span> Nuevo Usuario
+      <BaseButton v-if="!showForm" @click="openCreate" variant="minimal" size="small">
+        Nuevo Usuario
       </BaseButton>
     </header>
 

@@ -1,5 +1,6 @@
 package com.cdfapp.app.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +19,7 @@ public class Producto {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String codigo;
 
     @Column(nullable = false)
@@ -30,17 +31,14 @@ public class Producto {
     @Column(nullable = false)
     private Boolean feteable;
 
-    //Calculos de conversiones estimados
     @Column
     private BigDecimal kilosPorBolsita;
 
-    //Relacion con el proveedor
     @ManyToOne
     @JoinColumn(name = "proveedor_id")
     private Proveedor proveedor;
 
-    @OneToMany
-    @JoinColumn(name = "producto_id")
-    private List<PedidoProducto> pedidoProducto;
-
+    @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
+    private List<PedidoProducto> pedidoItems;
 }

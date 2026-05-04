@@ -1,42 +1,35 @@
 package com.cdfapp.app.entity;
 
-
-import jakarta.persistence.Entity;
+import com.cdfapp.app.enums.EstadoProducto;
 import jakarta.persistence.*;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
+import lombok.*;
 
 @Entity
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 @Builder
-@Table(name = "pedidos_productos")
+@AllArgsConstructor
+@NoArgsConstructor
+@Table(name = "pedido_productos")
 public class PedidoProducto {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "pedido_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pedido_id", nullable = false)
+    @EqualsAndHashCode.Exclude // Rompe el ciclo en equals/hashCode
+    @ToString.Exclude // Rompe el ciclo en toString
     private Pedido pedido;
 
-    @ManyToOne
-    @JoinColumn(name = "producto_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "producto_id", nullable = false)
     private Producto producto;
 
     @Column(nullable = false)
-    private Integer unidades;
+    private Integer cantidad;
 
-    @Column(nullable = false)
-    private BigDecimal kilos;
-
-
-
-
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo", nullable = false)
+    private EstadoProducto estado;
 }

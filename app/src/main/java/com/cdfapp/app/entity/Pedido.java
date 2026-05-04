@@ -1,13 +1,11 @@
 package com.cdfapp.app.entity;
 
+import com.cdfapp.app.enums.EstadoPedido;
 import jakarta.persistence.*;
-import jdk.jfr.Timestamp;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -16,28 +14,31 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "pedidos")
+@ToString(exclude = "items")
 public class Pedido {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToMany
-    @JoinColumn(name = "pedido_id")
-    private List<PedidoProducto> pedidoProducto;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(nullable = false)
+    private Date fecha;
 
-    @ManyToOne
-    @JoinColumn(name = "sucursal_id")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoPedido estado;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sucursal_id", nullable = false)
     private Sucursal sucursal;
 
-    @Column
-    @Timestamp
-    private LocalDateTime fecha;
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<PedidoProducto> items = new ArrayList<>();
 
-
-    @PrePersist
-    public void prePersist() {
-        this.fecha = LocalDateTime.now();
+    public void addItem(PedidoProducto item) {
+        items.add(item);
+        item.setPedido(this);
     }
-
 }

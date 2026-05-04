@@ -53,7 +53,7 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/productos/editar',
+      path: '/productos/editar/:id?',
       name: 'modificar-producto',
       component: ModificarProductoView,
       meta: { requiresAuth: true }
@@ -92,6 +92,24 @@ const router = createRouter({
       path: '/proveedores',
       name: 'proveedores',
       component: ProveedoresView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/pedidos/actuales',
+      name: 'pedidos-actuales',
+      component: () => import('../views/PedidosActualesView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/pedidos/historial',
+      name: 'pedidos-historial',
+      component: () => import('../views/PedidosView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/pedidos/nuevo',
+      name: 'nuevo-pedido',
+      component: () => import('../views/CrearPedidoView.vue'),
       meta: { requiresAuth: true }
     }
   ],

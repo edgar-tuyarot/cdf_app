@@ -25,9 +25,18 @@ const handleLogout = () => {
         <RouterLink to="/" class="nav-link">
           <span class="material-icons">dashboard</span> Dashboard
         </RouterLink>
-        <RouterLink to="/envasado" class="nav-link">
-          <span class="material-icons">inventory_2</span> Envasado
-        </RouterLink>
+        
+        <!-- Dropdown Pedidos -->
+        <div class="dropdown">
+          <button class="dropdown-trigger">
+            <span class="material-icons">shopping_cart</span> Pedidos <span class="material-icons arrow">expand_more</span>
+          </button>
+          <div class="dropdown-content">
+            <RouterLink to="/pedidos/actuales">Pedidos Actuales</RouterLink>
+            <RouterLink to="/pedidos/historial">Historial de Pedidos</RouterLink>
+            <RouterLink to="/pedidos/nuevo">Crear Pedido</RouterLink>
+          </div>
+        </div>
         
         <!-- Dropdown Productos -->
         <div class="dropdown">

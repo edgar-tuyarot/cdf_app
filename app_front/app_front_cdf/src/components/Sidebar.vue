@@ -12,6 +12,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const isProductosOpen = ref(false)
 const isExistenciasOpen = ref(false)
+const isPedidosOpen = ref(false)
 const isUsuariosOpen = ref(false)
 
 const handleLogout = () => {
@@ -26,6 +27,10 @@ const toggleProductos = () => {
 
 const toggleExistencias = () => {
   isExistenciasOpen.value = !isExistenciasOpen.value
+}
+
+const togglePedidos = () => {
+  isPedidosOpen.value = !isPedidosOpen.value
 }
 
 const toggleUsuarios = () => {
@@ -56,9 +61,32 @@ const toggleUsuarios = () => {
             <RouterLink to="/" class="nav-item" @click="$emit('close')">
               <span class="material-icons">dashboard</span> Dashboard
             </RouterLink>
-            <RouterLink to="/envasado" class="nav-item" @click="$emit('close')">
-              <span class="material-icons">inventory_2</span> Envasado
-            </RouterLink>
+            
+            <!-- Menu Pedidos con Submenu -->
+            <div class="menu-group">
+              <button 
+                class="nav-item group-toggle" 
+                :class="{ 'is-active': isPedidosOpen }"
+                @click="togglePedidos"
+              >
+                <span class="material-icons">shopping_cart</span> Pedidos
+                <span class="material-icons arrow" :class="{ 'is-rotated': isPedidosOpen }">expand_more</span>
+              </button>
+              
+              <Transition name="expand">
+                <div v-if="isPedidosOpen" class="submenu">
+                  <RouterLink to="/pedidos/actuales" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Pedidos Actuales
+                  </RouterLink>
+                  <RouterLink to="/pedidos/historial" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Historial de Pedidos
+                  </RouterLink>
+                  <RouterLink to="/pedidos/nuevo" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Crear Pedido
+                  </RouterLink>
+                </div>
+              </Transition>
+            </div>
             
             <!-- Menu Productos con Submenu -->
             <div class="menu-group">
