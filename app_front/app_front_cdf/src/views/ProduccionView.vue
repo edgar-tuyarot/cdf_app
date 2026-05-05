@@ -21,11 +21,12 @@ const productosFraccionados = ref([]) // Para la pestaña de Fraccionar
 const error = ref('')
 
 // Estados para formulario de Fraccionar
-const operationCodigo = ref('')
-const operationStock = ref(null)
+const storedFrac = JSON.parse(localStorage.getItem('produccion_fraccionar') || 'null')
+const operationCodigo = ref(storedFrac?.codigo || '')
+const operationStock = ref(storedFrac?.stock || null)
 const isSearchingOperation = ref(false)
 const isSubmittingOperation = ref(false)
-const operationForm = ref({
+const operationForm = ref(storedFrac?.form || {
   cantidad: '',
   pesoBruto: '',
   fracciones: '',
@@ -34,14 +35,31 @@ const operationForm = ref({
   peso: ''
 })
 
+watch([operationCodigo, operationStock, operationForm], () => {
+  localStorage.setItem('produccion_fraccionar', JSON.stringify({
+    codigo: operationCodigo.value,
+    stock: operationStock.value,
+    form: operationForm.value
+  }))
+}, { deep: true })
+
 // Estados para Envasar
-const selectedEnvasar = ref(null)
+const storedEnv = JSON.parse(localStorage.getItem('produccion_envasar') || 'null')
+const selectedEnvasar = ref(storedEnv?.selected || null)
 const isSubmittingEnvasado = ref(false)
-const envasarForm = ref({
+const envasarForm = ref(storedEnv?.form || {
   cantidad: '',
   peso: ''
 })
-const envasarSearchQuery = ref('')
+const envasarSearchQuery = ref(storedEnv?.query || '')
+
+watch([selectedEnvasar, envasarForm, envasarSearchQuery], () => {
+  localStorage.setItem('produccion_envasar', JSON.stringify({
+    selected: selectedEnvasar.value,
+    form: envasarForm.value,
+    query: envasarSearchQuery.value
+  }))
+}, { deep: true })
 
 // Cálculo de Peso Fraccionado (Bruto - Recorte - Decomiso)
 const pesoFraccionadosCalculado = computed(() => {

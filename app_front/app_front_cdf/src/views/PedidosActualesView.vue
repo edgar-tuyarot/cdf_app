@@ -28,8 +28,22 @@ const isSubmittingEdit = ref(false)
 const agregandoItem = ref(null) // pedidoId
 const nuevoItemCodigo = ref('')
 const nuevoItemFraccion = ref('')
-const nuevoItemPiezas = ref('')
-const isSubmittingAgregar = ref(false)
+const handleRowClick = (pedidoId, item) => {
+  const isPrep = isItemPreparado(pedidoId, item.productoCodigo)
+  if (isPrep) {
+    if (isEditandoEsteItem(pedidoId, item.productoCodigo)) {
+      cancelarEdicion()
+    } else {
+      iniciarEdicion(pedidoId, item.productoCodigo)
+    }
+  } else {
+    if (isPreparandoEsteItem(pedidoId, item)) {
+      cancelarPreparacion()
+    } else {
+      iniciarPreparacion(pedidoId, item)
+    }
+  }
+}
 
 const fetchPedidos = async () => {
   isLoading.value = true
@@ -423,155 +437,126 @@ const submitAgregarItem = async () => {
             <div
               v-for="item in (pedido.items || [])"
               :key="item.id"
-              class="item-row"
-              :class="{ 
-                'item-preparado': isItemPreparado(pedido.id, item.productoCodigo),
-                'item-activo': isPreparandoEsteItem(pedido.id, item)
-              }"
-            >
-              <!-- Info del item -->
-              <div class="item-main">
-                <div class="item-left">
-                  <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" class="material-icons check-icon">check_circle</span>
-                  <span v-else class="material-icons pending-icon">radio_button_unchecked</span>
-                  <div class="item-info">
-                    <div class="item-top">
-                      <span class="code-badge">{{ item.productoCodigo }}</span>
-                      <span :class="['tipo-badge', item.tipo === 'FETEADO' ? 'tipo-fet' : 'tipo-pieza']">
-                        {{ item.tipo }}
-                      </span>
+              <div
+                class="item-row"
+                :class="{ 
+                  'item-is-prepared': isItemPreparado(pedido.id, item.productoCodigo),
+                  'item-is-pending': !isItemPreparado(pedido.id, item.productoCodigo),
+                  'item-activo': isPreparandoEsteItem(pedido.id, item) || isEditandoEsteItem(pedido.id, item.productoCodigo)
+                }"
+              >
+                <!-- Info del item (reducida) -->
+                <div class="item-main" @click="handleRowClick(pedido.id, item)" style="cursor: pointer;">
+                  <div class="item-left">
+                    <div class="item-info">
+                      <span class="item-nombre" style="font-size: 1.05rem; font-weight: 700;">{{ item.productoNombre }}</span>
                     </div>
-                    <span class="item-nombre">{{ item.productoNombre }}</span>
+                  </div>
+                  <div class="item-right">
+                    <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" class="item-cantidad" style="font-weight: 800;">
+                      {{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}/{{ item.cantidad }}
+                    </span>
+                    <span v-else class="item-cantidad" style="font-weight: 800; font-size: 1.15rem;">
+                      {{ item.cantidad }}
+                    </span>
+                    <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" 
+                      :class="['cumpl-badge', getItemCumplimiento(pedido.id, item.productoCodigo) >= 100 ? 'cumpl-ok' : 'cumpl-parcial']"
+                    >
+                      {{ getItemCumplimiento(pedido.id, item.productoCodigo) }}%
+                    </span>
                   </div>
                 </div>
-                <div class="item-right">
-                  <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" class="item-cantidad">
-                    {{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}/{{ item.cantidad }}
-                  </span>
-                  <span v-else class="item-cantidad">{{ item.cantidad }}</span>
-                  <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" 
-                    :class="['cumpl-badge', getItemCumplimiento(pedido.id, item.productoCodigo) >= 100 ? 'cumpl-ok' : 'cumpl-parcial']"
-                    @click.stop="iniciarEdicion(pedido.id, item.productoCodigo)"
-                    title="Click para editar"
-                  >
-                    {{ getItemCumplimiento(pedido.id, item.productoCodigo) }}%
-                    <span class="material-icons edit-hint">edit</span>
-                  </span>
-                  <button 
-                    v-if="!isItemPreparado(pedido.id, item.productoCodigo) && !isPreparandoEsteItem(pedido.id, item)"
-                    class="prep-btn"
-                    @click.stop="iniciarPreparacion(pedido.id, item)"
-                  >
-                    Preparar
-                  </button>
-                </div>
-              </div>
 
-              <!-- Formulario de preparación inline -->
-              <Transition name="expand">
-                <div v-if="isPreparandoEsteItem(pedido.id, item)" class="prep-form">
-                  <div class="prep-form-header">
-                    <span class="material-icons">scale</span>
-                    <span>Pesar y confirmar <strong>{{ item.productoNombre }}</strong></span>
-                  </div>
-                  <div class="prep-form-row">
-                    <div class="prep-info-chips">
-                      <span class="prep-chip-info">
-                        <span class="plbl">Tipo</span>
-                        <span class="pval">{{ item.tipo }}</span>
-                      </span>
-                      <span class="prep-chip-info">
-                        <span class="plbl">Pedido</span>
-                        <span class="pval">{{ item.cantidad }}</span>
-                      </span>
+                <!-- Detalles y formulario expandidos -->
+                <Transition name="expand">
+                  <div v-if="isPreparandoEsteItem(pedido.id, item) || isEditandoEsteItem(pedido.id, item.productoCodigo)" class="item-expanded-full-width" @click.stop>
+                    
+                    <!-- Formulario de preparación inline -->
+                    <div v-if="isPreparandoEsteItem(pedido.id, item)" class="prep-form subtle-form-full">
+                      <table class="subtle-table">
+                        <tr>
+                          <td class="t-label" style="width:30%">CÓDIGO</td>
+                          <td class="t-label" style="width:35%">TIPO</td>
+                          <td class="t-label" style="width:35%">PEDIDO</td>
+                        </tr>
+                        <tr>
+                          <td class="t-val">{{ item.productoCodigo }}</td>
+                          <td class="t-val">{{ item.tipo }}</td>
+                          <td class="t-val">{{ item.cantidad }}</td>
+                        </tr>
+                        <tr>
+                          <td class="t-label spacer-top" colspan="2">Cant. {{ item.tipo === 'FETEADO' ? 'Fracciones' : 'Piezas' }}</td>
+                          <td class="t-label spacer-top">Peso Real (KG)</td>
+                        </tr>
+                        <tr>
+                          <td colspan="2">
+                            <input v-model="cantidadReal" type="number" class="t-input" placeholder="Ej: 20" required />
+                          </td>
+                          <td>
+                            <input v-model="pesoReal" type="number" step="0.001" class="t-input" placeholder="Ej: 1.250" required />
+                          </td>
+                        </tr>
+                      </table>
+
+                      <div class="prep-actions centered-actions">
+                        <button type="button" class="cancel-btn" @click.stop="cancelarPreparacion">
+                          Cancelar
+                        </button>
+                        <button 
+                          class="confirm-btn" 
+                          :disabled="isSubmittingPrep || !pesoReal || !cantidadReal"
+                          @click.stop="confirmarItem"
+                        >
+                          <span class="material-icons">{{ isSubmittingPrep ? 'sync' : 'check' }}</span>
+                          {{ isSubmittingPrep ? 'Enviando...' : 'Confirmar' }}
+                        </button>
+                      </div>
                     </div>
-                    <div class="inputs-row">
-                      <BaseInput 
-                        v-model="cantidadReal" 
-                        :label="item.tipo === 'FETEADO' ? 'Cant. Fracciones' : 'Cant. Piezas'" 
-                        type="number" 
-                        placeholder="Ej: 15"
-                        required
-                        class="prep-input"
-                      />
-                      <BaseInput 
-                        v-model="pesoReal" 
-                        label="Peso Real (KG)" 
-                        type="number" 
-                        step="0.001"
-                        placeholder="Ej: 1.250"
-                        required
-                        class="prep-input"
-                      />
-                    </div>
-                    <div class="prep-actions">
-                      <button type="button" class="cancel-btn" @click.stop="cancelarPreparacion">
-                        Cancelar
-                      </button>
-                      <button 
-                        class="confirm-btn" 
-                        :disabled="isSubmittingPrep || !pesoReal || !cantidadReal"
-                        @click.stop="confirmarItem"
-                      >
-                        <span class="material-icons">{{ isSubmittingPrep ? 'sync' : 'check' }}</span>
-                        {{ isSubmittingPrep ? 'Enviando...' : 'Confirmar' }}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </Transition>
-              <!-- Formulario de edición de item preparado -->
-              <Transition name="expand">
-                <div v-if="isEditandoEsteItem(pedido.id, item.productoCodigo)" class="prep-form edit-form">
-                  <div class="prep-form-header">
-                    <span class="material-icons">edit</span>
-                    <span>Editar <strong>{{ item.productoNombre }}</strong></span>
-                  </div>
-                  <div class="prep-form-row">
-                    <div class="prep-info-chips">
-                      <span class="prep-chip-info">
-                        <span class="plbl">Pedido</span>
-                        <span class="pval">{{ item.cantidad }}</span>
-                      </span>
-                      <span class="prep-chip-info">
-                        <span class="plbl">Preparado</span>
-                        <span class="pval">{{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}</span>
-                      </span>
-                    </div>
-                    <div class="inputs-row">
-                      <BaseInput 
-                        v-model="editCantidad" 
-                        :label="item.tipo === 'FETEADO' ? 'Cant. Fracciones' : 'Cant. Piezas'" 
-                        type="number" 
-                        required
-                        class="prep-input"
-                      />
-                      <BaseInput 
-                        v-model="editPeso" 
-                        label="Peso Real (KG)" 
-                        type="number" 
-                        step="0.001"
-                        required
-                        class="prep-input"
-                      />
-                    </div>
-                    <div class="prep-actions">
-                      <button type="button" class="cancel-btn" @click.stop="cancelarEdicion">
-                        Cancelar
-                      </button>
-                      <button 
-                        class="confirm-btn edit-confirm"
-                        :disabled="isSubmittingEdit || !editCantidad || !editPeso"
-                        @click.stop="submitEditItem"
-                      >
-                        <span class="material-icons">{{ isSubmittingEdit ? 'sync' : 'save' }}</span>
-                        {{ isSubmittingEdit ? 'Guardando...' : 'Guardar' }}
-                      </button>
+
+                    <!-- Formulario de edición de item preparado -->
+                    <div v-if="isEditandoEsteItem(pedido.id, item.productoCodigo)" class="prep-form subtle-form-full edit-form">
+                      <table class="subtle-table">
+                        <tr>
+                          <td class="t-label" style="width:30%">CÓDIGO</td>
+                          <td class="t-label" style="width:35%">PREPARADO</td>
+                          <td class="t-label" style="width:35%">PEDIDO</td>
+                        </tr>
+                        <tr>
+                          <td class="t-val">{{ item.productoCodigo }}</td>
+                          <td class="t-val">{{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}</td>
+                          <td class="t-val">{{ item.cantidad }}</td>
+                        </tr>
+                        <tr>
+                          <td class="t-label spacer-top" colspan="2">Cant. {{ item.tipo === 'FETEADO' ? 'Fracciones' : 'Piezas' }}</td>
+                          <td class="t-label spacer-top">Peso Real (KG)</td>
+                        </tr>
+                        <tr>
+                          <td colspan="2">
+                            <input v-model="editCantidad" type="number" class="t-input" required />
+                          </td>
+                          <td>
+                            <input v-model="editPeso" type="number" step="0.001" class="t-input" required />
+                          </td>
+                        </tr>
+                      </table>
+
+                      <div class="prep-actions centered-actions">
+                        <button type="button" class="cancel-btn" @click.stop="cancelarEdicion">
+                          Cancelar
+                        </button>
+                        <button 
+                          class="confirm-btn edit-confirm"
+                          :disabled="isSubmittingEdit || !editCantidad || !editPeso"
+                          @click.stop="submitEditItem"
+                        >
+                          <span class="material-icons">{{ isSubmittingEdit ? 'sync' : 'save' }}</span>
+                          {{ isSubmittingEdit ? 'Guardando...' : 'Guardar' }}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Transition>
-            </div>
+                </Transition>
+              </div>
           </div>
 
           <div class="detail-footer">
@@ -1366,5 +1351,82 @@ const submitAgregarItem = async () => {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   padding: 12px;
+}
+
+/* Expanded styles and row states */
+.item-is-prepared {
+  background-color: #F1F8E9;
+  border-bottom: 1px solid #C8E6C9;
+}
+
+.item-is-pending {
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #F0F0F0;
+}
+
+.item-expanded-full-width {
+  width: 100%;
+  border-top: 1px dashed var(--color-border);
+}
+
+.subtle-form-full {
+  background-color: transparent;
+  padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.subtle-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  table-layout: fixed;
+}
+
+.subtle-table td {
+  padding: 4px 4px 4px 0;
+  border: none;
+  vertical-align: middle;
+}
+
+.t-label {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.spacer-top {
+  padding-top: 14px !important;
+}
+
+.t-val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.t-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background-color: white;
+}
+
+.t-input:focus {
+  border-color: var(--color-primary);
+}
+
+.centered-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
 }
 </style>
