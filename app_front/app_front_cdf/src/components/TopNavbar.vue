@@ -47,6 +47,7 @@ const handleLogout = () => {
             <RouterLink to="/productos/nuevo">Alta de producto</RouterLink>
             <RouterLink to="/productos">Ver Productos</RouterLink>
             <RouterLink to="/productos/editar">Modificar Producto</RouterLink>
+            <RouterLink to="/productos/reglas-fraccionado">Reglas de Fraccionado</RouterLink>
           </div>
         </div>
 

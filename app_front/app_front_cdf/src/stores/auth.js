@@ -2,8 +2,9 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null)
-  const isAuthenticated = ref(false)
+  const storedUser = localStorage.getItem('auth_user')
+  const user = ref(storedUser ? JSON.parse(storedUser) : null)
+  const isAuthenticated = ref(!!storedUser)
 
   const isColaborador = computed(() => user.value?.rol === 'COLABORADOR')
 
@@ -30,6 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
           rol: data.rol || 'ADMIN' 
         }
         isAuthenticated.value = true
+        localStorage.setItem('auth_user', JSON.stringify(user.value))
         return { success: true, message: 'Sesión iniciada' }
       } else {
         // Si falló (redirigió a /api/auth/failure o devolvió error)
@@ -44,6 +46,7 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = () => {
     user.value = null
     isAuthenticated.value = false
+    localStorage.removeItem('auth_user')
   }
 
   return { user, isAuthenticated, isColaborador, login, logout }

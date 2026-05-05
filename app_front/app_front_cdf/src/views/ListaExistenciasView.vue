@@ -156,34 +156,36 @@ onMounted(fetchExistencias)
               <td colspan="10">
                 <div class="details-content fade-in">
                   <table class="detail-mini-table">
-                    <tr>
-                      <th>Ubicación</th>
-                      <td><span class="badge">{{ item.ubicacionNombre }}</span></td>
-                    </tr>
-                    <tr>
-                      <th>Piezas</th>
-                      <td><strong>{{ item.piezas }}</strong></td>
-                    </tr>
-                    <tr>
-                      <th>Kilos</th>
-                      <td><strong>{{ item.kilos.toFixed(3) }}</strong></td>
-                    </tr>
-                    <tr>
-                      <th>Fraccionados</th>
-                      <td><strong>{{ (item.feteados || 0).toFixed(0) }}</strong></td>
-                    </tr>
-                    <tr>
-                      <th>Envasados</th>
-                      <td><strong>{{ (item.envasados || 0).toFixed(0) }}</strong></td>
-                    </tr>
-                    <tr v-if="item.recortes">
-                      <th>Recortes</th>
-                      <td><strong>{{ item.recortes.toFixed(3) }} kg</strong></td>
-                    </tr>
-                    <tr v-if="item.decomisados">
-                      <th>Decomisados</th>
-                      <td class="warn-text"><strong>{{ item.decomisados.toFixed(3) }} kg</strong></td>
-                    </tr>
+                    <tbody>
+                      <tr>
+                        <th>Ubicación</th>
+                        <td><span class="badge">{{ item.ubicacionNombre }}</span></td>
+                      </tr>
+                      <tr>
+                        <th>Piezas</th>
+                        <td><strong>{{ item.piezas }}</strong></td>
+                      </tr>
+                      <tr>
+                        <th>Kilos</th>
+                        <td><strong>{{ item.kilos.toFixed(3) }}</strong></td>
+                      </tr>
+                      <tr>
+                        <th>Fraccionados</th>
+                        <td><strong>{{ (item.feteados || 0).toFixed(0) }}</strong></td>
+                      </tr>
+                      <tr>
+                        <th>Envasados</th>
+                        <td><strong>{{ (item.envasados || 0).toFixed(0) }}</strong></td>
+                      </tr>
+                      <tr v-if="item.recortes">
+                        <th>Recortes</th>
+                        <td><strong>{{ item.recortes.toFixed(3) }} kg</strong></td>
+                      </tr>
+                      <tr v-if="item.decomisados">
+                        <th>Decomisados</th>
+                        <td class="warn-text"><strong>{{ item.decomisados.toFixed(3) }} kg</strong></td>
+                      </tr>
+                    </tbody>
                   </table>
                 </div>
               </td>

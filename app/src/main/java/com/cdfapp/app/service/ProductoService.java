@@ -74,9 +74,10 @@ public class ProductoService {
             Existencia existencia;
             if (existenciaOpt.isPresent()) {
                 existencia = existenciaOpt.get();
-                BigDecimal kilosActuales = existencia.getKilos() != null ? existencia.getKilos() : BigDecimal.ZERO;
-                existencia.setKilos(kilosActuales.add(cantidad));
+                // REEMPLAZA el valor actual con el del Excel
+                existencia.setKilos(cantidad);
             } else {
+                // Si no existe, crea una nueva con el valor del Excel
                 existencia = Existencia.builder()
                         .producto(producto)
                         .estado(EstadoProducto.KILOS)
@@ -112,7 +113,6 @@ public class ProductoService {
     }
 
     public List<ProductoDtoResponse> obtenerTodosLosProductos() {
-        // Usamos el nuevo método optimizado
         return productoRepository.findAllWithProveedor().stream()
                 .map(producto -> new ProductoDtoResponse(
                         producto.getCodigo(),

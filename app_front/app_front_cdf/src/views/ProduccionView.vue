@@ -434,19 +434,6 @@ onMounted(refreshData)
             </button>
           </div>
 
-          <div v-if="!operationStock && productosFraccionados.length > 0" class="fraccionados-list">
-            <p class="list-title">Productos disponibles para fraccionar:</p>
-            <div v-for="item in productosFraccionados" :key="item.codigo" 
-                 class="fraccionado-item-mini" @click="seleccionarProductoParaOperacion(item)">
-              <div class="fraccionado-main">
-                <span class="fraccionado-code">{{ item.codigo }}</span>
-                <span class="fraccionado-name">{{ item.nombre }}</span>
-              </div>
-              <div class="fraccionado-badges">
-                <span class="badge pos">{{ Math.floor(item.existencia_posible) }} u (Posible)</span>
-              </div>
-            </div>
-          </div>
 
           <Transition name="expand">
             <div v-if="operationStock" class="op-info-box">

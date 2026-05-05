@@ -1,15 +1,10 @@
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
 import MainLayout from './layouts/MainLayout.vue'
-
-const route = useRoute()
-const isLoginPage = computed(() => route.path === '/login')
 </script>
 
 <template>
   <!-- If it's the login page, show without layout shell -->
-  <template v-if="isLoginPage">
+  <template v-if="$route && $route.path === '/login'">
     <RouterView />
   </template>
 

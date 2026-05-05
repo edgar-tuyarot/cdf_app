@@ -57,39 +57,32 @@ const toggleUsuarios = () => {
           <template v-if="authStore.isColaborador">
             <RouterLink 
               to="/produccion?tab=existencias" 
-              class="nav-item" 
-              :class="{ 'active-tab': currentTab === 'existencias' }"
+              class="nav-item colab-tab" 
+              :class="{ 'is-active': route.path === '/produccion' && currentTab === 'existencias' }"
               @click="$emit('close')"
             >
               Existencias
             </RouterLink>
             <RouterLink 
-              to="/produccion?tab=productos" 
-              class="nav-item" 
-              :class="{ 'active-tab': currentTab === 'productos' }"
-              @click="$emit('close')"
-            >
-              Productos
-            </RouterLink>
-            <RouterLink 
               to="/produccion?tab=fraccionar" 
-              class="nav-item" 
-              :class="{ 'active-tab': currentTab === 'fraccionar' }"
+              class="nav-item colab-tab" 
+              :class="{ 'is-active': route.path === '/produccion' && currentTab === 'fraccionar' }"
               @click="$emit('close')"
             >
               Fraccionar
             </RouterLink>
             <RouterLink 
               to="/produccion?tab=envasar" 
-              class="nav-item" 
-              :class="{ 'active-tab': currentTab === 'envasar' }"
+              class="nav-item colab-tab" 
+              :class="{ 'is-active': route.path === '/produccion' && currentTab === 'envasar' }"
               @click="$emit('close')"
             >
               Envasar
             </RouterLink>
             <RouterLink 
               to="/pedidos/actuales" 
-              class="nav-item" 
+              class="nav-item colab-tab" 
+              :class="{ 'is-active': route.path === '/pedidos/actuales' }"
               @click="$emit('close')"
             >
               Pedidos
@@ -310,14 +303,14 @@ const toggleUsuarios = () => {
 }
 
 /* Active state for items using unique paths (admin menu) */
-.nav-item.router-link-exact-active:not([class*="active-tab"]) {
+.nav-item.router-link-exact-active:not(.colab-tab) {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-border);
 }
 
 /* Active state for collaborator tab items */
-.nav-item.active-tab {
+.nav-item.colab-tab.is-active {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-border);

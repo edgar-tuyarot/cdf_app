@@ -59,6 +59,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/productos/reglas-fraccionado',
+      name: 'reglas-fraccionado',
+      component: () => import('../views/ReglasFraccionadoView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/existencias/nuevo',
       name: 'nueva-existencia',
       component: ExistenciasView,
