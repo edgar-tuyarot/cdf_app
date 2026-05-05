@@ -1,11 +1,15 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
+import { useAuthStore } from '../stores/auth'
 
 // Estado global y de navegación
-const activeTab = ref('existencias') // existencias, productos, fraccionar, envasar
+const route = useRoute()
+const authStore = useAuthStore()
+const activeTab = computed(() => route.query.tab || 'existencias')
 const isLoading = ref(false)
 const searchQuery = ref('')
 const expandedRow = ref(null)
@@ -13,22 +17,31 @@ const expandedRow = ref(null)
 // Datos
 const productos = ref([])
 const existencias = ref([])
-const productosFraccionados = ref([]) // Para la pestaña de Envasar
+const productosFraccionados = ref([]) // Para la pestaña de Fraccionar
 const error = ref('')
 
-// Estados para formularios de operación
+// Estados para formulario de Fraccionar
 const operationCodigo = ref('')
 const operationStock = ref(null)
 const isSearchingOperation = ref(false)
 const isSubmittingOperation = ref(false)
 const operationForm = ref({
-  cantidad: '', // Piezas a fraccionar
+  cantidad: '',
   pesoBruto: '',
   fracciones: '',
   decomiso: '',
   recorte: '',
-  peso: '' // Este será el peso fraccionados calculado para Fraccionar, o manual para Envasar
+  peso: ''
 })
+
+// Estados para Envasar
+const selectedEnvasar = ref(null)
+const isSubmittingEnvasado = ref(false)
+const envasarForm = ref({
+  cantidad: '',
+  peso: ''
+})
+const envasarSearchQuery = ref('')
 
 // Cálculo de Peso Fraccionado (Bruto - Recorte - Decomiso)
 const pesoFraccionadosCalculado = computed(() => {
@@ -55,7 +68,7 @@ const fetchExistencias = async () => {
   } catch (err) { console.error('Error existencias:', err) }
 }
 
-// Fetch de Productos Fraccionados (para Envasar)
+// Fetch de Productos Fraccionados (para Fraccionar)
 const fetchProductosFraccionados = async () => {
   try {
     isLoading.value = true
@@ -72,8 +85,71 @@ const refreshData = async () => {
   isLoading.value = true
   error.value = ''
   await Promise.all([fetchProductos(), fetchExistencias()])
-  if (activeTab.value === 'envasar' || activeTab.value === 'fraccionar') await fetchProductosFraccionados()
+  if (activeTab.value === 'fraccionar') await fetchProductosFraccionados()
   isLoading.value = false
+}
+
+// Existencias con feteados > 0 (para envasar)
+const existenciasConFeteados = computed(() => {
+  let result = existencias.value.filter(e => (e.feteados || 0) > 0)
+  if (envasarSearchQuery.value) {
+    const q = envasarSearchQuery.value.toLowerCase()
+    result = result.filter(e =>
+      e.codigo_producto.toLowerCase().includes(q) ||
+      e.nombre.toLowerCase().includes(q)
+    )
+  }
+  return result
+})
+
+const seleccionarParaEnvasar = (item) => {
+  selectedEnvasar.value = {
+    codigo: item.codigo_producto,
+    nombre: item.nombre,
+    feteados: item.feteados || 0,
+    ubicacionId: item.ubicacionId || item.ubicacion_id || 1,
+    ubicacionNombre: item.ubicacionNombre || '—'
+  }
+  envasarForm.value = { cantidad: '', peso: '' }
+}
+
+const cancelarEnvasar = () => {
+  selectedEnvasar.value = null
+  envasarForm.value = { cantidad: '', peso: '' }
+}
+
+const submitEnvasado = async () => {
+  isSubmittingEnvasado.value = true
+  try {
+    const payload = {
+      codigo: selectedEnvasar.value.codigo,
+      ubicacionId: selectedEnvasar.value.ubicacionId,
+      usuarioId: authStore.user?.id || 1,
+      cantidad: parseInt(envasarForm.value.cantidad) || 0,
+      peso: parseFloat(envasarForm.value.peso) || 0
+    }
+
+    const response = await fetch('/api/procesos/envasar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || 'Error al registrar envasado')
+    }
+
+    alert('Envasado registrado con éxito')
+    selectedEnvasar.value = null
+    envasarForm.value = { cantidad: '', peso: '' }
+    await refreshData()
+  } catch (err) {
+    console.error('Error al registrar envasado:', err)
+    alert(`Error: ${err.message}`)
+  } finally {
+    isSubmittingEnvasado.value = false
+  }
 }
 
 // Lógica de Operaciones (Fetear/Envasar)
@@ -83,7 +159,8 @@ const seleccionarProductoParaOperacion = (item) => {
     nombre: item.nombre,
     piezas: item.existencia_feteados || 0,
     kilos: item.existencia_posible || 0,
-    ubicacionNombre: 'Fraccionado'
+    ubicacionId: item.ubicacionId || item.ubicacion_id || 1,
+    ubicacionNombre: item.ubicacionNombre || 'Fraccionado'
   }
 }
 
@@ -100,7 +177,10 @@ const buscarStockOperacion = async () => {
     if (activeTab.value === 'fraccionar') {
       const foundExistencia = existencias.value.find(e => e.codigo_producto === operationCodigo.value)
       if (foundExistencia) {
-        operationStock.value = { ...foundExistencia }
+        operationStock.value = { 
+          ...foundExistencia,
+          ubicacionId: foundExistencia.ubicacionId || foundExistencia.ubicacion_id || 1
+        }
       } else {
         alert('Producto no encontrado')
         operationStock.value = null
@@ -113,32 +193,42 @@ const buscarStockOperacion = async () => {
   isSearchingOperation.value = false
 }
 
-const submitOperacion = async () => {
+const submitFraccionado = async () => {
   isSubmittingOperation.value = true
-  const tipo = activeTab.value === 'fraccionar' ? 'Fraccionado' : 'Envasado'
-  
-  // Mock de registro
-  setTimeout(async () => {
-    console.log(`${tipo} registrado`, {
+  try {
+    const payload = {
       codigo: operationCodigo.value,
-      ...operationForm.value
+      ubicacionId: operationStock.value?.ubicacionId || 1,
+      usuarioId: authStore.user?.id || 1,
+      recortes: parseFloat(operationForm.value.recorte) || 0,
+      decomisos: parseFloat(operationForm.value.decomiso) || 0,
+      fracciones: parseInt(operationForm.value.fracciones) || 0,
+      piezas_utilizadas: parseInt(operationForm.value.cantidad) || 0,
+      peso_consumido: parseFloat(operationForm.value.pesoBruto) || 0
+    }
+
+    const response = await fetch('/api/procesos/fraccionar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     })
-    alert(`${tipo} registrado con éxito`)
-    
-    // Limpiar y refrescar
-    isSubmittingOperation.value = false
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || 'Error al registrar fraccionado')
+    }
+
+    alert('Fraccionado registrado con éxito')
     operationStock.value = null
     operationCodigo.value = ''
-    operationForm.value = { 
-      cantidad: '', 
-      pesoBruto: '', 
-      fracciones: '', 
-      decomiso: '', 
-      recorte: '', 
-      peso: '' 
-    }
+    operationForm.value = { cantidad: '', pesoBruto: '', fracciones: '', decomiso: '', recorte: '', peso: '' }
     await refreshData()
-  }, 1000)
+  } catch (err) {
+    console.error('Error al registrar fraccionado:', err)
+    alert(`Error: ${err.message}`)
+  } finally {
+    isSubmittingOperation.value = false
+  }
 }
 
 // Filtrado
@@ -164,6 +254,22 @@ const toggleRow = (id) => {
   expandedRow.value = expandedRow.value === id ? null : id
 }
 
+// Watch tab changes to load data when navigating via sidebar
+watch(() => route.query.tab, (newTab) => {
+  expandedRow.value = null
+  if (newTab === 'fraccionar') {
+    operationStock.value = null
+    operationCodigo.value = ''
+    fetchProductosFraccionados()
+  }
+  if (newTab === 'envasar') {
+    selectedEnvasar.value = null
+    envasarForm.value = { cantidad: '', peso: '' }
+    envasarSearchQuery.value = ''
+    fetchExistencias()
+  }
+})
+
 onMounted(refreshData)
 </script>
 
@@ -178,42 +284,6 @@ onMounted(refreshData)
         <span class="material-icons" :class="{ 'spinning': isLoading }">refresh</span>
       </button>
     </header>
-
-    <!-- Pestañas (Tabs) -->
-    <div class="tabs-container">
-      <div class="tabs-row">
-        <button 
-          class="tab-btn" 
-          :class="{ 'active': activeTab === 'existencias' }"
-          @click="activeTab = 'existencias'; expandedRow = null"
-        >
-          <span class="material-icons">inventory</span> Existencias
-        </button>
-        <button 
-          class="tab-btn" 
-          :class="{ 'active': activeTab === 'productos' }"
-          @click="activeTab = 'productos'; expandedRow = null"
-        >
-          <span class="material-icons">category</span> Productos
-        </button>
-      </div>
-      <div class="tabs-row second-row">
-        <button 
-          class="tab-btn" 
-          :class="{ 'active': activeTab === 'fraccionar' }"
-          @click="activeTab = 'fraccionar'; operationStock = null; operationCodigo = ''; fetchProductosFraccionados()"
-        >
-          <span class="material-icons">content_cut</span> Fraccionar
-        </button>
-        <button 
-          class="tab-btn" 
-          :class="{ 'active': activeTab === 'envasar' }"
-          @click="activeTab = 'envasar'; operationStock = null; operationCodigo = ''; fetchProductosFraccionados()"
-        >
-          <span class="material-icons">inventory_2</span> Envasar
-        </button>
-      </div>
-    </div>
 
     <!-- Contenido según pestaña -->
     
@@ -273,7 +343,19 @@ onMounted(refreshData)
                   </div>
                   <div class="detail-item">
                     <span class="label">Fraccionados</span>
-                    <span class="value">{{ item.feteados.toFixed(2) }}</span>
+                    <span class="value">{{ (item.feteados || 0).toFixed(0) }}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Envasados</span>
+                    <span class="value">{{ (item.envasados || 0).toFixed(0) }}</span>
+                  </div>
+                  <div v-if="item.recortes" class="detail-item">
+                    <span class="label">Recortes</span>
+                    <span class="value">{{ item.recortes.toFixed(3) }} kg</span>
+                  </div>
+                  <div v-if="item.decomisados" class="detail-item">
+                    <span class="label">Decomisados</span>
+                    <span class="value warn-value">{{ item.decomisados.toFixed(3) }} kg</span>
                   </div>
                 </div>
               </div>
@@ -328,14 +410,14 @@ onMounted(refreshData)
       </div>
     </template>
 
-    <!-- Vistas de Operación (Fetear / Envasar) -->
-    <template v-else>
+    <!-- Vista de Fraccionar -->
+    <template v-if="activeTab === 'fraccionar'">
       <div class="operation-container fade-in">
         <BaseCard>
           <template #header>
             <div class="op-header">
-              <span class="material-icons">{{ activeTab === 'fraccionar' ? 'content_cut' : 'inventory_2' }}</span>
-              <h3>Registrar {{ activeTab === 'fraccionar' ? 'Fraccionado' : 'Envasado' }}</h3>
+              <span class="material-icons">content_cut</span>
+              <h3>Registrar Fraccionado</h3>
             </div>
           </template>
 
@@ -352,9 +434,8 @@ onMounted(refreshData)
             </button>
           </div>
 
-          <!-- Lista de productos fraccionados disponibles (Solo en pestañas Fraccionar y Envasar) -->
-          <div v-if="(activeTab === 'envasar' || activeTab === 'fraccionar') && !operationStock && productosFraccionados.length > 0" class="fraccionados-list">
-            <p class="list-title">Productos disponibles para {{ activeTab }}:</p>
+          <div v-if="!operationStock && productosFraccionados.length > 0" class="fraccionados-list">
+            <p class="list-title">Productos disponibles para fraccionar:</p>
             <div v-for="item in productosFraccionados" :key="item.codigo" 
                  class="fraccionado-item-mini" @click="seleccionarProductoParaOperacion(item)">
               <div class="fraccionado-main">
@@ -362,8 +443,7 @@ onMounted(refreshData)
                 <span class="fraccionado-name">{{ item.nombre }}</span>
               </div>
               <div class="fraccionado-badges">
-                <span v-if="activeTab === 'fraccionar'" class="badge pos">{{ Math.floor(item.existencia_posible) }} u (Posible)</span>
-                <span v-if="activeTab === 'envasar'" class="badge fet">{{ item.existencia_feteados }} u (Fraccionados)</span>
+                <span class="badge pos">{{ Math.floor(item.existencia_posible) }} u (Posible)</span>
               </div>
             </div>
           </div>
@@ -375,79 +455,164 @@ onMounted(refreshData)
                 <span class="op-badge">{{ operationStock.ubicacionNombre }}</span>
               </div>
               <div class="op-stats-row">
-                <!-- Para Fraccionar: Mostrar lo posible -->
-                <div v-if="activeTab === 'fraccionar'" class="op-stat">
+                <div class="op-stat">
                   <span class="lbl">Posible a Fraccionar</span>
                   <span class="val">{{ Math.floor(operationStock.kilos) }} u</span>
-                </div>
-                
-                <!-- Para Envasar: Mostrar lo fraccionado existente -->
-                <div v-if="activeTab === 'envasar'" class="op-stat">
-                  <span class="lbl">Fraccionados Listos</span>
-                  <span class="val">{{ operationStock.piezas }} u</span>
                 </div>
               </div>
             </div>
           </Transition>
 
-          <form v-if="operationStock" @submit.prevent="submitOperacion" class="op-form">
-            <div class="op-form-grid" :class="{ 'frac-grid': activeTab === 'fraccionar' }">
-              <!-- Campos comunes o específicos según pestaña -->
+          <form v-if="operationStock" @submit.prevent="submitFraccionado" class="op-form">
+            <div class="op-form-grid frac-grid">
               <BaseInput 
                 v-model="operationForm.cantidad" 
-                :label="activeTab === 'fraccionar' ? 'Piezas a Fraccionar' : 'Cant. a Envasar'" 
+                label="Piezas a Fraccionar" 
                 type="number"
                 required
               />
-              
-              <template v-if="activeTab === 'fraccionar'">
-                <BaseInput 
-                  v-model="operationForm.pesoBruto" 
-                  label="Peso Bruto (KG)" 
-                  type="number" 
-                  step="0.001"
-                  required
-                />
-                <BaseInput 
-                  v-model="operationForm.fracciones" 
-                  label="Fracciones (Bolsitas)" 
-                  type="number" 
-                  required
-                />
-                <BaseInput 
-                  v-model="operationForm.recorte" 
-                  label="Recorte (KG)" 
-                  type="number" 
-                  step="0.001"
-                />
-                <BaseInput 
-                  v-model="operationForm.decomiso" 
-                  label="Decomiso (KG)" 
-                  type="number" 
-                  step="0.001"
-                />
-                <div class="calculated-field">
-                  <span class="lbl">Peso Fraccionados</span>
-                  <span class="val">{{ pesoFraccionadosCalculado }} KG</span>
-                </div>
-              </template>
-
-              <template v-else>
-                <BaseInput 
-                  v-model="operationForm.peso" 
-                  label="Peso Resultante (KG)" 
-                  type="number" 
-                  step="0.001"
-                  required
-                />
-              </template>
+              <BaseInput 
+                v-model="operationForm.pesoBruto" 
+                label="Peso Bruto (KG)" 
+                type="number" 
+                step="0.001"
+                required
+              />
+              <BaseInput 
+                v-model="operationForm.fracciones" 
+                label="Fracciones (Bolsitas)" 
+                type="number" 
+                required
+              />
+              <BaseInput 
+                v-model="operationForm.recorte" 
+                label="Recorte (KG)" 
+                type="number" 
+                step="0.001"
+              />
+              <BaseInput 
+                v-model="operationForm.decomiso" 
+                label="Decomiso (KG)" 
+                type="number" 
+                step="0.001"
+              />
+              <div class="calculated-field">
+                <span class="lbl">Peso Fraccionados</span>
+                <span class="val">{{ pesoFraccionadosCalculado }} KG</span>
+              </div>
             </div>
             <BaseButton variant="primary" fullWidth :disabled="isSubmittingOperation">
               <span class="material-icons">save</span> 
-              {{ isSubmittingOperation ? 'Procesando...' : 'Confirmar Registro' }}
+              {{ isSubmittingOperation ? 'Procesando...' : 'Confirmar Fraccionado' }}
             </BaseButton>
           </form>
         </BaseCard>
+      </div>
+    </template>
+
+    <!-- Vista de Envasar -->
+    <template v-if="activeTab === 'envasar'">
+      <div class="operation-container fade-in">
+        <!-- Si no hay producto seleccionado, mostrar lista -->
+        <template v-if="!selectedEnvasar">
+          <div class="search-section">
+            <div class="search-wrapper">
+              <span class="material-icons search-icon">search</span>
+              <input 
+                v-model="envasarSearchQuery" 
+                type="text" 
+                placeholder="Buscar producto..." 
+                class="custom-search-input"
+              >
+              <button v-if="envasarSearchQuery" @click="envasarSearchQuery = ''" class="clear-btn">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="existenciasConFeteados.length === 0 && !isLoading" class="empty-state">
+            <span class="material-icons">inventory_2</span>
+            <p>No hay productos con fraccionados disponibles para envasar.</p>
+          </div>
+
+          <div class="content-scroll-area">
+            <div v-for="item in existenciasConFeteados" :key="item.codigo_producto + item.ubicacionNombre"
+                 class="mobile-card envasar-card"
+                 @click="seleccionarParaEnvasar(item)">
+              <div class="card-main">
+                <div class="card-info">
+                  <span class="code-badge">{{ item.codigo_producto }}</span>
+                  <h3 class="product-name">{{ item.nombre }}</h3>
+                </div>
+                <div class="card-stats">
+                  <div class="stat">
+                    <span class="stat-value">{{ (item.feteados || 0).toFixed(0) }}</span>
+                    <span class="stat-label">FRACC</span>
+                  </div>
+                  <span class="material-icons chevron">chevron_right</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Producto seleccionado: formulario de envasado -->
+        <template v-else>
+          <BaseCard>
+            <template #header>
+              <div class="op-header">
+                <span class="material-icons">inventory_2</span>
+                <h3>Registrar Envasado</h3>
+              </div>
+            </template>
+
+            <div class="op-info-box">
+              <div class="op-info-main">
+                <strong>{{ selectedEnvasar.nombre }}</strong>
+                <span class="op-badge">{{ selectedEnvasar.ubicacionNombre }}</span>
+              </div>
+              <div class="op-stats-row">
+                <div class="op-stat">
+                  <span class="lbl">Código</span>
+                  <span class="val">{{ selectedEnvasar.codigo }}</span>
+                </div>
+                <div class="op-stat">
+                  <span class="lbl">Fraccionados disponibles</span>
+                  <span class="val">{{ selectedEnvasar.feteados }}</span>
+                </div>
+              </div>
+            </div>
+
+            <form @submit.prevent="submitEnvasado" class="op-form">
+              <div class="op-form-grid">
+                <BaseInput 
+                  v-model="envasarForm.cantidad" 
+                  label="Cantidad a Envasar" 
+                  type="number"
+                  placeholder="Ej: 15"
+                  required
+                />
+                <BaseInput 
+                  v-model="envasarForm.peso" 
+                  label="Peso Total (KG)" 
+                  type="number" 
+                  step="0.001"
+                  placeholder="Ej: 3.500"
+                  required
+                />
+              </div>
+              <div class="envasar-actions">
+                <BaseButton variant="minimal" type="button" @click="cancelarEnvasar">
+                  Cancelar
+                </BaseButton>
+                <BaseButton variant="primary" fullWidth :disabled="isSubmittingEnvasado">
+                  <span class="material-icons">save</span> 
+                  {{ isSubmittingEnvasado ? 'Procesando...' : 'Confirmar Envasado' }}
+                </BaseButton>
+              </div>
+            </form>
+          </BaseCard>
+        </template>
       </div>
     </template>
   </div>
@@ -500,49 +665,7 @@ onMounted(refreshData)
   background-color: #F0F0F0;
 }
 
-/* Tabs */
-.tabs-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background-color: #EEE;
-  padding: 4px;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-md);
-  border: 2px solid var(--color-border);
-}
-
-.tabs-row {
-  display: flex;
-  gap: 4px;
-}
-
-.tab-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px;
-  border: none;
-  background: none;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.tab-btn.active {
-  background-color: white;
-  color: var(--color-primary);
-  box-shadow: var(--shadow-sm);
-}
-
-.second-row .tab-btn.active {
-  color: var(--color-secondary);
-}
+/* Tabs removed - navigation moved to sidebar */
 
 /* Operation Section */
 .op-header {
@@ -946,5 +1069,31 @@ onMounted(refreshData)
   opacity: 0;
   padding-top: 0;
   padding-bottom: 0;
+}
+
+.warn-value {
+  color: #C62828;
+}
+
+/* Envasar tab styles */
+.envasar-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.envasar-card:hover {
+  border-color: var(--color-secondary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.envasar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: var(--space-sm);
+}
+
+.envasar-actions > *:last-child {
+  flex: 1;
 }
 </style>

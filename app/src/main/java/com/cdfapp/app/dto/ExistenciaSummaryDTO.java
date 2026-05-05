@@ -16,4 +16,7 @@ public class ExistenciaSummaryDTO {
     private Long feteados;
     private Long piezas;
     private BigDecimal kilos;
+    private Long envasados;
+    private BigDecimal recortes;
+    private BigDecimal decomisados;
 }

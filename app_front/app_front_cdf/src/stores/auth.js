@@ -25,6 +25,7 @@ export const useAuthStore = defineStore('auth', () => {
         const data = await response.json()
         
         user.value = { 
+          id: data.id || null,
           usuario: username,
           rol: data.rol || 'ADMIN' 
         }

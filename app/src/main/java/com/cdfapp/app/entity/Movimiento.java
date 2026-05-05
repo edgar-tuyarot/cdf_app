@@ -1,5 +1,6 @@
 package com.cdfapp.app.entity;
 
+import com.cdfapp.app.enums.EstadoProducto;
 import com.cdfapp.app.enums.MotivoMovimiento;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -34,6 +35,9 @@ public class Movimiento {
 
     @Enumerated(EnumType.STRING)
     private MotivoMovimiento motivo;
+
+    @Enumerated(EnumType.STRING)
+    private EstadoProducto estado;
 
     @ManyToOne
     @JoinColumn(name = "proceso_id")

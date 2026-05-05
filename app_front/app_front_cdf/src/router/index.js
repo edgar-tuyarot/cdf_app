@@ -95,6 +95,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/procesos',
+      name: 'procesos',
+      component: () => import('../views/ProcesosView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/pedidos/actuales',
       name: 'pedidos-actuales',
       component: () => import('../views/PedidosActualesView.vue'),
@@ -122,9 +128,10 @@ router.beforeEach((to, from) => {
     return '/login'
   }
 
-  // Redirección por Rol: Colaborador solo puede ver Producción
+  // Redirección por Rol: Colaborador solo puede ver Producción y Pedidos Actuales
   if (authStore.isAuthenticated && authStore.isColaborador) {
-    if (to.path !== '/produccion') {
+    const allowedPaths = ['/produccion', '/pedidos/actuales']
+    if (!allowedPaths.includes(to.path)) {
       return '/produccion'
     }
   }

@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
 -- Host:                         127.0.0.1
--- Versión del servidor:         12.2.2-MariaDB - MariaDB Server
--- SO del servidor:              Win64
--- HeidiSQL Versión:             12.17.0.7270
+-- Versión del servidor:        11.8.6-MariaDB-0+deb13u1 from Debian - -- Please help get to 10k stars at https://github.com/MariaDB/Server
+-- SO del servidor:              debian-linux-gnu
+-- HeidiSQL Versión:            12.17.1.1
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -14,203 +14,263 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- Volcando datos para la tabla cdf_bbdd.existencias: ~66 rows (aproximadamente)
-REPLACE INTO `existencias` (`id`, `estado`, `kilos`, `ubicacion`, `ultima_actualizacion`, `unidades`, `producto_id`, `ubicacion_id`) VALUES
-	(1, 'KILOS', 4.980, NULL, '2026-05-04 09:47:26.219259', 0, 4, 1),
-	(2, 'KILOS', 173.925, NULL, '2026-05-04 09:47:26.234927', 0, 5, 1),
-	(3, 'KILOS', 3.206, NULL, '2026-05-04 09:47:26.240607', 0, 6, 1),
-	(4, 'KILOS', 17.410, NULL, '2026-05-04 09:47:26.246217', 0, 7, 1),
-	(5, 'KILOS', 123.530, NULL, '2026-05-04 09:47:26.253281', 0, 8, 1),
-	(6, 'KILOS', 16.350, NULL, '2026-05-04 09:47:26.259116', 0, 9, 1),
-	(7, 'KILOS', 8.905, NULL, '2026-05-04 09:47:26.263847', 0, 10, 1),
-	(8, 'KILOS', 9.420, NULL, '2026-05-04 09:47:26.270922', 0, 11, 1),
-	(9, 'KILOS', 16.460, NULL, '2026-05-04 09:47:26.277287', 0, 12, 1),
-	(10, 'KILOS', 190.207, NULL, '2026-05-04 09:47:26.283169', 0, 13, 1),
-	(11, 'KILOS', 0.090, NULL, '2026-05-04 09:47:26.290580', 0, 14, 1),
-	(12, 'KILOS', 31.850, NULL, '2026-05-04 09:47:26.296143', 0, 15, 1),
-	(13, 'KILOS', 30.270, NULL, '2026-05-04 09:47:26.301443', 0, 16, 1),
-	(14, 'KILOS', 48.765, NULL, '2026-05-04 09:47:26.307592', 0, 17, 1),
-	(15, 'KILOS', 25.750, NULL, '2026-05-04 09:47:26.312185', 0, 18, 1),
-	(16, 'KILOS', 6.145, NULL, '2026-05-04 09:47:26.318072', 0, 19, 1),
-	(17, 'KILOS', 7.215, NULL, '2026-05-04 09:47:26.323101', 0, 20, 1),
-	(18, 'KILOS', 0.010, NULL, '2026-05-04 09:47:26.328386', 0, 21, 1),
-	(19, 'KILOS', 0.150, NULL, '2026-05-04 09:47:26.337719', 0, 22, 1),
-	(20, 'KILOS', 0.005, NULL, '2026-05-04 09:47:26.343837', 0, 23, 1),
-	(21, 'KILOS', 50.735, NULL, '2026-05-04 09:47:26.351370', 0, 24, 1),
-	(22, 'KILOS', 0.100, NULL, '2026-05-04 09:47:26.357874', 0, 25, 1),
-	(23, 'KILOS', 0.200, NULL, '2026-05-04 09:47:26.362905', 0, 26, 1),
-	(24, 'KILOS', 33.845, NULL, '2026-05-04 09:47:26.369384', 0, 27, 1),
-	(25, 'KILOS', 12.065, NULL, '2026-05-04 09:47:26.374583', 0, 28, 1),
-	(26, 'KILOS', 0.225, NULL, '2026-05-04 09:47:26.380247', 0, 29, 1),
-	(27, 'KILOS', 36.070, NULL, '2026-05-04 09:47:26.384784', 0, 30, 1),
-	(28, 'KILOS', 20.090, NULL, '2026-05-04 09:47:26.389616', 0, 31, 1),
-	(29, 'KILOS', 110.870, NULL, '2026-05-04 09:47:26.394638', 0, 32, 1),
-	(30, 'KILOS', 2.225, NULL, '2026-05-04 09:47:26.400227', 0, 33, 1),
-	(31, 'KILOS', 6.045, NULL, '2026-05-04 09:47:26.405261', 0, 34, 1),
-	(32, 'KILOS', 155.905, NULL, '2026-05-04 09:47:26.411610', 0, 1, 1),
-	(33, 'KILOS', 12.875, NULL, '2026-05-04 09:47:26.416650', 0, 35, 1),
-	(34, 'KILOS', 8.910, NULL, '2026-05-04 09:47:26.421506', 0, 36, 1),
-	(35, 'KILOS', 3.045, NULL, '2026-05-04 09:47:26.426475', 0, 37, 1),
-	(36, 'KILOS', 200.285, NULL, '2026-05-04 09:47:26.430523', 0, 38, 1),
-	(37, 'KILOS', 158.286, NULL, '2026-05-04 09:47:26.435863', 0, 39, 1),
-	(38, 'KILOS', 23.495, NULL, '2026-05-04 09:47:26.439455', 0, 40, 1),
-	(39, 'KILOS', 5.110, NULL, '2026-05-04 09:47:26.444112', 0, 41, 1),
-	(40, 'KILOS', 0.010, NULL, '2026-05-04 09:47:26.449532', 0, 42, 1),
-	(41, 'KILOS', 29.585, NULL, '2026-05-04 09:47:26.454402', 0, 43, 1),
-	(42, 'KILOS', 2.875, NULL, '2026-05-04 09:47:26.458441', 0, 44, 1),
-	(43, 'KILOS', 10.620, NULL, '2026-05-04 09:47:26.464633', 0, 45, 1),
-	(44, 'KILOS', 0.435, NULL, '2026-05-04 09:47:26.471557', 0, 46, 1),
-	(45, 'KILOS', 0.740, NULL, '2026-05-04 09:47:26.478986', 0, 47, 1),
-	(46, 'KILOS', 2.400, NULL, '2026-05-04 09:47:26.485856', 0, 48, 1),
-	(47, 'KILOS', 23.635, NULL, '2026-05-04 09:47:26.490256', 0, 49, 1),
-	(48, 'KILOS', 3.075, NULL, '2026-05-04 09:47:26.499333', 0, 50, 1),
-	(49, 'KILOS', 17.290, NULL, '2026-05-04 09:47:26.505783', 0, 51, 1),
-	(50, 'KILOS', 3.065, NULL, '2026-05-04 09:47:26.512845', 0, 52, 1),
-	(51, 'KILOS', 28.762, NULL, '2026-05-04 09:47:26.518468', 0, 53, 1),
-	(52, 'KILOS', 15.990, NULL, '2026-05-04 09:47:26.524547', 0, 54, 1),
-	(53, 'KILOS', 10.770, NULL, '2026-05-04 09:47:26.530074', 0, 55, 1),
-	(54, 'KILOS', 8.364, NULL, '2026-05-04 09:47:26.535817', 0, 56, 1),
-	(55, 'KILOS', 9.574, NULL, '2026-05-04 09:47:26.541913', 0, 57, 1),
-	(56, 'KILOS', 1.985, NULL, '2026-05-04 09:47:26.547678', 0, 58, 1),
-	(57, 'KILOS', 14.480, NULL, '2026-05-04 09:47:26.553557', 0, 59, 1),
-	(58, 'KILOS', 0.260, NULL, '2026-05-04 09:47:26.558919', 0, 60, 1),
-	(59, 'KILOS', 15.360, NULL, '2026-05-04 09:47:26.569470', 0, 61, 1),
-	(60, 'KILOS', 13.135, NULL, '2026-05-04 09:47:26.576160', 0, 62, 1),
-	(61, 'KILOS', 0.705, NULL, '2026-05-04 09:47:26.583037', 0, 63, 1),
-	(62, 'KILOS', 1.339, NULL, '2026-05-04 09:47:26.591896', 0, 64, 1),
-	(63, 'KILOS', 12.820, NULL, '2026-05-04 09:47:26.611486', 0, 65, 1),
-	(64, 'KILOS', 294.695, NULL, '2026-05-04 09:47:26.618033', 0, 66, 1),
-	(65, 'KILOS', 2000.000, NULL, '2026-05-04 09:47:26.623558', 0, 67, 1),
-	(66, 'KILOS', 2500.000, NULL, '2026-05-04 09:47:26.628499', 0, 68, 1);
+-- Volcando datos para la tabla cdf_app.existencias: ~80 rows (aproximadamente)
+REPLACE INTO `existencias` (`kilos`, `unidades`, `id`, `producto_id`, `ultima_actualizacion`, `estado`, `ubicacion_id`, `ubicacion`) VALUES
+	(4.980, 0, 1, 4, '2026-05-04 09:47:26.219259', 'KILOS', 1, NULL),
+	(173.925, 0, 2, 5, '2026-05-04 09:47:26.234927', 'KILOS', 1, NULL),
+	(3.206, 0, 3, 6, '2026-05-04 09:47:26.240607', 'KILOS', 1, NULL),
+	(17.410, 0, 4, 7, '2026-05-04 09:47:26.246217', 'KILOS', 1, NULL),
+	(123.530, 0, 5, 8, '2026-05-04 09:47:26.253281', 'KILOS', 1, NULL),
+	(16.350, 0, 6, 9, '2026-05-04 09:47:26.259116', 'KILOS', 1, NULL),
+	(8.905, 0, 7, 10, '2026-05-04 09:47:26.263847', 'KILOS', 1, NULL),
+	(9.420, 0, 8, 11, '2026-05-04 09:47:26.270922', 'KILOS', 1, NULL),
+	(16.460, 0, 9, 12, '2026-05-04 09:47:26.277287', 'KILOS', 1, NULL),
+	(190.207, 0, 10, 13, '2026-05-04 09:47:26.283169', 'KILOS', 1, NULL),
+	(0.090, 0, 11, 14, '2026-05-04 09:47:26.290580', 'KILOS', 1, NULL),
+	(31.850, 0, 12, 15, '2026-05-04 09:47:26.296143', 'KILOS', 1, NULL),
+	(30.270, 0, 13, 16, '2026-05-04 09:47:26.301443', 'KILOS', 1, NULL),
+	(48.765, 0, 14, 17, '2026-05-04 09:47:26.307592', 'KILOS', 1, NULL),
+	(25.750, 0, 15, 18, '2026-05-04 09:47:26.312185', 'KILOS', 1, NULL),
+	(6.145, 0, 16, 19, '2026-05-04 09:47:26.318072', 'KILOS', 1, NULL),
+	(7.215, 0, 17, 20, '2026-05-04 09:47:26.323101', 'KILOS', 1, NULL),
+	(0.010, 0, 18, 21, '2026-05-04 09:47:26.328386', 'KILOS', 1, NULL),
+	(0.150, 0, 19, 22, '2026-05-04 09:47:26.337719', 'KILOS', 1, NULL),
+	(0.005, 0, 20, 23, '2026-05-04 09:47:26.343837', 'KILOS', 1, NULL),
+	(47.485, 0, 21, 24, '2026-05-04 20:30:08.625891', 'KILOS', 1, NULL),
+	(0.100, 0, 22, 25, '2026-05-04 09:47:26.357874', 'KILOS', 1, NULL),
+	(0.200, 0, 23, 26, '2026-05-04 09:47:26.362905', 'KILOS', 1, NULL),
+	(33.845, 0, 24, 27, '2026-05-04 09:47:26.369384', 'KILOS', 1, NULL),
+	(12.065, 0, 25, 28, '2026-05-04 09:47:26.374583', 'KILOS', 1, NULL),
+	(0.225, 0, 26, 29, '2026-05-04 09:47:26.380247', 'KILOS', 1, NULL),
+	(36.070, 0, 27, 30, '2026-05-04 09:47:26.384784', 'KILOS', 1, NULL),
+	(20.090, 0, 28, 31, '2026-05-04 09:47:26.389616', 'KILOS', 1, NULL),
+	(110.870, 0, 29, 32, '2026-05-04 09:47:26.394638', 'KILOS', 1, NULL),
+	(2.225, 0, 30, 33, '2026-05-04 09:47:26.400227', 'KILOS', 1, NULL),
+	(6.045, 0, 31, 34, '2026-05-04 09:47:26.405261', 'KILOS', 1, NULL),
+	(142.740, 0, 32, 1, '2026-05-04 21:33:24.662692', 'KILOS', 1, NULL),
+	(12.875, 0, 33, 35, '2026-05-04 09:47:26.416650', 'KILOS', 1, NULL),
+	(8.910, 0, 34, 36, '2026-05-04 09:47:26.421506', 'KILOS', 1, NULL),
+	(3.045, 0, 35, 37, '2026-05-04 09:47:26.426475', 'KILOS', 1, NULL),
+	(196.960, 0, 36, 38, '2026-05-04 23:20:43.790044', 'KILOS', 1, NULL),
+	(158.286, 0, 37, 39, '2026-05-04 09:47:26.435863', 'KILOS', 1, NULL),
+	(23.495, 0, 38, 40, '2026-05-04 09:47:26.439455', 'KILOS', 1, NULL),
+	(5.110, 0, 39, 41, '2026-05-04 09:47:26.444112', 'KILOS', 1, NULL),
+	(0.010, 0, 40, 42, '2026-05-04 09:47:26.449532', 'KILOS', 1, NULL),
+	(29.585, 0, 41, 43, '2026-05-04 09:47:26.454402', 'KILOS', 1, NULL),
+	(2.875, 0, 42, 44, '2026-05-04 09:47:26.458441', 'KILOS', 1, NULL),
+	(10.620, 0, 43, 45, '2026-05-04 09:47:26.464633', 'KILOS', 1, NULL),
+	(0.435, 0, 44, 46, '2026-05-04 09:47:26.471557', 'KILOS', 1, NULL),
+	(0.740, 0, 45, 47, '2026-05-04 09:47:26.478986', 'KILOS', 1, NULL),
+	(2.400, 0, 46, 48, '2026-05-04 09:47:26.485856', 'KILOS', 1, NULL),
+	(23.635, 0, 47, 49, '2026-05-04 09:47:26.490256', 'KILOS', 1, NULL),
+	(3.075, 0, 48, 50, '2026-05-04 09:47:26.499333', 'KILOS', 1, NULL),
+	(17.290, 0, 49, 51, '2026-05-04 09:47:26.505783', 'KILOS', 1, NULL),
+	(3.065, 0, 50, 52, '2026-05-04 09:47:26.512845', 'KILOS', 1, NULL),
+	(28.762, 0, 51, 53, '2026-05-04 09:47:26.518468', 'KILOS', 1, NULL),
+	(15.990, 0, 52, 54, '2026-05-04 09:47:26.524547', 'KILOS', 1, NULL),
+	(10.770, 0, 53, 55, '2026-05-04 09:47:26.530074', 'KILOS', 1, NULL),
+	(8.364, 0, 54, 56, '2026-05-04 09:47:26.535817', 'KILOS', 1, NULL),
+	(9.574, 0, 55, 57, '2026-05-04 09:47:26.541913', 'KILOS', 1, NULL),
+	(1.985, 0, 56, 58, '2026-05-04 09:47:26.547678', 'KILOS', 1, NULL),
+	(14.480, 0, 57, 59, '2026-05-04 09:47:26.553557', 'KILOS', 1, NULL),
+	(0.260, 0, 58, 60, '2026-05-04 09:47:26.558919', 'KILOS', 1, NULL),
+	(15.360, 0, 59, 61, '2026-05-04 09:47:26.569470', 'KILOS', 1, NULL),
+	(13.135, 0, 60, 62, '2026-05-04 09:47:26.576160', 'KILOS', 1, NULL),
+	(0.705, 0, 61, 63, '2026-05-04 09:47:26.583037', 'KILOS', 1, NULL),
+	(1.339, 0, 62, 64, '2026-05-04 09:47:26.591896', 'KILOS', 1, NULL),
+	(12.820, 0, 63, 65, '2026-05-04 09:47:26.611486', 'KILOS', 1, NULL),
+	(294.695, 0, 64, 66, '2026-05-04 09:47:26.618033', 'KILOS', 1, NULL),
+	(2000.000, 0, 65, 67, '2026-05-04 09:47:26.623558', 'KILOS', 1, NULL),
+	(2500.000, 0, 66, 68, '2026-05-04 09:47:26.628499', 'KILOS', 1, NULL),
+	(0.000, -1, 67, 24, '2026-05-04 20:30:08.617666', 'PIEZA', 1, NULL),
+	(0.000, 20, 68, 24, '2026-05-04 20:30:08.631436', 'ENVASADO', 1, NULL),
+	(0.085, 0, 69, 24, '2026-05-04 20:30:08.634962', 'RECORTE', 1, NULL),
+	(0.302, 0, 70, 24, '2026-05-04 20:30:08.639063', 'DECOMISADO', 1, NULL),
+	(0.000, -4, 71, 1, '2026-05-04 21:33:24.649390', 'PIEZA', 1, NULL),
+	(0.000, 60, 72, 1, '2026-05-04 23:19:48.308261', 'ENVASADO', 1, NULL),
+	(1.199, 0, 73, 1, '2026-05-04 21:33:24.670368', 'RECORTE', 1, NULL),
+	(1.225, 0, 74, 1, '2026-05-04 21:33:24.673140', 'DECOMISADO', 1, NULL),
+	(0.000, 0, 75, 1, '2026-05-04 23:19:48.284557', 'FETEADO', 1, NULL),
+	(0.000, -1, 76, 38, '2026-05-04 23:20:43.780554', 'PIEZA', 1, NULL),
+	(0.000, 0, 77, 38, '2026-05-04 23:21:21.790013', 'FETEADO', 1, NULL),
+	(0.315, 0, 78, 38, '2026-05-04 23:20:43.795877', 'RECORTE', 1, NULL),
+	(0.085, 0, 79, 38, '2026-05-04 23:20:43.799941', 'DECOMISADO', 1, NULL),
+	(0.000, 18, 80, 38, '2026-05-04 23:21:21.791307', 'ENVASADO', 1, NULL);
 
--- Volcando datos para la tabla cdf_bbdd.movimientos: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.movimientos: ~24 rows (aproximadamente)
+REPLACE INTO `movimientos` (`cantidad`, `fecha`, `id`, `proceso_id`, `producto_id`, `motivo`, `estado`) VALUES
+	(1.00, '2026-05-04 20:55:00.781777', 11, 3, 1, 'SALIDA', 'PIEZA'),
+	(3.25, '2026-05-04 20:55:00.790550', 12, 3, 1, 'SALIDA', 'KILOS'),
+	(15.00, '2026-05-04 20:55:00.794302', 13, 3, 1, 'ENTRADA', 'ENVASADO'),
+	(0.30, '2026-05-04 20:55:00.797749', 14, 3, 1, 'ENTRADA', 'RECORTE'),
+	(0.95, '2026-05-04 20:55:00.801604', 15, 3, 1, 'ENTRADA', 'DECOMISADO'),
+	(1.00, '2026-05-04 21:24:21.116122', 16, 4, 1, 'SALIDA', 'PIEZA'),
+	(3.10, '2026-05-04 21:24:21.119648', 17, 4, 1, 'SALIDA', 'KILOS'),
+	(12.00, '2026-05-04 21:24:21.123526', 18, 4, 1, 'ENTRADA', 'ENVASADO'),
+	(0.29, '2026-05-04 21:24:21.127305', 19, 4, 1, 'ENTRADA', 'RECORTE'),
+	(0.09, '2026-05-04 21:24:21.130871', 20, 4, 1, 'ENTRADA', 'DECOMISADO'),
+	(1.00, '2026-05-04 21:33:24.646922', 21, 5, 1, 'SALIDA', 'PIEZA'),
+	(3.12, '2026-05-04 21:33:24.660419', 22, 5, 1, 'SALIDA', 'KILOS'),
+	(15.00, '2026-05-04 21:33:24.664916', 23, 5, 1, 'ENTRADA', 'FETEADO'),
+	(0.31, '2026-05-04 21:33:24.668385', 24, 5, 1, 'ENTRADA', 'RECORTE'),
+	(0.11, '2026-05-04 21:33:24.671922', 25, 5, 1, 'ENTRADA', 'DECOMISADO'),
+	(15.00, '2026-05-04 23:19:48.281910', 26, 6, 1, 'SALIDA', 'FETEADO'),
+	(15.00, '2026-05-04 23:19:48.306764', 27, 6, 1, 'ENTRADA', 'ENVASADO'),
+	(1.00, '2026-05-04 23:20:43.782728', 28, 7, 38, 'SALIDA', 'PIEZA'),
+	(3.33, '2026-05-04 23:20:43.787703', 29, 7, 38, 'SALIDA', 'KILOS'),
+	(18.00, '2026-05-04 23:20:43.792306', 30, 7, 38, 'ENTRADA', 'FETEADO'),
+	(0.32, '2026-05-04 23:20:43.797056', 31, 7, 38, 'ENTRADA', 'RECORTE'),
+	(0.09, '2026-05-04 23:20:43.800746', 32, 7, 38, 'ENTRADA', 'DECOMISADO'),
+	(18.00, '2026-05-04 23:21:21.788108', 33, 8, 38, 'SALIDA', 'FETEADO'),
+	(18.00, '2026-05-04 23:21:21.792012', 34, 8, 38, 'ENTRADA', 'ENVASADO');
 
--- Volcando datos para la tabla cdf_bbdd.pedido_productos: ~6 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.pedido_final_items: ~5 rows (aproximadamente)
+REPLACE INTO `pedido_final_items` (`id`, `cantidad`, `estado`, `peso_real`, `pedido_final_id`, `producto_id`) VALUES
+	(2, 98, 'FETEADO', 7.215, 1, 1),
+	(3, 60, 'FETEADO', 6.520, 2, 38),
+	(4, 40, 'FETEADO', 4.220, 2, 5),
+	(5, 10, 'FETEADO', 1.850, 2, 24),
+	(6, 23, 'FETEADO', 7.355, 2, 66);
+
+-- Volcando datos para la tabla cdf_app.pedido_productos: ~1 rows (aproximadamente)
 REPLACE INTO `pedido_productos` (`id`, `cantidad`, `tipo`, `pedido_id`, `producto_id`) VALUES
-	(2, 57, 'FETEADO', 2, 8),
-	(3, 10, 'FETEADO', 3, 8),
-	(4, 5, 'PIEZA', 3, 8),
-	(5, 60, 'FETEADO', 3, 1),
-	(6, 50, 'FETEADO', 3, 38),
-	(7, 2, 'PIEZA', 3, 38);
+	(8, 100, 'FETEADO', 4, 1),
+	(9, 80, 'FETEADO', 5, 38),
+	(10, 20, 'FETEADO', 5, 24),
+	(11, 40, 'FETEADO', 5, 5),
+	(12, 23, 'FETEADO', 5, 66);
 
--- Volcando datos para la tabla cdf_bbdd.pedidos: ~2 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.pedidos: ~2 rows (aproximadamente)
 REPLACE INTO `pedidos` (`id`, `fecha`, `sucursal_id`, `estado`) VALUES
-	(2, '2026-05-03 21:00:00.000000', 1, 'NUEVO'),
-	(3, '2026-05-03 21:00:00.000000', 1, 'NUEVO');
+	(4, '2026-05-03 21:00:00.000000', 3, 'NUEVO'),
+	(5, '2026-05-04 21:00:00.000000', 2, 'PREPARANDO');
 
--- Volcando datos para la tabla cdf_bbdd.pedidos_productos: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.pedidos_finales: ~0 rows (aproximadamente)
+REPLACE INTO `pedidos_finales` (`id`, `fecha_creacion`, `pedido_original_id`) VALUES
+	(1, '2026-05-05 00:02:22.046341', 4),
+	(2, '2026-05-05 00:18:33.316375', 5);
 
--- Volcando datos para la tabla cdf_bbdd.pedidos_productos_seq: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.pedidos_productos: ~0 rows (aproximadamente)
+
+-- Volcando datos para la tabla cdf_app.pedidos_productos_seq: ~1 rows (aproximadamente)
 REPLACE INTO `pedidos_productos_seq` (`next_not_cached_value`, `minimum_value`, `maximum_value`, `start_value`, `increment`, `cache_size`, `cycle_option`, `cycle_count`) VALUES
 	(1, 1, 9223372036854775806, 1, 50, 0, 0, 0);
 
--- Volcando datos para la tabla cdf_bbdd.procesos: ~0 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.procesos: ~6 rows (aproximadamente)
+REPLACE INTO `procesos` (`fecha`, `id`, `usuario_id`, `tipo`) VALUES
+	('2026-05-04 20:55:00.752270', 3, 3, 'FRACCIONADO'),
+	('2026-05-04 21:24:21.112014', 4, 3, 'FRACCIONADO'),
+	('2026-05-04 21:33:24.623057', 5, 3, 'FRACCIONADO'),
+	('2026-05-04 23:19:48.256176', 6, 3, 'ENVASADO'),
+	('2026-05-04 23:20:43.776459', 7, 3, 'FRACCIONADO'),
+	('2026-05-04 23:21:21.785170', 8, 3, 'ENVASADO');
 
--- Volcando datos para la tabla cdf_bbdd.productos: ~66 rows (aproximadamente)
-REPLACE INTO `productos` (`id`, `codigo`, `feteable`, `kilos_por_bolsita`, `nombre`, `picable`, `proveedor_id`) VALUES
-	(1, '8010', b'1', 0.22, 'PAULINA PATEGRAS P/SANDWICH', b'1', NULL),
-	(4, '2374', b'0', NULL, 'FIAM LARIO SALAME BAST GRUESO', b'0', NULL),
-	(5, '2379', b'0', 0.35, 'FIQU PAULINA CREMOSO X KG', b'0', 1),
-	(6, '2381', b'0', NULL, 'FIAM LARIO JAMON CRUDO', b'0', NULL),
-	(7, '2420', b'0', NULL, 'FIQU TREGAR DANBO X KG.', b'0', NULL),
-	(8, '2422', b'0', NULL, 'FIQU TREGAR CREMOSO X KG', b'0', NULL),
-	(9, '2424', b'0', NULL, 'FIQU TREGAR CRIOLLO X KG', b'0', NULL),
-	(10, '2427', b'0', NULL, 'FIQU TREGAR FONTINA X KG', b'0', NULL),
-	(11, '2431', b'0', NULL, 'FIQU TREGAR PATEGRAS X KG', b'0', NULL),
-	(12, '2434', b'0', NULL, 'FIQU TREGAR HOLANDA X KG', b'0', NULL),
-	(13, '2435', b'0', NULL, 'FIQU PAULINA DANBO X KG', b'0', NULL),
-	(14, '2438', b'0', NULL, 'FIQU TREGAR MUZZARELLA BARRA X KG', b'0', NULL),
-	(15, '2440', b'0', NULL, 'FIQU TREGAR PORT SALUT X KG', b'0', NULL),
-	(16, '2441', b'0', NULL, 'FIQU TREGAR PORT SALUT LIGHT X KG', b'0', NULL),
-	(17, '2912', b'0', NULL, 'FIAM RECREO FIAMB COC PATA CERDO(405)', b'0', NULL),
-	(18, '2914', b'0', NULL, 'FIAM RECREO MORTADELA BOLG VEJ X KG', b'0', NULL),
-	(19, '2925', b'0', NULL, 'FIAM RECREO JAMON CRUDO X KG', b'0', NULL),
-	(20, '8974', b'0', NULL, 'FIAM CAGNOLI BONDIOLA', b'0', NULL),
-	(21, '9778', b'0', NULL, 'FIQU RICREM DANBO X KG', b'0', NULL),
-	(22, '1806', b'0', NULL, 'FIAM CAGNOLI SALAMIN P/G x KG', b'0', NULL),
-	(23, '1816', b'0', NULL, 'FIAM PALADINI PALETA COC X KG', b'0', NULL),
-	(24, '1218', b'0', NULL, 'FIQU PAULINA MUZZARELLA  P/FETEAR X KG', b'0', NULL),
-	(25, '5915', b'0', NULL, 'FIAM CAGNOLI CHORIZO ESPANIOL X KG', b'0', NULL),
-	(26, '6011', b'0', NULL, 'FIAM LARIO SALAME BAST FINO', b'0', NULL),
-	(27, '6055', b'0', NULL, 'FIAM 66 MILAN', b'0', NULL),
-	(28, '6152', b'0', NULL, 'FIAM RECREO MILAN X KG', b'0', NULL),
-	(29, '6253', b'0', NULL, 'FIAM PALADINI SALCH PRIMAV', b'0', NULL),
-	(30, '4116', b'0', NULL, 'FIAM CAGNOLI MILAN X KG', b'0', NULL),
-	(31, '4318', b'0', NULL, 'FIQU TREGAR AZUL HORMA x KG', b'0', NULL),
-	(32, '4787', b'0', NULL, 'FIAM CAGNOLI PALETA CERDO X KG', b'0', NULL),
-	(33, '7700', b'0', NULL, 'FIAM CAGNOLI JAM COCIDO C.LENTA 5.5X', b'0', NULL),
-	(34, '7718', b'0', NULL, 'FIAM PICADITAS X KG', b'0', NULL),
-	(35, '8016', b'0', NULL, 'FIAM RECREO BONDIOLA X KG', b'0', NULL),
-	(36, '8085', b'0', NULL, 'FIAM PALADINI JAM COCIDO BAJO SODIO X KG.', b'0', NULL),
-	(37, '3483', b'0', NULL, 'FIAM LARIO LOMO COC. NAT xKG', b'0', NULL),
-	(38, '3755', b'1', 0.20, 'FIAM CAGNOLI JAM COCIDO. X KG', b'1', 1),
-	(39, '3781', b'0', NULL, 'FIAM RECREO JAM COCIDO X KG', b'0', NULL),
-	(40, '3817', b'0', NULL, 'FIAM RECREO SALCHICHON PRIMAVERA X KG', b'0', NULL),
-	(41, '2073', b'0', NULL, 'FIQU PAULINA GOUDA X KG', b'0', NULL),
-	(42, '2187', b'0', NULL, 'FIAM LARIO SALCHICHON PRIMAV', b'0', NULL),
-	(43, '2190', b'0', NULL, 'FIQU PAULINA PATEGRAS X KG', b'0', NULL),
-	(44, '2250', b'0', NULL, 'FIAM PALADINI MORTADELA A/V', b'0', NULL),
-	(45, '2254', b'0', NULL, 'FIAM PALADINI JAM COCIDO', b'0', NULL),
-	(46, '2264', b'0', NULL, 'FIAM PALADINI MILAN', b'0', NULL),
-	(47, '2266', b'0', NULL, 'FIAM PALADINI SALAMIN T/C', b'0', NULL),
-	(48, '6442', b'0', NULL, 'FIQU PAULINA AZUL X KG', b'0', NULL),
-	(49, '6572', b'1', 0.19, 'FIQU PAULINA CHEDDAR X KG', b'1', 1),
-	(50, '4898', b'0', NULL, 'FIAM CAGNOLI SALAME BAST P/F  X KG', b'0', NULL),
-	(51, '4929', b'0', NULL, 'FIQU PAULINA PORT SALUT X KG', b'0', NULL),
-	(52, '4998', b'0', NULL, 'FIAM CAGNOLI SALAME BAST P/G X KG', b'0', NULL),
-	(53, '5048', b'0', NULL, 'FIAM LARIO MORTADELA BOLOGNA', b'0', NULL),
-	(54, '5052', b'0', NULL, 'FIAM LARIO JAM COCIDO X KG (119)', b'0', NULL),
-	(55, '5072', b'0', NULL, 'FIAM LARIO MILAN FINO', b'0', NULL),
-	(56, '5075', b'0', NULL, 'FIAM LARIO SALAMIN TAND P/F', b'0', NULL),
-	(57, '5076', b'0', NULL, 'FIAM LARIO SALAMIN TAND P/G', b'0', NULL),
-	(58, '5409', b'0', NULL, 'FIQU PAULINA REGGIANITO X KG', b'0', NULL),
-	(59, '5446', b'0', NULL, 'FIAM CAGNOLI MORTADELA x KG', b'0', NULL),
-	(60, '6598', b'0', NULL, 'FIAM CAGNOLI PANCETA AHUM X KG', b'0', NULL),
-	(61, '8663', b'0', NULL, 'FIQU PAULINA TYBO X KG', b'0', NULL),
-	(62, '7105', b'0', NULL, 'FIQU PAULINA SARDO X KG', b'0', NULL),
-	(63, '1541', b'0', NULL, 'FIAM CAGNOLI SALAMIN P/F x KG', b'0', NULL),
-	(64, '1611', b'0', NULL, 'FIAM LARIO BONDIOLA (122)', b'0', NULL),
-	(65, '1617', b'0', NULL, 'FIAM RAFAELA JAM COCIDO  NAT X KG', b'0', NULL),
-	(66, '1922', b'0', NULL, 'FIQU CREMON CREMOSO SERENISIMA X KG', b'0', NULL),
-	(67, '667225', b'0', NULL, 'INSU BOLSA VACIO 14X24X70', b'0', NULL),
-	(68, '663717', b'0', NULL, 'INSU BOLS VACIO CERVENY 15X25X70 FIAM 1X', b'0', NULL);
+-- Volcando datos para la tabla cdf_app.productos: ~66 rows (aproximadamente)
+REPLACE INTO `productos` (`feteable`, `kilos_por_bolsita`, `picable`, `id`, `proveedor_id`, `codigo`, `nombre`) VALUES
+	(b'1', 0.22, b'1', 1, NULL, '8010', 'PAULINA PATEGRAS P/SANDWICH'),
+	(b'0', NULL, b'0', 4, NULL, '2374', 'FIAM LARIO SALAME BAST GRUESO'),
+	(b'0', 0.35, b'0', 5, 1, '2379', 'FIQU PAULINA CREMOSO X KG'),
+	(b'0', NULL, b'0', 6, NULL, '2381', 'FIAM LARIO JAMON CRUDO'),
+	(b'0', NULL, b'0', 7, NULL, '2420', 'FIQU TREGAR DANBO X KG.'),
+	(b'0', NULL, b'0', 8, NULL, '2422', 'FIQU TREGAR CREMOSO X KG'),
+	(b'0', NULL, b'0', 9, NULL, '2424', 'FIQU TREGAR CRIOLLO X KG'),
+	(b'0', NULL, b'0', 10, NULL, '2427', 'FIQU TREGAR FONTINA X KG'),
+	(b'0', NULL, b'0', 11, NULL, '2431', 'FIQU TREGAR PATEGRAS X KG'),
+	(b'0', NULL, b'0', 12, NULL, '2434', 'FIQU TREGAR HOLANDA X KG'),
+	(b'0', NULL, b'0', 13, NULL, '2435', 'FIQU PAULINA DANBO X KG'),
+	(b'0', NULL, b'0', 14, NULL, '2438', 'FIQU TREGAR MUZZARELLA BARRA X KG'),
+	(b'0', NULL, b'0', 15, NULL, '2440', 'FIQU TREGAR PORT SALUT X KG'),
+	(b'0', NULL, b'0', 16, NULL, '2441', 'FIQU TREGAR PORT SALUT LIGHT X KG'),
+	(b'0', NULL, b'0', 17, NULL, '2912', 'FIAM RECREO FIAMB COC PATA CERDO(405)'),
+	(b'0', NULL, b'0', 18, NULL, '2914', 'FIAM RECREO MORTADELA BOLG VEJ X KG'),
+	(b'0', NULL, b'0', 19, NULL, '2925', 'FIAM RECREO JAMON CRUDO X KG'),
+	(b'0', NULL, b'0', 20, NULL, '8974', 'FIAM CAGNOLI BONDIOLA'),
+	(b'0', NULL, b'0', 21, NULL, '9778', 'FIQU RICREM DANBO X KG'),
+	(b'0', NULL, b'0', 22, NULL, '1806', 'FIAM CAGNOLI SALAMIN P/G x KG'),
+	(b'0', NULL, b'0', 23, NULL, '1816', 'FIAM PALADINI PALETA COC X KG'),
+	(b'0', NULL, b'0', 24, NULL, '1218', 'FIQU PAULINA MUZZARELLA  P/FETEAR X KG'),
+	(b'0', NULL, b'0', 25, NULL, '5915', 'FIAM CAGNOLI CHORIZO ESPANIOL X KG'),
+	(b'0', NULL, b'0', 26, NULL, '6011', 'FIAM LARIO SALAME BAST FINO'),
+	(b'0', NULL, b'0', 27, NULL, '6055', 'FIAM 66 MILAN'),
+	(b'0', NULL, b'0', 28, NULL, '6152', 'FIAM RECREO MILAN X KG'),
+	(b'0', NULL, b'0', 29, NULL, '6253', 'FIAM PALADINI SALCH PRIMAV'),
+	(b'0', NULL, b'0', 30, NULL, '4116', 'FIAM CAGNOLI MILAN X KG'),
+	(b'0', NULL, b'0', 31, NULL, '4318', 'FIQU TREGAR AZUL HORMA x KG'),
+	(b'0', NULL, b'0', 32, NULL, '4787', 'FIAM CAGNOLI PALETA CERDO X KG'),
+	(b'0', NULL, b'0', 33, NULL, '7700', 'FIAM CAGNOLI JAM COCIDO C.LENTA 5.5X'),
+	(b'0', NULL, b'0', 34, NULL, '7718', 'FIAM PICADITAS X KG'),
+	(b'0', NULL, b'0', 35, NULL, '8016', 'FIAM RECREO BONDIOLA X KG'),
+	(b'0', NULL, b'0', 36, NULL, '8085', 'FIAM PALADINI JAM COCIDO BAJO SODIO X KG.'),
+	(b'0', NULL, b'0', 37, NULL, '3483', 'FIAM LARIO LOMO COC. NAT xKG'),
+	(b'1', 0.20, b'1', 38, 1, '3755', 'FIAM CAGNOLI JAM COCIDO. X KG'),
+	(b'0', NULL, b'0', 39, NULL, '3781', 'FIAM RECREO JAM COCIDO X KG'),
+	(b'0', NULL, b'0', 40, NULL, '3817', 'FIAM RECREO SALCHICHON PRIMAVERA X KG'),
+	(b'0', NULL, b'0', 41, NULL, '2073', 'FIQU PAULINA GOUDA X KG'),
+	(b'0', NULL, b'0', 42, NULL, '2187', 'FIAM LARIO SALCHICHON PRIMAV'),
+	(b'0', NULL, b'0', 43, NULL, '2190', 'FIQU PAULINA PATEGRAS X KG'),
+	(b'0', NULL, b'0', 44, NULL, '2250', 'FIAM PALADINI MORTADELA A/V'),
+	(b'0', NULL, b'0', 45, NULL, '2254', 'FIAM PALADINI JAM COCIDO'),
+	(b'0', NULL, b'0', 46, NULL, '2264', 'FIAM PALADINI MILAN'),
+	(b'0', NULL, b'0', 47, NULL, '2266', 'FIAM PALADINI SALAMIN T/C'),
+	(b'0', NULL, b'0', 48, NULL, '6442', 'FIQU PAULINA AZUL X KG'),
+	(b'1', 0.19, b'1', 49, 1, '6572', 'FIQU PAULINA CHEDDAR X KG'),
+	(b'0', NULL, b'0', 50, NULL, '4898', 'FIAM CAGNOLI SALAME BAST P/F  X KG'),
+	(b'0', NULL, b'0', 51, NULL, '4929', 'FIQU PAULINA PORT SALUT X KG'),
+	(b'0', NULL, b'0', 52, NULL, '4998', 'FIAM CAGNOLI SALAME BAST P/G X KG'),
+	(b'0', NULL, b'0', 53, NULL, '5048', 'FIAM LARIO MORTADELA BOLOGNA'),
+	(b'0', NULL, b'0', 54, NULL, '5052', 'FIAM LARIO JAM COCIDO X KG (119)'),
+	(b'0', NULL, b'0', 55, NULL, '5072', 'FIAM LARIO MILAN FINO'),
+	(b'0', NULL, b'0', 56, NULL, '5075', 'FIAM LARIO SALAMIN TAND P/F'),
+	(b'0', NULL, b'0', 57, NULL, '5076', 'FIAM LARIO SALAMIN TAND P/G'),
+	(b'0', NULL, b'0', 58, NULL, '5409', 'FIQU PAULINA REGGIANITO X KG'),
+	(b'0', NULL, b'0', 59, NULL, '5446', 'FIAM CAGNOLI MORTADELA x KG'),
+	(b'0', NULL, b'0', 60, NULL, '6598', 'FIAM CAGNOLI PANCETA AHUM X KG'),
+	(b'0', NULL, b'0', 61, NULL, '8663', 'FIQU PAULINA TYBO X KG'),
+	(b'0', NULL, b'0', 62, NULL, '7105', 'FIQU PAULINA SARDO X KG'),
+	(b'0', NULL, b'0', 63, NULL, '1541', 'FIAM CAGNOLI SALAMIN P/F x KG'),
+	(b'0', NULL, b'0', 64, NULL, '1611', 'FIAM LARIO BONDIOLA (122)'),
+	(b'0', NULL, b'0', 65, NULL, '1617', 'FIAM RAFAELA JAM COCIDO  NAT X KG'),
+	(b'0', NULL, b'0', 66, NULL, '1922', 'FIQU CREMON CREMOSO SERENISIMA X KG'),
+	(b'0', NULL, b'0', 67, NULL, '667225', 'INSU BOLSA VACIO 14X24X70'),
+	(b'0', NULL, b'0', 68, NULL, '663717', 'INSU BOLS VACIO CERVENY 15X25X70 FIAM 1X');
 
--- Volcando datos para la tabla cdf_bbdd.productos_seq: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.productos_seq: ~1 rows (aproximadamente)
 REPLACE INTO `productos_seq` (`next_not_cached_value`, `minimum_value`, `maximum_value`, `start_value`, `increment`, `cache_size`, `cycle_option`, `cycle_count`) VALUES
 	(151, 1, 9223372036854775806, 1, 50, 0, 0, 0);
 
--- Volcando datos para la tabla cdf_bbdd.proveedor: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.proveedor: ~1 rows (aproximadamente)
 REPLACE INTO `proveedor` (`id`, `direccion`, `nombre`, `telefono`) VALUES
 	(1, '-', 'Jotabe', '-');
 
--- Volcando datos para la tabla cdf_bbdd.proveedor_seq: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.proveedor_seq: ~1 rows (aproximadamente)
 REPLACE INTO `proveedor_seq` (`next_not_cached_value`, `minimum_value`, `maximum_value`, `start_value`, `increment`, `cache_size`, `cycle_option`, `cycle_count`) VALUES
 	(51, 1, 9223372036854775806, 1, 50, 0, 0, 0);
 
--- Volcando datos para la tabla cdf_bbdd.roles: ~3 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.roles: ~3 rows (aproximadamente)
 REPLACE INTO `roles` (`id`, `nombre`) VALUES
 	(1, 'ADMIN'),
 	(2, 'REFERENTE'),
 	(3, 'COLABORADOR');
 
--- Volcando datos para la tabla cdf_bbdd.sucursales: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.sucursales: ~2 rows (aproximadamente)
 REPLACE INTO `sucursales` (`id`, `direccion`, `nombre`, `numero`, `telefono`, `ubicacion_id`) VALUES
-	(1, 'Italia 1137', 'Italia', 3, '-', 2);
+	(2, 'Italia 1137', 'Italia', 3, '-', 2),
+	(3, 'Sarmiento 999', 'Sarmiento', 20, '-', 52);
 
--- Volcando datos para la tabla cdf_bbdd.ubicacion: ~2 rows (aproximadamente)
-REPLACE INTO `ubicacion` (`id`, `descripcion`, `nombre`, `numero`) VALUES
-	(1, 'CD Chaco', 'CD Italia', 1),
-	(2, 'Dep. Suc Italia', 'Deposito Italia', 3);
+-- Volcando datos para la tabla cdf_app.ubicacion: ~3 rows (aproximadamente)
+REPLACE INTO `ubicacion` (`numero`, `id`, `descripcion`, `nombre`) VALUES
+	(1, 1, 'CD Chaco', 'CD Italia'),
+	(3, 2, 'Dep. Suc Italia', 'Deposito Italia'),
+	(20, 52, 'Deposti sucursal sarmiento', 'Sarmiento Dep.');
 
--- Volcando datos para la tabla cdf_bbdd.ubicacion_seq: ~1 rows (aproximadamente)
+-- Volcando datos para la tabla cdf_app.ubicacion_seq: ~1 rows (aproximadamente)
 REPLACE INTO `ubicacion_seq` (`next_not_cached_value`, `minimum_value`, `maximum_value`, `start_value`, `increment`, `cache_size`, `cycle_option`, `cycle_count`) VALUES
-	(101, 1, 9223372036854775806, 1, 50, 0, 0, 0);
+	(151, 1, 9223372036854775806, 1, 50, 0, 0, 0);
 
--- Volcando datos para la tabla cdf_bbdd.usuarios: ~2 rows (aproximadamente)
-REPLACE INTO `usuarios` (`id`, `password`, `username`, `rol_id`) VALUES
-	(2, '$2a$10$HO3i8kGTw6csg6yJYIFI9O0mfzoB6Im5hc0UFIwtDVzbiVfrrNmFC', 'edgar', 1),
-	(3, '$2a$10$x76sZmV2wqlT.GHOlrIJj.vjU9WFs1T6bS3qCto20WlZlblEsjpfG', 'juan', 3);
+-- Volcando datos para la tabla cdf_app.usuarios: ~2 rows (aproximadamente)
+REPLACE INTO `usuarios` (`id`, `rol_id`, `password`, `username`) VALUES
+	(2, 1, '$2a$10$HO3i8kGTw6csg6yJYIFI9O0mfzoB6Im5hc0UFIwtDVzbiVfrrNmFC', 'edgar'),
+	(3, 3, '$2a$10$x76sZmV2wqlT.GHOlrIJj.vjU9WFs1T6bS3qCto20WlZlblEsjpfG', 'juan');
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

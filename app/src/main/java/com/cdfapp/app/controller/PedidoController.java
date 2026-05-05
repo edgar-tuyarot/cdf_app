@@ -1,6 +1,7 @@
 package com.cdfapp.app.controller;
 
 import com.cdfapp.app.dto.CrearPedidoDTO;
+import com.cdfapp.app.dto.PedidoItemDTO;
 import com.cdfapp.app.dto.PedidoResponseDTO;
 import com.cdfapp.app.service.PedidoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,16 @@ public class PedidoController {
             return ResponseEntity
                     .badRequest()
                     .body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{pedidoId}/items")
+    public ResponseEntity<?> agregarItemAdicional(@PathVariable Long pedidoId, @RequestBody PedidoItemDTO dto) {
+        try {
+            PedidoResponseDTO pedidoActualizado = pedidoService.agregarItemAdicional(pedidoId, dto);
+            return ResponseEntity.ok(pedidoActualizado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

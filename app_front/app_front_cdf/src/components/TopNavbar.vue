@@ -67,6 +67,9 @@ const handleLogout = () => {
         <RouterLink to="/proveedores" class="nav-link">
           <span class="material-icons">local_shipping</span> Proveedores
         </RouterLink>
+        <RouterLink to="/procesos" class="nav-link">
+          <span class="material-icons">assignment</span> Procesos
+        </RouterLink>
         <!-- Dropdown Usuarios -->
         <div class="dropdown">
           <button class="dropdown-trigger">

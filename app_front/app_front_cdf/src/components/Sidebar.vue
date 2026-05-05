@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 defineProps({
@@ -9,7 +9,9 @@ defineProps({
 const emit = defineEmits(['close'])
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+const currentTab = computed(() => route.query.tab || 'existencias')
 const isProductosOpen = ref(false)
 const isExistenciasOpen = ref(false)
 const isPedidosOpen = ref(false)
@@ -52,9 +54,47 @@ const toggleUsuarios = () => {
 
         <nav class="sidebar-nav">
           <!-- Vista para Colaboradores -->
-          <RouterLink v-if="authStore.isColaborador" to="/produccion" class="nav-item" @click="$emit('close')">
-            <span class="material-icons">precision_manufacturing</span> Producción
-          </RouterLink>
+          <template v-if="authStore.isColaborador">
+            <RouterLink 
+              to="/produccion?tab=existencias" 
+              class="nav-item" 
+              :class="{ 'active-tab': currentTab === 'existencias' }"
+              @click="$emit('close')"
+            >
+              Existencias
+            </RouterLink>
+            <RouterLink 
+              to="/produccion?tab=productos" 
+              class="nav-item" 
+              :class="{ 'active-tab': currentTab === 'productos' }"
+              @click="$emit('close')"
+            >
+              Productos
+            </RouterLink>
+            <RouterLink 
+              to="/produccion?tab=fraccionar" 
+              class="nav-item" 
+              :class="{ 'active-tab': currentTab === 'fraccionar' }"
+              @click="$emit('close')"
+            >
+              Fraccionar
+            </RouterLink>
+            <RouterLink 
+              to="/produccion?tab=envasar" 
+              class="nav-item" 
+              :class="{ 'active-tab': currentTab === 'envasar' }"
+              @click="$emit('close')"
+            >
+              Envasar
+            </RouterLink>
+            <RouterLink 
+              to="/pedidos/actuales" 
+              class="nav-item" 
+              @click="$emit('close')"
+            >
+              Pedidos
+            </RouterLink>
+          </template>
 
           <!-- Vistas para Admin -->
           <template v-if="!authStore.isColaborador">
@@ -143,6 +183,10 @@ const toggleUsuarios = () => {
 
             <RouterLink to="/proveedores" class="nav-item" @click="$emit('close')">
               <span class="material-icons">local_shipping</span> Proveedores
+            </RouterLink>
+
+            <RouterLink to="/procesos" class="nav-item" @click="$emit('close')">
+              <span class="material-icons">assignment</span> Procesos
             </RouterLink>
 
             <!-- Menu Usuarios con Submenu -->
@@ -265,7 +309,15 @@ const toggleUsuarios = () => {
   background-color: #F0F0F0;
 }
 
-.nav-item.router-link-active {
+/* Active state for items using unique paths (admin menu) */
+.nav-item.router-link-exact-active:not([class*="active-tab"]) {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-border);
+}
+
+/* Active state for collaborator tab items */
+.nav-item.active-tab {
   background-color: var(--color-primary);
   color: white;
   border-color: var(--color-border);

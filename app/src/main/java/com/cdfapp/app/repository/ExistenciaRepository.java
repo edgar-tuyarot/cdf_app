@@ -24,7 +24,10 @@ public interface ExistenciaRepository extends JpaRepository<Existencia, Long> {
             "u.nombre, " +
             "SUM(CASE WHEN e.estado = 'FETEADO' THEN e.unidades ELSE 0 END), " +
             "SUM(CASE WHEN e.estado = 'PIEZA' THEN e.unidades ELSE 0 END), " +
-            "SUM(CASE WHEN e.estado = 'KILOS' THEN e.kilos ELSE 0 END)) " +
+            "SUM(CASE WHEN e.estado = 'KILOS' THEN e.kilos ELSE 0 END), " +
+            "SUM(CASE WHEN e.estado = 'ENVASADO' THEN e.unidades ELSE 0 END), " +
+            "SUM(CASE WHEN e.estado = 'RECORTE' THEN e.kilos ELSE 0 END), " +
+            "SUM(CASE WHEN e.estado = 'DECOMISADO' THEN e.kilos ELSE 0 END)) " +
             "FROM Existencia e JOIN e.producto p JOIN e.ubicacion u " +
             "GROUP BY p.codigo, p.nombre, u.nombre")
     List<ExistenciaSummaryDTO> getExistenciaSummary();

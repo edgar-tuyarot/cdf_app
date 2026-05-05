@@ -45,28 +45,43 @@ public class PedidoService {
                 .build();
 
         for (PedidoItemDTO itemDTO : dto.getItems()) {
-            Producto producto = productoRepository.findByCodigo(itemDTO.getCodigo())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado con código: " + itemDTO.getCodigo()));
-
-            if (itemDTO.getCantidad_fraccion() > 0) {
-                pedido.addItem(PedidoProducto.builder()
-                        .producto(producto)
-                        .cantidad(itemDTO.getCantidad_fraccion())
-                        .estado(EstadoProducto.FETEADO)
-                        .build());
-            }
-
-            if (itemDTO.getCantidad_piezas() > 0) {
-                pedido.addItem(PedidoProducto.builder()
-                        .producto(producto)
-                        .cantidad(itemDTO.getCantidad_piezas())
-                        .estado(EstadoProducto.PIEZA)
-                        .build());
-            }
+            agregarItemAPedido(pedido, itemDTO);
         }
 
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
         return mapToPedidoResponseDTO(pedidoGuardado);
+    }
+
+    @Transactional
+    public PedidoResponseDTO agregarItemAdicional(Long pedidoId, PedidoItemDTO itemDTO) {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new RuntimeException("Pedido no encontrado con id: " + pedidoId));
+                
+        agregarItemAPedido(pedido, itemDTO);
+        
+        Pedido pedidoActualizado = pedidoRepository.save(pedido);
+        return mapToPedidoResponseDTO(pedidoActualizado);
+    }
+    
+    private void agregarItemAPedido(Pedido pedido, PedidoItemDTO itemDTO) {
+        Producto producto = productoRepository.findByCodigo(itemDTO.getCodigo())
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con código: " + itemDTO.getCodigo()));
+
+        if (itemDTO.getCantidad_fraccion() > 0) {
+            pedido.addItem(PedidoProducto.builder()
+                    .producto(producto)
+                    .cantidad(itemDTO.getCantidad_fraccion())
+                    .estado(EstadoProducto.FETEADO)
+                    .build());
+        }
+
+        if (itemDTO.getCantidad_piezas() > 0) {
+            pedido.addItem(PedidoProducto.builder()
+                    .producto(producto)
+                    .cantidad(itemDTO.getCantidad_piezas())
+                    .estado(EstadoProducto.PIEZA)
+                    .build());
+        }
     }
 
     public List<PedidoResponseDTO> obtenerTodosLosPedidos() {
@@ -77,10 +92,20 @@ public class PedidoService {
     }
 
     private PedidoResponseDTO mapToPedidoResponseDTO(Pedido pedido) {
-        PedidoResponseDTO.SucursalInfo sucursalInfo = new PedidoResponseDTO.SucursalInfo(
-                pedido.getSucursal().getId(),
-                pedido.getSucursal().getNombre()
-        );
+        PedidoResponseDTO.SucursalInfo sucursalInfo = null;
+        
+        if (pedido.getSucursal() != null) {
+            sucursalInfo = new PedidoResponseDTO.SucursalInfo(
+                    pedido.getSucursal().getId(),
+                    pedido.getSucursal().getNombre()
+            );
+        } else {
+            // Manejo por si hay pedidos en la BD sin sucursal asignada o cuya sucursal fue borrada
+            sucursalInfo = new PedidoResponseDTO.SucursalInfo(
+                    null,
+                    "Sucursal Desconocida o Eliminada"
+            );
+        }
 
         List<PedidoResponseDTO.ItemInfo> itemInfos = pedido.getItems().stream()
                 .map(item -> new PedidoResponseDTO.ItemInfo(

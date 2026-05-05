@@ -1,12 +1,35 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import BaseCard from '../components/BaseCard.vue'
 import BaseButton from '../components/BaseButton.vue'
+import BaseInput from '../components/BaseInput.vue'
+import { useAuthStore } from '../stores/auth'
 
+const authStore = useAuthStore()
 const pedidos = ref([])
 const isLoading = ref(true)
 const error = ref('')
 const expandedPedido = ref(null)
+
+// Estado de preparación
+const preparandoItem = ref(null) // { pedidoId, item }
+const pesoReal = ref('')
+const cantidadReal = ref('')
+const isSubmittingPrep = ref(false)
+const itemsPreparados = ref({}) // { pedidoId: [ { itemId, productoCodigo, cantidad, cantidad_pedida, pesoReal, estado } ] }
+
+// Estado de edición de item preparado
+const editandoItem = ref(null) // { pedidoId, productoCodigo, itemId }
+const editCantidad = ref('')
+const editPeso = ref('')
+const isSubmittingEdit = ref(false)
+
+// Estado de agregar item extra
+const agregandoItem = ref(null) // pedidoId
+const nuevoItemCodigo = ref('')
+const nuevoItemFraccion = ref('')
+const nuevoItemPiezas = ref('')
+const isSubmittingAgregar = ref(false)
 
 const fetchPedidos = async () => {
   isLoading.value = true
@@ -22,10 +45,37 @@ const fetchPedidos = async () => {
   }
 }
 
-onMounted(fetchPedidos)
+onMounted(async () => {
+  await fetchPedidos()
+  // Pre-cargar items preparados de todos los pedidos
+  for (const pedido of pedidos.value) {
+    await fetchItemsPreparados(pedido.id)
+  }
+})
 
-const toggleExpand = (id) => {
+const fetchItemsPreparados = async (pedidoId) => {
+  try {
+    const res = await fetch(`/api/pedidos/${pedidoId}/items-preparados`)
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data) && data.length > 0) {
+        itemsPreparados.value[pedidoId] = data
+      }
+    }
+  } catch (err) {
+    console.error(`Error cargando items preparados del pedido ${pedidoId}:`, err)
+  }
+}
+
+const toggleExpand = async (id) => {
   expandedPedido.value = expandedPedido.value === id ? null : id
+  // Al cerrar, cancelar cualquier preparación en curso
+  if (expandedPedido.value !== id) {
+    cancelarPreparacion()
+  } else {
+    // Al abrir, cargar items preparados
+    await fetchItemsPreparados(id)
+  }
 }
 
 const formatFecha = (fecha) => {
@@ -60,8 +110,239 @@ const estadoClass = (estado) => {
   const e = estado.toUpperCase()
   if (e === 'CANCELADO') return 'estado-cancelado'
   if (e === 'PENDIENTE') return 'estado-pendiente'
+  if (e === 'PREPARANDO') return 'estado-preparando'
   if (e === 'COMPLETADO' || e === 'ENTREGADO') return 'estado-completado'
   return 'estado-default'
+}
+
+// Preparación de items
+const iniciarPreparacion = (pedidoId, item) => {
+  preparandoItem.value = { pedidoId, item }
+  cantidadReal.value = item.cantidad // Pre-fill con la cantidad pedida
+  pesoReal.value = ''
+}
+
+const cancelarPreparacion = () => {
+  preparandoItem.value = null
+  cantidadReal.value = ''
+  pesoReal.value = ''
+}
+
+const isItemPreparado = (pedidoId, productoCodigo) => {
+  const lista = itemsPreparados.value[pedidoId] || []
+  return lista.some(i => i.productoCodigo === productoCodigo)
+}
+
+const getItemPreparado = (pedidoId, productoCodigo) => {
+  const lista = itemsPreparados.value[pedidoId] || []
+  return lista.find(i => i.productoCodigo === productoCodigo) || null
+}
+
+const getItemCumplimiento = (pedidoId, productoCodigo) => {
+  const prep = getItemPreparado(pedidoId, productoCodigo)
+  if (!prep || !prep.cantidad_pedida) return 0
+  return Math.min(Math.round((prep.cantidad / prep.cantidad_pedida) * 100), 100)
+}
+
+const getCumplimientoPedido = (pedido) => {
+  const lista = itemsPreparados.value[pedido.id] || []
+  if (lista.length === 0) return 0
+  const items = pedido.items || []
+  if (items.length === 0) return 0
+  
+  let totalPedido = 0
+  let totalPreparado = 0
+  
+  for (const item of items) {
+    totalPedido += item.cantidad || 0
+    const prep = lista.find(p => p.productoCodigo === item.productoCodigo)
+    if (prep) {
+      totalPreparado += Math.min(prep.cantidad, item.cantidad)
+    }
+  }
+  
+  if (totalPedido === 0) return 0
+  return Math.min(Math.round((totalPreparado / totalPedido) * 100), 100)
+}
+
+const isPreparandoEsteItem = (pedidoId, item) => {
+  return preparandoItem.value?.pedidoId === pedidoId && 
+         preparandoItem.value?.item?.productoCodigo === item.productoCodigo
+}
+
+const confirmarItem = async () => {
+  if (!preparandoItem.value || !pesoReal.value || !cantidadReal.value) return
+  
+  isSubmittingPrep.value = true
+  const { pedidoId, item } = preparandoItem.value
+
+  try {
+    const payload = {
+      productoCodigo: item.productoCodigo,
+      estado: item.tipo || 'FETEADO',
+      cantidad: parseInt(cantidadReal.value) || 0,
+      pesoReal: parseFloat(pesoReal.value) || 0
+    }
+
+    const response = await fetch(`/api/pedidos/${pedidoId}/preparar-item`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || 'Error al preparar item')
+    }
+
+    // Guardar datos de preparación del response
+    const responseData = await response.json()
+    if (Array.isArray(responseData)) {
+      itemsPreparados.value[pedidoId] = responseData
+    } else {
+      // Si no devuelve array, marcar manualmente
+      if (!itemsPreparados.value[pedidoId]) {
+        itemsPreparados.value[pedidoId] = []
+      }
+      itemsPreparados.value[pedidoId].push({
+        productoCodigo: item.productoCodigo,
+        estado: item.tipo || 'FETEADO',
+        cantidad: parseInt(cantidadReal.value) || 0,
+        pesoReal: parseFloat(pesoReal.value) || 0,
+        cantidad_pedida: item.cantidad
+      })
+    }
+    cancelarPreparacion()
+    
+    // Refrescar pedidos para actualizar estados
+    await fetchPedidos()
+    // Re-expandir el pedido actual
+    expandedPedido.value = pedidoId
+
+  } catch (err) {
+    console.error('Error al preparar item:', err)
+    alert(`Error: ${err.message}`)
+  } finally {
+    isSubmittingPrep.value = false
+  }
+}
+
+// Conteo de items preparados por pedido
+const itemsPreparadosCount = (pedido) => {
+  const lista = itemsPreparados.value[pedido.id] || []
+  return lista.length
+}
+
+// --- EDITAR ITEM PREPARADO ---
+const iniciarEdicion = (pedidoId, productoCodigo) => {
+  const prep = getItemPreparado(pedidoId, productoCodigo)
+  if (!prep) return
+  editandoItem.value = { pedidoId, productoCodigo, itemId: prep.itemId }
+  editCantidad.value = prep.cantidad
+  editPeso.value = prep.pesoReal
+  // Cerrar formulario de preparar si hay uno abierto
+  cancelarPreparacion()
+}
+
+const cancelarEdicion = () => {
+  editandoItem.value = null
+  editCantidad.value = ''
+  editPeso.value = ''
+}
+
+const isEditandoEsteItem = (pedidoId, productoCodigo) => {
+  return editandoItem.value?.pedidoId === pedidoId &&
+         editandoItem.value?.productoCodigo === productoCodigo
+}
+
+const submitEditItem = async () => {
+  if (!editandoItem.value || !editCantidad.value || !editPeso.value) return
+  isSubmittingEdit.value = true
+  const { pedidoId, itemId } = editandoItem.value
+
+  try {
+    const payload = {
+      cantidad: parseInt(editCantidad.value) || 0,
+      pesoReal: parseFloat(editPeso.value) || 0
+    }
+
+    const response = await fetch(`/api/pedidos/items-preparados/${itemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || 'Error al editar item')
+    }
+
+    const responseData = await response.json()
+    if (Array.isArray(responseData)) {
+      itemsPreparados.value[pedidoId] = responseData
+    }
+    cancelarEdicion()
+    await fetchPedidos()
+    expandedPedido.value = pedidoId
+  } catch (err) {
+    console.error('Error al editar item:', err)
+    alert(`Error: ${err.message}`)
+  } finally {
+    isSubmittingEdit.value = false
+  }
+}
+
+// --- AGREGAR ITEM EXTRA AL PEDIDO ---
+const iniciarAgregarItem = (pedidoId) => {
+  agregandoItem.value = pedidoId
+  nuevoItemCodigo.value = ''
+  nuevoItemFraccion.value = ''
+  nuevoItemPiezas.value = ''
+}
+
+const cancelarAgregarItem = () => {
+  agregandoItem.value = null
+  nuevoItemCodigo.value = ''
+  nuevoItemFraccion.value = ''
+  nuevoItemPiezas.value = ''
+}
+
+const submitAgregarItem = async () => {
+  if (!agregandoItem.value || !nuevoItemCodigo.value) return
+  if (!nuevoItemFraccion.value && !nuevoItemPiezas.value) {
+    alert('Ingrese cantidad de fracciones o piezas')
+    return
+  }
+  isSubmittingAgregar.value = true
+
+  try {
+    const payload = {
+      codigo: nuevoItemCodigo.value,
+      cantidad_fraccion: parseInt(nuevoItemFraccion.value) || 0,
+      cantidad_piezas: parseInt(nuevoItemPiezas.value) || 0
+    }
+
+    const response = await fetch(`/api/pedidos/${agregandoItem.value}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || 'Error al agregar item')
+    }
+
+    const pedidoId = agregandoItem.value
+    cancelarAgregarItem()
+    await fetchPedidos()
+    expandedPedido.value = pedidoId
+  } catch (err) {
+    console.error('Error al agregar item:', err)
+    alert(`Error: ${err.message}`)
+  } finally {
+    isSubmittingAgregar.value = false
+  }
 }
 </script>
 
@@ -70,31 +351,28 @@ const estadoClass = (estado) => {
     <header class="view-header">
       <div class="header-content">
         <h2>Pedidos Actuales</h2>
-        <p>Listado de pedidos registrados</p>
+        <p>Listado de pedidos · Preparación de despacho</p>
       </div>
-      <BaseButton variant="minimal" size="small" @click="fetchPedidos" :disabled="isLoading">
-        {{ isLoading ? '...' : 'Actualizar' }}
-      </BaseButton>
+      <button class="refresh-btn" @click="fetchPedidos" :disabled="isLoading">
+        <span class="material-icons" :class="{ 'spinning': isLoading }">refresh</span>
+      </button>
     </header>
 
     <!-- Error -->
     <div v-if="error" class="alert error">
-      ⚠️ {{ error }}
+      <span class="material-icons">error_outline</span> {{ error }}
     </div>
 
     <!-- Loading -->
     <div v-if="isLoading" class="loading-state">
-      <div class="spinner"></div>
+      <span class="material-icons spinning">sync</span>
       <p>Cargando pedidos...</p>
     </div>
 
     <!-- Empty -->
     <div v-else-if="pedidos.length === 0" class="empty-state">
-      <span class="empty-icon">📋</span>
+      <span class="material-icons empty-icon">inbox</span>
       <p>No hay pedidos registrados.</p>
-      <BaseButton variant="minimal" size="small" @click="$router.push('/pedidos/nuevo')">
-        Crear Pedido
-      </BaseButton>
     </div>
 
     <!-- Lista de Pedidos -->
@@ -103,7 +381,10 @@ const estadoClass = (estado) => {
         v-for="pedido in pedidos"
         :key="pedido.id"
         class="pedido-card"
-        :class="{ expanded: expandedPedido === pedido.id }"
+        :class="{ 
+          expanded: expandedPedido === pedido.id,
+          'card-preparando': pedido.estado?.toUpperCase() === 'PREPARANDO'
+        }"
       >
         <!-- Header del pedido -->
         <div class="pedido-header" @click="toggleExpand(pedido.id)">
@@ -128,6 +409,9 @@ const estadoClass = (estado) => {
               <span class="chip items-chip">
                 {{ getResumen(pedido).totalItems }} ítem{{ getResumen(pedido).totalItems !== 1 ? 's' : '' }}
               </span>
+              <span v-if="itemsPreparadosCount(pedido) > 0" class="chip prep-chip">
+                {{ getCumplimientoPedido(pedido) }}%
+              </span>
             </div>
             <span class="expand-arrow" :class="{ rotated: expandedPedido === pedido.id }">▼</span>
           </div>
@@ -135,35 +419,234 @@ const estadoClass = (estado) => {
 
         <!-- Detalle expandido -->
         <div v-if="expandedPedido === pedido.id" class="pedido-detail">
-          <table class="detail-table">
-            <thead>
-              <tr>
-                <th>Código</th>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Tipo</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in (pedido.items || [])" :key="item.id">
-                <td>
-                  <span class="code-badge">{{ item.productoCodigo }}</span>
-                </td>
-                <td class="prod-name">{{ item.productoNombre }}</td>
-                <td class="qty-cell">{{ item.cantidad }}</td>
-                <td>
-                  <span :class="['tipo-badge', item.tipo === 'FETEADO' ? 'tipo-fet' : 'tipo-pieza']">
-                    {{ item.tipo }}
+          <div class="items-list">
+            <div
+              v-for="item in (pedido.items || [])"
+              :key="item.id"
+              class="item-row"
+              :class="{ 
+                'item-preparado': isItemPreparado(pedido.id, item.productoCodigo),
+                'item-activo': isPreparandoEsteItem(pedido.id, item)
+              }"
+            >
+              <!-- Info del item -->
+              <div class="item-main">
+                <div class="item-left">
+                  <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" class="material-icons check-icon">check_circle</span>
+                  <span v-else class="material-icons pending-icon">radio_button_unchecked</span>
+                  <div class="item-info">
+                    <div class="item-top">
+                      <span class="code-badge">{{ item.productoCodigo }}</span>
+                      <span :class="['tipo-badge', item.tipo === 'FETEADO' ? 'tipo-fet' : 'tipo-pieza']">
+                        {{ item.tipo }}
+                      </span>
+                    </div>
+                    <span class="item-nombre">{{ item.productoNombre }}</span>
+                  </div>
+                </div>
+                <div class="item-right">
+                  <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" class="item-cantidad">
+                    {{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}/{{ item.cantidad }}
                   </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  <span v-else class="item-cantidad">{{ item.cantidad }}</span>
+                  <span v-if="isItemPreparado(pedido.id, item.productoCodigo)" 
+                    :class="['cumpl-badge', getItemCumplimiento(pedido.id, item.productoCodigo) >= 100 ? 'cumpl-ok' : 'cumpl-parcial']"
+                    @click.stop="iniciarEdicion(pedido.id, item.productoCodigo)"
+                    title="Click para editar"
+                  >
+                    {{ getItemCumplimiento(pedido.id, item.productoCodigo) }}%
+                    <span class="material-icons edit-hint">edit</span>
+                  </span>
+                  <button 
+                    v-if="!isItemPreparado(pedido.id, item.productoCodigo) && !isPreparandoEsteItem(pedido.id, item)"
+                    class="prep-btn"
+                    @click.stop="iniciarPreparacion(pedido.id, item)"
+                  >
+                    Preparar
+                  </button>
+                </div>
+              </div>
 
-          <div class="detail-totals">
-            <span>{{ getResumen(pedido).totalItems }} productos</span>
-            <span v-if="getResumen(pedido).totalFeteado > 0">· {{ getResumen(pedido).totalFeteado }} feteado</span>
-            <span v-if="getResumen(pedido).totalPiezas > 0">· {{ getResumen(pedido).totalPiezas }} piezas</span>
+              <!-- Formulario de preparación inline -->
+              <Transition name="expand">
+                <div v-if="isPreparandoEsteItem(pedido.id, item)" class="prep-form">
+                  <div class="prep-form-header">
+                    <span class="material-icons">scale</span>
+                    <span>Pesar y confirmar <strong>{{ item.productoNombre }}</strong></span>
+                  </div>
+                  <div class="prep-form-row">
+                    <div class="prep-info-chips">
+                      <span class="prep-chip-info">
+                        <span class="plbl">Tipo</span>
+                        <span class="pval">{{ item.tipo }}</span>
+                      </span>
+                      <span class="prep-chip-info">
+                        <span class="plbl">Pedido</span>
+                        <span class="pval">{{ item.cantidad }}</span>
+                      </span>
+                    </div>
+                    <div class="inputs-row">
+                      <BaseInput 
+                        v-model="cantidadReal" 
+                        :label="item.tipo === 'FETEADO' ? 'Cant. Fracciones' : 'Cant. Piezas'" 
+                        type="number" 
+                        placeholder="Ej: 15"
+                        required
+                        class="prep-input"
+                      />
+                      <BaseInput 
+                        v-model="pesoReal" 
+                        label="Peso Real (KG)" 
+                        type="number" 
+                        step="0.001"
+                        placeholder="Ej: 1.250"
+                        required
+                        class="prep-input"
+                      />
+                    </div>
+                    <div class="prep-actions">
+                      <button type="button" class="cancel-btn" @click.stop="cancelarPreparacion">
+                        Cancelar
+                      </button>
+                      <button 
+                        class="confirm-btn" 
+                        :disabled="isSubmittingPrep || !pesoReal || !cantidadReal"
+                        @click.stop="confirmarItem"
+                      >
+                        <span class="material-icons">{{ isSubmittingPrep ? 'sync' : 'check' }}</span>
+                        {{ isSubmittingPrep ? 'Enviando...' : 'Confirmar' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Transition>
+              <!-- Formulario de edición de item preparado -->
+              <Transition name="expand">
+                <div v-if="isEditandoEsteItem(pedido.id, item.productoCodigo)" class="prep-form edit-form">
+                  <div class="prep-form-header">
+                    <span class="material-icons">edit</span>
+                    <span>Editar <strong>{{ item.productoNombre }}</strong></span>
+                  </div>
+                  <div class="prep-form-row">
+                    <div class="prep-info-chips">
+                      <span class="prep-chip-info">
+                        <span class="plbl">Pedido</span>
+                        <span class="pval">{{ item.cantidad }}</span>
+                      </span>
+                      <span class="prep-chip-info">
+                        <span class="plbl">Preparado</span>
+                        <span class="pval">{{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}</span>
+                      </span>
+                    </div>
+                    <div class="inputs-row">
+                      <BaseInput 
+                        v-model="editCantidad" 
+                        :label="item.tipo === 'FETEADO' ? 'Cant. Fracciones' : 'Cant. Piezas'" 
+                        type="number" 
+                        required
+                        class="prep-input"
+                      />
+                      <BaseInput 
+                        v-model="editPeso" 
+                        label="Peso Real (KG)" 
+                        type="number" 
+                        step="0.001"
+                        required
+                        class="prep-input"
+                      />
+                    </div>
+                    <div class="prep-actions">
+                      <button type="button" class="cancel-btn" @click.stop="cancelarEdicion">
+                        Cancelar
+                      </button>
+                      <button 
+                        class="confirm-btn edit-confirm"
+                        :disabled="isSubmittingEdit || !editCantidad || !editPeso"
+                        @click.stop="submitEditItem"
+                      >
+                        <span class="material-icons">{{ isSubmittingEdit ? 'sync' : 'save' }}</span>
+                        {{ isSubmittingEdit ? 'Guardando...' : 'Guardar' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Transition>
+            </div>
+          </div>
+
+          <div class="detail-footer">
+            <div class="detail-totals">
+              <span>{{ getResumen(pedido).totalItems }} productos</span>
+              <span v-if="getResumen(pedido).totalFeteado > 0">· {{ getResumen(pedido).totalFeteado }} feteado</span>
+              <span v-if="getResumen(pedido).totalPiezas > 0">· {{ getResumen(pedido).totalPiezas }} piezas</span>
+            </div>
+            <div v-if="itemsPreparadosCount(pedido) > 0" class="progress-section">
+              <div class="progress-header">
+                <span class="progress-label">Cumplimiento</span>
+                <span class="progress-pct" :class="{ 'pct-full': getCumplimientoPedido(pedido) >= 100 }">
+                  {{ getCumplimientoPedido(pedido) }}%
+                </span>
+              </div>
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill" 
+                  :class="{ 'fill-full': getCumplimientoPedido(pedido) >= 100 }"
+                  :style="{ width: getCumplimientoPedido(pedido) + '%' }"
+                ></div>
+              </div>
+              <span class="progress-detail">
+                {{ itemsPreparadosCount(pedido) }}/{{ getResumen(pedido).totalItems }} items preparados
+              </span>
+            </div>
+            <!-- Botón y formulario para agregar item extra -->
+            <div class="add-item-section">
+              <button v-if="agregandoItem !== pedido.id" class="add-item-btn" @click.stop="iniciarAgregarItem(pedido.id)">
+                <span class="material-icons">add_circle_outline</span>
+                Agregar producto
+              </button>
+              <div v-else class="add-item-form">
+                <div class="add-item-header">
+                  <span class="material-icons">add_shopping_cart</span>
+                  <span>Agregar producto al pedido</span>
+                </div>
+                <div class="add-item-fields">
+                  <BaseInput 
+                    v-model="nuevoItemCodigo" 
+                    label="Código Producto" 
+                    placeholder="Ej: 8010"
+                    required
+                    class="prep-input"
+                  />
+                  <BaseInput 
+                    v-model="nuevoItemFraccion" 
+                    label="Cant. Fracciones" 
+                    type="number" 
+                    placeholder="0"
+                    class="prep-input"
+                  />
+                  <BaseInput 
+                    v-model="nuevoItemPiezas" 
+                    label="Cant. Piezas" 
+                    type="number" 
+                    placeholder="0"
+                    class="prep-input"
+                  />
+                </div>
+                <div class="prep-actions">
+                  <button type="button" class="cancel-btn" @click.stop="cancelarAgregarItem">
+                    Cancelar
+                  </button>
+                  <button 
+                    class="confirm-btn"
+                    :disabled="isSubmittingAgregar || !nuevoItemCodigo || (!nuevoItemFraccion && !nuevoItemPiezas)"
+                    @click.stop="submitAgregarItem"
+                  >
+                    <span class="material-icons">{{ isSubmittingAgregar ? 'sync' : 'add' }}</span>
+                    {{ isSubmittingAgregar ? 'Agregando...' : 'Agregar' }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -190,45 +673,42 @@ const estadoClass = (estado) => {
 
 .header-content p {
   color: var(--color-text-muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.refresh-btn {
+  background: white;
+  border: 2px solid var(--color-border);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-primary);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover {
+  background-color: #F0F0F0;
 }
 
 /* Loading */
-.loading-state {
+.loading-state, .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-xl);
+  padding: 60px 20px;
   color: var(--color-text-muted);
+  gap: 12px;
 }
 
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--color-border);
-  border-top: 3px solid var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--space-md);
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Empty */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--space-xl);
-  color: var(--color-text-muted);
-  text-align: center;
-}
-
-.empty-icon {
+.loading-state .material-icons, .empty-state .material-icons {
   font-size: 2.5rem;
-  margin-bottom: var(--space-sm);
+  opacity: 0.4;
 }
 
 /* Alert */
@@ -239,6 +719,10 @@ const estadoClass = (estado) => {
   font-weight: 600;
   text-align: center;
   margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .alert.error {
@@ -266,6 +750,10 @@ const estadoClass = (estado) => {
   border-color: var(--color-secondary);
 }
 
+.pedido-card.card-preparando {
+  border-left: 4px solid #FF9800;
+}
+
 .pedido-header {
   display: flex;
   justify-content: space-between;
@@ -289,6 +777,7 @@ const estadoClass = (estado) => {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .pedido-id {
@@ -332,6 +821,17 @@ const estadoClass = (estado) => {
   white-space: nowrap;
 }
 
+.items-chip {
+  background-color: #E8EAF6;
+  color: #3949AB;
+}
+
+.prep-chip {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+  border-color: #C8E6C9;
+}
+
 .expand-arrow {
   font-size: 0.7rem;
   color: var(--color-text-muted);
@@ -345,35 +845,76 @@ const estadoClass = (estado) => {
 /* Detail */
 .pedido-detail {
   border-top: 1px solid var(--color-border);
-  padding: 12px 16px;
   background-color: #FAFAFA;
   animation: slideDown 0.2s ease;
 }
 
 @keyframes slideDown {
-  from { opacity: 0; max-height: 0; }
-  to { opacity: 1; max-height: 500px; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.detail-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
+/* Items list */
+.items-list {
+  display: flex;
+  flex-direction: column;
 }
 
-.detail-table th {
-  text-align: left;
-  padding: 8px 10px;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.item-row {
+  border-bottom: 1px solid #EEEEEE;
+  transition: background-color 0.2s ease;
 }
 
-.detail-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #EEE;
+.item-row:last-child {
+  border-bottom: none;
+}
+
+.item-row.item-preparado {
+  background-color: #F1F8F1;
+}
+
+.item-row.item-activo {
+  background-color: #FFF8E1;
+}
+
+.item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 10px;
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.check-icon {
+  color: #2E7D32;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.pending-icon {
+  color: #BDBDBD;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .code-badge {
@@ -382,43 +923,257 @@ const estadoClass = (estado) => {
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
-.prod-name {
+.item-nombre {
+  font-size: 0.85rem;
   font-weight: 600;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.item-cantidad {
+  font-weight: 900;
+  font-size: 0.95rem;
+  color: var(--color-text);
   white-space: nowrap;
+}
+
+.prep-btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.prep-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+/* Formulario de preparación */
+.prep-form {
+  padding: 0 16px 14px;
+  animation: fadeSlide 0.2s ease;
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.prep-form-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: white;
+  border: 2px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.prep-form-header .material-icons {
+  font-size: 1.1rem;
+  color: var(--color-primary);
+}
+
+.prep-form-row {
+  background: white;
+  border: 2px solid var(--color-border);
+  border-top: 1px solid #EEE;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prep-info-chips {
+  display: flex;
+  gap: 10px;
+}
+
+.prep-chip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.plbl {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.pval {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.prep-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.cancel-btn {
+  background: none;
+  border: 2px solid var(--color-border);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #F0F0F0;
+}
+
+.confirm-btn {
+  background: #2E7D32;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background: #1B5E20;
+}
+
+.confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirm-btn .material-icons {
+  font-size: 1rem;
+}
+
+/* Totals & Progress */
+.detail-footer {
+  border-top: 1px solid var(--color-border);
+  padding: 12px 16px;
 }
 
 .detail-totals {
   display: flex;
   gap: 8px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border);
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-text-muted);
   flex-wrap: wrap;
+  margin-bottom: 8px;
 }
 
-/* Responsive */
-@media (max-width: 480px) {
-  .meta-chips {
-    display: none;
-  }
+.progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-  .prod-name {
-    max-width: 120px;
-  }
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
-  .detail-table th:nth-child(2),
-  .detail-table td:nth-child(2) {
-    max-width: 100px;
-  }
+.progress-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.progress-pct {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #E65100;
+}
+
+.progress-pct.pct-full {
+  color: #2E7D32;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: #EEEEEE;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #FF9800, #F57C00);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.progress-fill.fill-full {
+  background: linear-gradient(90deg, #66BB6A, #2E7D32);
+}
+
+.progress-detail {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* Cumplimiento per-item badge */
+.cumpl-badge {
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.cumpl-ok {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.cumpl-parcial {
+  background-color: #FFF3E0;
+  color: #E65100;
 }
 
 /* Estado badges */
@@ -441,6 +1196,12 @@ const estadoClass = (estado) => {
   color: #E65100;
 }
 
+.estado-preparando {
+  background-color: #FFF8E1;
+  color: #F57F17;
+  border: 1px solid #FFE082;
+}
+
 .estado-completado {
   background-color: #E8F5E9;
   color: #2E7D32;
@@ -453,10 +1214,10 @@ const estadoClass = (estado) => {
 
 /* Tipo badges */
 .tipo-badge {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
 .tipo-fet {
@@ -469,12 +1230,141 @@ const estadoClass = (estado) => {
   color: #1565C0;
 }
 
-.qty-cell {
-  font-weight: 800;
+/* Spinning animation */
+.spinning {
+  animation: spin 0.8s linear infinite;
 }
 
-.items-chip {
-  background-color: #E8EAF6;
-  color: #3949AB;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Expand transition */
+.expand-enter-active, .expand-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+.expand-enter-from, .expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .meta-chips {
+    display: none;
+  }
+
+  .prep-btn {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
+
+  .prep-actions {
+    flex-wrap: wrap;
+  }
+
+  .add-item-fields {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Edit form */
+.edit-form .prep-form-header {
+  border-color: #42A5F5;
+}
+
+.edit-form .prep-form-header .material-icons {
+  color: #1565C0;
+}
+
+.edit-confirm {
+  background: #1565C0 !important;
+}
+
+.edit-confirm:hover:not(:disabled) {
+  background: #0D47A1 !important;
+}
+
+/* Edit hint on cumpl-badge */
+.cumpl-badge {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.cumpl-badge:hover {
+  opacity: 0.85;
+  transform: scale(1.05);
+}
+
+.edit-hint {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
+/* Add item section */
+.add-item-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.add-item-btn {
+  background: none;
+  border: 2px dashed var(--color-border);
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-item-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: #F5F5FF;
+}
+
+.add-item-form {
+  background: white;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  animation: fadeSlide 0.2s ease;
+}
+
+.add-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #F5F5F5;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.add-item-header .material-icons {
+  color: var(--color-primary);
+  font-size: 1.1rem;
+}
+
+.add-item-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 12px;
 }
 </style>

@@ -113,14 +113,23 @@ onMounted(fetchExistencias)
               <th @click="sortBy('nombre')" class="sortable">
                 Nombre <span v-if="sortKey === 'nombre'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               </th>
-              <th @click="sortBy('feteados')" class="text-right desktop-only sortable">
-                Fraccionados <span v-if="sortKey === 'feteados'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-              </th>
               <th @click="sortBy('piezas')" class="text-right desktop-only sortable">
                 Piezas <span v-if="sortKey === 'piezas'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               </th>
               <th @click="sortBy('kilos')" class="text-right desktop-only sortable">
                 Kilos <span v-if="sortKey === 'kilos'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('feteados')" class="text-right desktop-only sortable">
+                Fracc. <span v-if="sortKey === 'feteados'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('envasados')" class="text-right desktop-only sortable">
+                Envasados <span v-if="sortKey === 'envasados'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('recortes')" class="text-right desktop-only sortable">
+                Recortes <span v-if="sortKey === 'recortes'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
+              <th @click="sortBy('decomisados')" class="text-right desktop-only sortable">
+                Decomiso <span v-if="sortKey === 'decomisados'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               </th>
               <th @click="sortBy('ubicacionNombre')" class="text-right desktop-only sortable">
                 Ubic. <span v-if="sortKey === 'ubicacionNombre'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
@@ -132,25 +141,24 @@ onMounted(fetchExistencias)
             <tr class="main-row" @click="toggleRow(item.codigo_producto + item.ubicacionNombre)" :class="{ 'is-expanded': expandedRow === (item.codigo_producto + item.ubicacionNombre) }">
               <td><strong>{{ item.codigo_producto }}</strong></td>
               <td>{{ item.nombre }}</td>
-              <td class="text-right desktop-only">{{ item.feteados.toFixed(3) }}</td>
               <td class="text-right desktop-only">{{ item.piezas }}</td>
               <td class="text-right desktop-only">{{ item.kilos.toFixed(3) }}</td>
+              <td class="text-right desktop-only">{{ (item.feteados || 0).toFixed(0) }}</td>
+              <td class="text-right desktop-only">{{ (item.envasados || 0).toFixed(0) }}</td>
+              <td class="text-right desktop-only">{{ (item.recortes || 0).toFixed(3) }}</td>
+              <td class="text-right desktop-only">{{ (item.decomisados || 0).toFixed(3) }}</td>
               <td class="text-right desktop-only"><span class="badge">{{ item.ubicacionNombre }}</span></td>
               <td class="text-right mobile-only">
                 <span class="expand-icon">{{ expandedRow === (item.codigo_producto + item.ubicacionNombre) ? '▲' : '▼' }}</span>
               </td>
             </tr>
             <tr v-if="expandedRow === (item.codigo_producto + item.ubicacionNombre)" class="details-row mobile-only">
-              <td colspan="6">
+              <td colspan="10">
                 <div class="details-content fade-in">
                   <table class="detail-mini-table">
                     <tr>
                       <th>Ubicación</th>
                       <td><span class="badge">{{ item.ubicacionNombre }}</span></td>
-                    </tr>
-                    <tr>
-                      <th>Fraccionados</th>
-                      <td><strong>{{ item.feteados.toFixed(3) }}</strong></td>
                     </tr>
                     <tr>
                       <th>Piezas</th>
@@ -160,6 +168,22 @@ onMounted(fetchExistencias)
                       <th>Kilos</th>
                       <td><strong>{{ item.kilos.toFixed(3) }}</strong></td>
                     </tr>
+                    <tr>
+                      <th>Fraccionados</th>
+                      <td><strong>{{ (item.feteados || 0).toFixed(0) }}</strong></td>
+                    </tr>
+                    <tr>
+                      <th>Envasados</th>
+                      <td><strong>{{ (item.envasados || 0).toFixed(0) }}</strong></td>
+                    </tr>
+                    <tr v-if="item.recortes">
+                      <th>Recortes</th>
+                      <td><strong>{{ item.recortes.toFixed(3) }} kg</strong></td>
+                    </tr>
+                    <tr v-if="item.decomisados">
+                      <th>Decomisados</th>
+                      <td class="warn-text"><strong>{{ item.decomisados.toFixed(3) }} kg</strong></td>
+                    </tr>
                   </table>
                 </div>
               </td>
@@ -167,7 +191,7 @@ onMounted(fetchExistencias)
           </tbody>
           <tbody v-if="existencias.length === 0 && !isLoading">
             <tr>
-              <td colspan="6" class="text-center text-muted">No hay existencias registradas.</td>
+              <td colspan="10" class="text-center text-muted">No hay existencias registradas.</td>
             </tr>
           </tbody>
         </table>
@@ -341,5 +365,9 @@ onMounted(fetchExistencias)
   border: 2px solid #EF9A9A;
   margin-bottom: var(--space-md);
   text-align: center;
+}
+
+.warn-text {
+  color: #C62828;
 }
 </style>

@@ -19,19 +19,18 @@ const toggleSidebar = () => {
     <header class="app-header">
       <!-- Mobile Trigger & Logo -->
       <div class="mobile-header-content mobile-only">
-        <button class="menu-trigger" @click="toggleSidebar">☰</button>
+        <button class="menu-trigger" @click="toggleSidebar">
+          <span class="material-icons">menu</span>
+        </button>
         <div class="header-logo">CDF APP</div>
+        <div class="user-avatar">
+          <span class="material-icons">person</span>
+        </div>
       </div>
 
       <!-- Desktop Navbar -->
       <div class="desktop-only w-full">
         <TopNavbar />
-      </div>
-
-      <div class="header-actions mobile-only">
-        <div class="user-avatar">
-          <span class="material-icons">person</span>
-        </div>
       </div>
     </header>
 
@@ -53,11 +52,11 @@ const toggleSidebar = () => {
 
 .app-header {
   background-color: var(--color-primary);
-  height: 64px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-md);
+  padding: 0 10px;
   border-bottom: 2px solid var(--color-border);
   position: sticky;
   top: 0;
@@ -69,11 +68,12 @@ const toggleSidebar = () => {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  height: 100%;
 }
 
 .w-full { width: 100%; }
 
-.mobile-only { display: block; }
+.mobile-only { display: flex; }
 .desktop-only { display: none; }
 
 @media (min-width: 1024px) {
@@ -93,23 +93,31 @@ const toggleSidebar = () => {
   background: none;
   border: none;
   color: white;
-  font-size: 1.5rem;
   cursor: pointer;
-  padding: 8px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+  flex-shrink: 0;
+}
+
+.menu-trigger .material-icons {
+  font-size: 1.5rem;
 }
 
 .header-logo {
   color: white;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   flex: 1;
   text-align: center;
+  letter-spacing: 0.5px;
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   background-color: var(--color-secondary);
   border-radius: 50%;
   border: 2px solid var(--color-border);
@@ -117,6 +125,11 @@ const toggleSidebar = () => {
   align-items: center;
   justify-content: center;
   color: white;
+  flex-shrink: 0;
+}
+
+.user-avatar .material-icons {
+  font-size: 1.1rem;
 }
 
 .main-content {
