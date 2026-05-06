@@ -123,6 +123,12 @@ const router = createRouter({
       name: 'nuevo-pedido',
       component: () => import('../views/CrearPedidoView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/pedidos/seguimiento',
+      name: 'pedidos-seguimiento',
+      component: () => import('../views/SeguimientoPreparacionView.vue'),
+      meta: { requiresAuth: true }
     }
   ],
 })

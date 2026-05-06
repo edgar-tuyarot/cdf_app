@@ -473,30 +473,29 @@ const submitAgregarItem = async () => {
                     
                     <!-- Formulario de preparación inline -->
                     <div v-if="isPreparandoEsteItem(pedido.id, item)" class="prep-form subtle-form-full">
-                      <table class="subtle-table">
-                        <tr>
-                          <td class="t-label" style="width:30%">CÓDIGO</td>
-                          <td class="t-label" style="width:35%">TIPO</td>
-                          <td class="t-label" style="width:35%">PEDIDO</td>
-                        </tr>
-                        <tr>
-                          <td class="t-val">{{ item.productoCodigo }}</td>
-                          <td class="t-val">{{ item.tipo }}</td>
-                          <td class="t-val">{{ item.cantidad }}</td>
-                        </tr>
-                        <tr>
-                          <td class="t-label spacer-top" colspan="2">Cant. {{ item.tipo === 'FETEADO' ? 'Fracciones' : 'Piezas' }}</td>
-                          <td class="t-label spacer-top">Peso Real (KG)</td>
-                        </tr>
-                        <tr>
-                          <td colspan="2">
-                            <input v-model="cantidadReal" type="number" class="t-input" placeholder="Ej: 20" required />
-                          </td>
-                          <td>
-                            <input v-model="pesoReal" type="number" step="0.001" class="t-input" placeholder="Ej: 1.250" required />
-                          </td>
-                        </tr>
-                      </table>
+                      <div class="prep-grid">
+                        <div class="grid-item">
+                          <span class="t-label">CÓDIGO</span>
+                          <span class="t-val">{{ item.productoCodigo }}</span>
+                        </div>
+                        <div class="grid-item">
+                          <span class="t-label">TIPO</span>
+                          <span class="t-val">{{ item.tipo }}</span>
+                        </div>
+                        <div class="grid-item">
+                          <span class="t-label">PEDIDO</span>
+                          <span class="t-val">{{ item.cantidad }}</span>
+                        </div>
+                        
+                        <div class="grid-item-input">
+                          <label class="t-label">Cant. {{ item.tipo === 'FETEADO' ? 'Fracciones' : 'Piezas' }}</label>
+                          <input v-model="cantidadReal" type="number" class="t-input" placeholder="Ej: 20" required />
+                        </div>
+                        <div class="grid-item-input">
+                          <label class="t-label">Peso Real (KG)</label>
+                          <input v-model="pesoReal" type="number" step="0.001" class="t-input" placeholder="Ej: 1.250" required />
+                        </div>
+                      </div>
 
                       <div class="prep-actions centered-actions">
                         <button type="button" class="cancel-btn" @click.stop="cancelarPreparacion">
@@ -515,30 +514,29 @@ const submitAgregarItem = async () => {
 
                     <!-- Formulario de edición de item preparado -->
                     <div v-if="isEditandoEsteItem(pedido.id, item.productoCodigo)" class="prep-form subtle-form-full edit-form">
-                      <table class="subtle-table">
-                        <tr>
-                          <td class="t-label" style="width:30%">CÓDIGO</td>
-                          <td class="t-label" style="width:35%">PREPARADO</td>
-                          <td class="t-label" style="width:35%">PEDIDO</td>
-                        </tr>
-                        <tr>
-                          <td class="t-val">{{ item.productoCodigo }}</td>
-                          <td class="t-val">{{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}</td>
-                          <td class="t-val">{{ item.cantidad }}</td>
-                        </tr>
-                        <tr>
-                          <td class="t-label spacer-top" colspan="2">Cant. {{ item.tipo === 'FETEADO' ? 'Fracciones' : 'Piezas' }}</td>
-                          <td class="t-label spacer-top">Peso Real (KG)</td>
-                        </tr>
-                        <tr>
-                          <td colspan="2">
-                            <input v-model="editCantidad" type="number" class="t-input" required />
-                          </td>
-                          <td>
-                            <input v-model="editPeso" type="number" step="0.001" class="t-input" required />
-                          </td>
-                        </tr>
-                      </table>
+                      <div class="prep-grid">
+                        <div class="grid-item">
+                          <span class="t-label">CÓDIGO</span>
+                          <span class="t-val">{{ item.productoCodigo }}</span>
+                        </div>
+                        <div class="grid-item">
+                          <span class="t-label">PREPARADO</span>
+                          <span class="t-val">{{ getItemPreparado(pedido.id, item.productoCodigo)?.cantidad }}</span>
+                        </div>
+                        <div class="grid-item">
+                          <span class="t-label">PEDIDO</span>
+                          <span class="t-val">{{ item.cantidad }}</span>
+                        </div>
+                        
+                        <div class="grid-item-input">
+                          <label class="t-label">Cant. {{ item.tipo === 'FETEADO' ? 'Fracciones' : 'Piezas' }}</label>
+                          <input v-model="editCantidad" type="number" class="t-input" required />
+                        </div>
+                        <div class="grid-item-input">
+                          <label class="t-label">Peso Real (KG)</label>
+                          <input v-model="editPeso" type="number" step="0.001" class="t-input" required />
+                        </div>
+                      </div>
 
                       <div class="prep-actions centered-actions">
                         <button type="button" class="cancel-btn" @click.stop="cancelarEdicion">
@@ -1389,6 +1387,32 @@ const submitAgregarItem = async () => {
   vertical-align: middle;
 }
 
+.prep-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.grid-item {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.grid-item-input {
+  grid-column: span 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grid-item-input .t-label {
+  margin-bottom: 2px;
+}
+
 .t-label {
   font-size: 0.72rem;
   color: var(--color-text-muted);
@@ -1417,6 +1441,7 @@ const submitAgregarItem = async () => {
   transition: border-color 0.2s;
   box-sizing: border-box;
   background-color: white;
+  text-align: center;
 }
 
 .t-input:focus {

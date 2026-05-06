@@ -48,7 +48,13 @@ public class SecurityConfig {
                 .loginProcessingUrl("/api/auth/login")
                 .successHandler(successHandler) // Usa el handler de exito JSON
                 .failureHandler(failureHandler) // Usa el handler de fallo JSON
+            )
+            .rememberMe(rememberMe -> rememberMe
+                .key("unaClaveSecretaMuyLargaYCompleja") // ¡Cambia esto por una clave secreta tuya!
+                .tokenValiditySeconds(2592000) // 30 días de validez
+                .userDetailsService(jpaUserDetailsService)
             );
+
         return http.build();
     }
 

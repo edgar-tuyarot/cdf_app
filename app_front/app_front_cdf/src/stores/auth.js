@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
       const formData = new URLSearchParams()
       formData.append('username', username)
       formData.append('password', password)
+      formData.append('remember-me', 'true')
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',

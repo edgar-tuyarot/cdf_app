@@ -117,6 +117,9 @@ const toggleUsuarios = () => {
                   <RouterLink to="/pedidos/nuevo" class="submenu-item" @click="$emit('close')">
                     <span class="dot">•</span> Crear Pedido
                   </RouterLink>
+                  <RouterLink to="/pedidos/seguimiento" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Monitoreo de Preparación
+                  </RouterLink>
                 </div>
               </Transition>
             </div>
