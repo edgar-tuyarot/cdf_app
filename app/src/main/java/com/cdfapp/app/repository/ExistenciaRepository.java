@@ -42,7 +42,10 @@ public interface ExistenciaRepository extends JpaRepository<Existencia, Long> {
             "GROUP BY p.codigo, p.nombre, p.kilosPorBolsita")
     List<ProductoFeteadoDTO> getProductosFeteadosStatus();
 
-    // --- Método de Diagnóstico ---
+    // --- Metodo de Diagnóstico ---
     @Query("SELECT e FROM Existencia e LEFT JOIN FETCH e.producto LEFT JOIN FETCH e.ubicacion")
     List<Existencia> findAllWithDetails();
+
+
+
 }

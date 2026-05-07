@@ -1,6 +1,7 @@
 package com.cdfapp.app.controller;
 
 import com.cdfapp.app.dto.EnvasadoRequestDTO;
+import com.cdfapp.app.dto.PicadaReqDto;
 import com.cdfapp.app.dto.ProcesamientoRequestDTO;
 import com.cdfapp.app.dto.ProcesoRespuestaDTO;
 import com.cdfapp.app.entity.Proceso;
@@ -40,5 +41,11 @@ public class ProcesoController {
     public ResponseEntity<List<ProcesoRespuestaDTO>> getTodosLosProcesos() {
         List<ProcesoRespuestaDTO> procesos = procesoService.getTodosLosProcesos();
         return ResponseEntity.ok(procesos);
+    }
+
+    @PostMapping("/picar")
+    public ResponseEntity<Proceso> procesarPicada(@RequestBody PicadaReqDto dto) {
+        Proceso nuevoProceso = procesoService.procesarPicada(dto);
+        return ResponseEntity.ok(nuevoProceso);
     }
 }

@@ -71,6 +71,7 @@ const toggleUsuarios = () => {
             >
               Fraccionar
             </RouterLink>
+
             <RouterLink 
               to="/produccion?tab=envasar" 
               class="nav-item colab-tab" 
@@ -168,6 +169,9 @@ const toggleUsuarios = () => {
                   </RouterLink>
                   <RouterLink to="/existencias/ver" class="submenu-item" @click="$emit('close')">
                     <span class="dot">•</span> Ver Existencias
+                  </RouterLink>
+                  <RouterLink to="/existencias/picadas" class="submenu-item" @click="$emit('close')">
+                    <span class="dot">•</span> Consultar Picadas
                   </RouterLink>
                 </div>
               </Transition>

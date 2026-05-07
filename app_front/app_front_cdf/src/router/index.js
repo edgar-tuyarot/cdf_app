@@ -129,6 +129,12 @@ const router = createRouter({
       name: 'pedidos-seguimiento',
       component: () => import('../views/SeguimientoPreparacionView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/existencias/picadas',
+      name: 'ver-picadas',
+      component: () => import('../views/ListaPicadasView.vue'),
+      meta: { requiresAuth: true }
     }
   ],
 })

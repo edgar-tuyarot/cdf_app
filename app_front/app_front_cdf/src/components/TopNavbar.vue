@@ -51,7 +51,6 @@ const handleLogout = () => {
           </div>
         </div>
 
-        <!-- Dropdown Existencias -->
         <div class="dropdown">
           <button class="dropdown-trigger">
             <span class="material-icons">store</span> Existencias <span class="material-icons arrow">expand_more</span>
@@ -59,6 +58,7 @@ const handleLogout = () => {
           <div class="dropdown-content">
             <RouterLink to="/existencias/nuevo">Agregar Existencia</RouterLink>
             <RouterLink to="/existencias/ver">Ver Existencias</RouterLink>
+            <RouterLink to="/existencias/picadas">Consultar Picadas</RouterLink>
           </div>
         </div>
 

@@ -1,13 +1,14 @@
 package com.cdfapp.app.service;
 
-import com.cdfapp.app.dto.EnvasadoRequestDTO;
-import com.cdfapp.app.dto.ProcesamientoRequestDTO;
-import com.cdfapp.app.dto.ProcesoRespuestaDTO;
+import com.cdfapp.app.dto.*;
 import com.cdfapp.app.entity.*;
 import com.cdfapp.app.enums.EstadoProducto;
 import com.cdfapp.app.enums.MotivoMovimiento;
 import com.cdfapp.app.enums.TipoProceso;
 import com.cdfapp.app.repository.*;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -167,6 +168,7 @@ public class ProcesoService {
         movimientoRepository.save(movimiento);
     }
 
+
     @Transactional(readOnly = true)
     public List<ProcesoRespuestaDTO> getTodosLosProcesos() {
         List<Proceso> procesos = procesoRepository.findAll();
@@ -228,4 +230,48 @@ public class ProcesoService {
 
         return respuestas;
     }
+
+
+
+    @Transactional
+    public Proceso procesarPicada(PicadaReqDto dto) {
+        // 1. Obtener entidades relacionadas
+        Producto productoOriginal = productoRepository.findByCodigo(dto.codigo())
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con código: " + dto.codigo()));
+        Ubicacion ubicacion = ubicacionRepository.findById(dto.ubicacionId())
+                .orElseThrow(() -> new RuntimeException("Ubicación no encontrada con id: " + dto.ubicacionId()));
+        Usuario usuario = usuarioRepository.findById(dto.usuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + dto.usuarioId()));
+
+        // 2. Crear y guardar el Proceso de tipo ENVASADO
+        Proceso proceso = Proceso.builder()
+                .tipo(TipoProceso.PICADO)
+                .fecha(LocalDateTime.now())
+                .usuario(usuario)
+                .build();
+        proceso = procesoRepository.save(proceso);
+
+        // 3. Procesar SALIDA (Materia Prima: Feteado del producto original)
+        actualizarYRegistrar(productoOriginal, ubicacion, proceso, EstadoProducto.RECORTE,
+                 MotivoMovimiento.SALIDA,  dto.peso(),null);
+
+
+
+        Producto productoDestino;
+        //Picada
+        productoDestino = productoRepository.findByCodigo("7718")
+                .orElseThrow(() -> new RuntimeException("Alta no iniciada: " + dto.codigo()));
+
+
+
+        // 5. Procesar ENTRADA (Producto Terminado: Envasado en el producto de destino)
+        actualizarYRegistrar(productoDestino, ubicacion, proceso, EstadoProducto.KILOS,
+                 MotivoMovimiento.ENTRADA, dto.peso(),null);
+
+
+        return proceso;
+    }
+
+
+
 }
