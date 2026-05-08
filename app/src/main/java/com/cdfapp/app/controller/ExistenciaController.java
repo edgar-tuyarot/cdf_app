@@ -27,6 +27,12 @@ public class ExistenciaController {
         return ResponseEntity.ok(nuevaExistencia);
     }
 
+    @PutMapping
+    public ResponseEntity<Existencia> actualizarExistencia(@RequestBody ExistenciaRequestDTO dto) {
+        Existencia existenciaActualizada = existenciaService.actualizarExistencia(dto);
+        return ResponseEntity.ok(existenciaActualizada);
+    }
+
     @GetMapping("/summary")
     public ResponseEntity<List<ExistenciaSummaryDTO>> getExistenciaSummary() {
         List<ExistenciaSummaryDTO> summary = existenciaService.getExistenciaSummary();

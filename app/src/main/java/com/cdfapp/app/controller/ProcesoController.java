@@ -4,6 +4,7 @@ import com.cdfapp.app.dto.EnvasadoRequestDTO;
 import com.cdfapp.app.dto.PicadaReqDto;
 import com.cdfapp.app.dto.ProcesamientoRequestDTO;
 import com.cdfapp.app.dto.ProcesoRespuestaDTO;
+import com.cdfapp.app.dto.RecorteRequestDTO;
 import com.cdfapp.app.entity.Proceso;
 import com.cdfapp.app.service.ProcesoService;
 import org.springframework.http.ResponseEntity;
@@ -47,5 +48,11 @@ public class ProcesoController {
     public ResponseEntity<Proceso> procesarPicada(@RequestBody PicadaReqDto dto) {
         Proceso nuevoProceso = procesoService.procesarPicada(dto);
         return ResponseEntity.ok(nuevoProceso);
+    }
+
+    @PostMapping("/recorte/sumar")
+    public ResponseEntity<Void> sumarRecorte(@RequestBody RecorteRequestDTO dto) {
+        procesoService.sumarRecorte(dto);
+        return ResponseEntity.ok().build();
     }
 }

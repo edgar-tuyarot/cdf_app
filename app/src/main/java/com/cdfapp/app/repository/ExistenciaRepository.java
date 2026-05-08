@@ -47,5 +47,11 @@ public interface ExistenciaRepository extends JpaRepository<Existencia, Long> {
     List<Existencia> findAllWithDetails();
 
 
+    Optional<Existencia> findByProductoIdAndEstadoAndUbicacionId(
+            Long productoId,
+            EstadoProducto estado,
+            Long ubicacionId
+    );
+
 
 }

@@ -51,6 +51,37 @@ public class ExistenciaService {
         return existenciaRepository.save(existencia);
     }
 
+    @Transactional
+    public Existencia actualizarExistencia(ExistenciaRequestDTO dto) {
+
+        Producto producto = productoRepository.findByCodigo(dto.getCodigo_producto())
+                .orElseThrow(() ->
+                        new RuntimeException("Producto no encontrado"));
+
+        Ubicacion ubicacion = ubicacionRepository.findById(dto.getUbicacionId())
+                .orElseThrow(() ->
+                        new RuntimeException("Ubicación no encontrada"));
+
+        Existencia existencia = existenciaRepository
+                .findByProductoIdAndEstadoAndUbicacionId(
+                        producto.getId(),
+                        dto.getEstado(),
+                        ubicacion.getId()
+                )
+                .orElseGet(() -> {
+                    Existencia nueva = new Existencia();
+                    nueva.setProducto(producto);
+                    nueva.setEstado(dto.getEstado());
+                    nueva.setUbicacion(ubicacion);
+                    return nueva;
+                });
+
+        existencia.setKilos(dto.getKilos());
+        existencia.setUnidades(dto.getUnidades());
+
+        return existenciaRepository.save(existencia);
+    }
+
     @Transactional(readOnly = true)
     public List<ExistenciaSummaryDTO> getExistenciaSummary() {
         return existenciaRepository.getExistenciaSummary();

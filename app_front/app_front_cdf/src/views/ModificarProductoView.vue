@@ -37,7 +37,7 @@ const fetchProduct = async () => {
       picable: data.picable,
       feteable: data.feteable,
       kilosPorBolsita: data.kilosPorBolsita,
-      proveedorId: data.proveedorId
+      proveedorId: data.proveedor ? data.proveedor.id : ''
     }
   } catch (err) {
     error.value = err.message

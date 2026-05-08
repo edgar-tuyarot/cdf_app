@@ -27,24 +27,23 @@ public class ProcesoService {
     private final ProductoRepository productoRepository;
     private final UbicacionRepository ubicacionRepository;
     private final UsuarioRepository usuarioRepository;
-    private final FraccionadoRepository fraccionadoRepository; // Inyectado
+    private final FraccionadoRepository fraccionadoRepository;
 
     public ProcesoService(ProcesoRepository procesoRepository, MovimientoRepository movimientoRepository,
                           ExistenciaRepository existenciaRepository, ProductoRepository productoRepository,
                           UbicacionRepository ubicacionRepository, UsuarioRepository usuarioRepository,
-                          FraccionadoRepository fraccionadoRepository) { // Añadido al constructor
+                          FraccionadoRepository fraccionadoRepository) {
         this.procesoRepository = procesoRepository;
         this.movimientoRepository = movimientoRepository;
         this.existenciaRepository = existenciaRepository;
         this.productoRepository = productoRepository;
         this.ubicacionRepository = ubicacionRepository;
         this.usuarioRepository = usuarioRepository;
-        this.fraccionadoRepository = fraccionadoRepository; // Asignado
+        this.fraccionadoRepository = fraccionadoRepository;
     }
 
     @Transactional
     public Proceso procesarEnvasado(EnvasadoRequestDTO dto) {
-        // 1. Obtener entidades relacionadas
         Producto productoOriginal = productoRepository.findByCodigo(dto.getCodigo())
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con código: " + dto.getCodigo()));
         Ubicacion ubicacion = ubicacionRepository.findById(dto.getUbicacionId())
@@ -52,7 +51,6 @@ public class ProcesoService {
         Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + dto.getUsuarioId()));
 
-        // 2. Crear y guardar el Proceso de tipo ENVASADO
         Proceso proceso = Proceso.builder()
                 .tipo(TipoProceso.ENVASADO)
                 .fecha(LocalDateTime.now())
@@ -60,27 +58,22 @@ public class ProcesoService {
                 .build();
         proceso = procesoRepository.save(proceso);
 
-        // 3. Procesar SALIDA (Materia Prima: Feteado del producto original)
         if (dto.getCantidad() != null && dto.getCantidad() > 0) {
             actualizarYRegistrar(productoOriginal, ubicacion, proceso, EstadoProducto.FETEADO,
                     MotivoMovimiento.SALIDA, null, dto.getCantidad());
         }
 
-        // 4. LÓGICA DE FRACCIONAMIENTO: Determinar el producto de destino
         Optional<Fraccionado> reglaOpt = fraccionadoRepository.findByCodigoProductoOriginal(productoOriginal.getCodigo());
         
         Producto productoDestino;
         if (reglaOpt.isPresent()) {
-            // Si hay regla, el destino es el nuevo producto
             String nuevoCodigo = reglaOpt.get().getCodigoProducto();
             productoDestino = productoRepository.findByCodigo(nuevoCodigo)
                     .orElseThrow(() -> new RuntimeException("Producto fraccionado de destino no encontrado con código: " + nuevoCodigo));
         } else {
-            // Si no hay regla, el destino es el mismo producto original
             productoDestino = productoOriginal;
         }
 
-        // 5. Procesar ENTRADA (Producto Terminado: Envasado en el producto de destino)
         if (dto.getCantidad() != null && dto.getCantidad() > 0) {
             actualizarYRegistrar(productoDestino, ubicacion, proceso, EstadoProducto.ENVASADO,
                     MotivoMovimiento.ENTRADA, null, dto.getCantidad());
@@ -231,11 +224,8 @@ public class ProcesoService {
         return respuestas;
     }
 
-
-
     @Transactional
     public Proceso procesarPicada(PicadaReqDto dto) {
-        // 1. Obtener entidades relacionadas
         Producto productoOriginal = productoRepository.findByCodigo(dto.codigo())
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado con código: " + dto.codigo()));
         Ubicacion ubicacion = ubicacionRepository.findById(dto.ubicacionId())
@@ -243,7 +233,6 @@ public class ProcesoService {
         Usuario usuario = usuarioRepository.findById(dto.usuarioId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + dto.usuarioId()));
 
-        // 2. Crear y guardar el Proceso de tipo ENVASADO
         Proceso proceso = Proceso.builder()
                 .tipo(TipoProceso.PICADO)
                 .fecha(LocalDateTime.now())
@@ -251,27 +240,37 @@ public class ProcesoService {
                 .build();
         proceso = procesoRepository.save(proceso);
 
-        // 3. Procesar SALIDA (Materia Prima: Feteado del producto original)
         actualizarYRegistrar(productoOriginal, ubicacion, proceso, EstadoProducto.RECORTE,
                  MotivoMovimiento.SALIDA,  dto.peso(),null);
 
-
-
         Producto productoDestino;
-        //Picada
         productoDestino = productoRepository.findByCodigo("7718")
                 .orElseThrow(() -> new RuntimeException("Alta no iniciada: " + dto.codigo()));
 
-
-
-        // 5. Procesar ENTRADA (Producto Terminado: Envasado en el producto de destino)
         actualizarYRegistrar(productoDestino, ubicacion, proceso, EstadoProducto.KILOS,
                  MotivoMovimiento.ENTRADA, dto.peso(),null);
-
 
         return proceso;
     }
 
+    @Transactional
+    public void sumarRecorte(RecorteRequestDTO dto) {
+        Producto producto = productoRepository.findByCodigo(dto.getCodigoProducto())
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado con código: " + dto.getCodigoProducto()));
+        Long ubicacionId = dto.getUbicacionId() != null ? dto.getUbicacionId() : 1L;
+        Ubicacion ubicacion = ubicacionRepository.findById(ubicacionId)
+                .orElseThrow(() -> new RuntimeException("Ubicación no encontrada con id: " + ubicacionId));
+        Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + dto.getUsuarioId()));
 
+        Proceso proceso = Proceso.builder()
+                .tipo(TipoProceso.FRACCIONADO) // o podrías tener un tipo especifico para ajuste de recorte
+                .fecha(LocalDateTime.now())
+                .usuario(usuario)
+                .build();
+        proceso = procesoRepository.save(proceso);
 
+        actualizarYRegistrar(producto, ubicacion, proceso, EstadoProducto.RECORTE,
+                MotivoMovimiento.ENTRADA, dto.getPeso(), null);
+    }
 }

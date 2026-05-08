@@ -12,6 +12,19 @@ const searchQuery = ref('')
 const sortKey = ref('nombre')
 const sortOrder = ref('asc')
 
+const ubicaciones = ref([])
+const showEditModal = ref(false)
+const isSubmitting = ref(false)
+const editForm = ref({
+  codigo_producto: '',
+  estado: '',
+  kilos: 0,
+  unidades: 0,
+  ubicacionId: ''
+})
+
+const estadosProducto = ['PIEZA', 'FETEADO', 'ENVASADO', 'RECORTES', 'DECOMISADO']
+
 const fetchExistencias = async () => {
   isLoading.value = true
   errorMsg.value = ''
@@ -24,8 +37,19 @@ const fetchExistencias = async () => {
     }
   } catch (error) {
     errorMsg.value = 'Error de conexión con el servidor.'
-  } finally {
+    } finally {
     isLoading.value = false
+  }
+}
+
+const fetchUbicaciones = async () => {
+  try {
+    const res = await fetch('/api/ubicaciones')
+    if (res.ok) {
+      ubicaciones.value = await res.json()
+    }
+  } catch (error) {
+    console.error('Error al cargar ubicaciones:', error)
   }
 }
 
@@ -73,7 +97,61 @@ const toggleRow = (id) => {
   expandedRow.value = expandedRow.value === id ? null : id
 }
 
-onMounted(fetchExistencias)
+const openEditModal = (item) => {
+  let uId = item.ubicacionId
+  if (!uId) {
+    const matched = ubicaciones.value.find(u => u.nombre === item.ubicacionNombre)
+    if (matched) uId = matched.id
+  }
+
+  editForm.value = {
+    codigo_producto: item.codigo_producto,
+    estado: '',
+    kilos: 0,
+    unidades: 0,
+    ubicacionId: uId || ''
+  }
+  showEditModal.value = true
+}
+
+const submitEdit = async () => {
+  if (!editForm.value.estado || editForm.value.ubicacionId === '') {
+    alert('Debe seleccionar un estado y una ubicación.')
+    return
+  }
+
+  isSubmitting.value = true
+  try {
+    const res = await fetch('/api/existencias', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        codigo_producto: editForm.value.codigo_producto,
+        estado: editForm.value.estado,
+        kilos: parseFloat(editForm.value.kilos || 0),
+        unidades: parseInt(editForm.value.unidades || 0, 10),
+        ubicacionId: parseInt(editForm.value.ubicacionId, 10)
+      })
+    })
+
+    if (res.ok) {
+      showEditModal.value = false
+      await fetchExistencias()
+      alert('Existencia actualizada correctamente.')
+    } else {
+      alert('Error al actualizar la existencia.')
+    }
+  } catch (error) {
+    alert('Error de conexión con el servidor.')
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+onMounted(() => {
+  fetchExistencias()
+  fetchUbicaciones()
+})
 </script>
 
 <template>
@@ -134,6 +212,7 @@ onMounted(fetchExistencias)
               <th @click="sortBy('ubicacionNombre')" class="text-right desktop-only sortable">
                 Ubic. <span v-if="sortKey === 'ubicacionNombre'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               </th>
+              <th class="text-center desktop-only">Acción</th>
               <th class="text-right mobile-only"></th>
             </tr>
           </thead>
@@ -148,6 +227,11 @@ onMounted(fetchExistencias)
               <td class="text-right desktop-only">{{ (item.recortes || 0).toFixed(3) }}</td>
               <td class="text-right desktop-only">{{ (item.decomisados || 0).toFixed(3) }}</td>
               <td class="text-right desktop-only"><span class="badge">{{ item.ubicacionNombre }}</span></td>
+              <td class="text-center desktop-only">
+                <button class="action-btn" @click.stop="openEditModal(item)" title="Corregir">
+                  <span class="material-icons">edit</span>
+                </button>
+              </td>
               <td class="text-right mobile-only">
                 <span class="expand-icon">{{ expandedRow === (item.codigo_producto + item.ubicacionNombre) ? '▲' : '▼' }}</span>
               </td>
@@ -185,6 +269,14 @@ onMounted(fetchExistencias)
                         <th>Decomisados</th>
                         <td class="warn-text"><strong>{{ item.decomisados.toFixed(3) }} kg</strong></td>
                       </tr>
+                      <tr>
+                        <th>Acción</th>
+                        <td>
+                          <button class="action-btn-text" @click.stop="openEditModal(item)">
+                            <span class="material-icons">edit</span> Corregir
+                          </button>
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -197,6 +289,60 @@ onMounted(fetchExistencias)
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Modal Editar Existencia -->
+    <div v-if="showEditModal" class="modal-overlay">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3>Corregir Existencia</h3>
+          <button class="close-btn" @click="showEditModal = false">×</button>
+        </header>
+        <form @submit.prevent="submitEdit" class="modal-body">
+          <BaseInput 
+            v-model="editForm.codigo_producto" 
+            label="Código" 
+            disabled 
+          />
+          <div class="input-group">
+            <label>Estado a modificar</label>
+            <select v-model="editForm.estado" required class="custom-select">
+              <option value="" disabled>Seleccione estado...</option>
+              <option v-for="est in estadosProducto" :key="est" :value="est">
+                {{ est }}
+              </option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Ubicación</label>
+            <select v-model="editForm.ubicacionId" required class="custom-select">
+              <option value="" disabled>Seleccione ubicación...</option>
+              <option v-for="u in ubicaciones" :key="u.id" :value="u.id">
+                {{ u.nombre }}
+              </option>
+            </select>
+          </div>
+          <BaseInput 
+            v-model="editForm.kilos" 
+            label="Kilos Totales (Nuevo Valor)" 
+            type="number" 
+            step="0.001" 
+            required 
+          />
+          <BaseInput 
+            v-model="editForm.unidades" 
+            label="Unidades (Nuevo Valor)" 
+            type="number" 
+            required 
+          />
+          <div class="modal-footer">
+            <BaseButton variant="minimal" type="button" @click="showEditModal = false">Cancelar</BaseButton>
+            <BaseButton variant="primary" type="submit" :disabled="isSubmitting">
+              {{ isSubmitting ? 'Guardando...' : 'Guardar' }}
+            </BaseButton>
+          </div>
+        </form>
       </div>
     </div>
   </div>
@@ -357,6 +503,142 @@ onMounted(fetchExistencias)
   font-size: 0.75rem;
   font-weight: 700;
   border: 1px solid var(--color-border);
+}
+
+.bold { font-weight: 700; }
+.color-sec { color: var(--color-secondary); }
+
+/* Acciones y Modal */
+.action-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.action-btn .material-icons {
+  font-size: 1.1rem;
+}
+
+.action-btn-text {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.action-btn-text:hover {
+  text-decoration: underline;
+}
+
+.action-btn-text .material-icons {
+  font-size: 1.1rem;
+}
+
+/* Modal Estilos */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  background-color: white;
+  border-radius: var(--radius-md);
+  width: 90%;
+  max-width: 450px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+.modal-header {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1.2rem;
+}
+
+.modal-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.custom-select {
+  padding: 10px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  background-color: white;
+  transition: border-color 0.2s ease;
+}
+
+.custom-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 .error-alert {

@@ -1,6 +1,7 @@
 package com.cdfapp.app.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -36,6 +37,7 @@ public class Producto {
 
     @ManyToOne
     @JoinColumn(name = "proveedor_id")
+    @JsonIgnoreProperties("productos")
     private Proveedor proveedor;
 
     @OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
