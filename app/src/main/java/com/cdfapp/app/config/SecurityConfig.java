@@ -40,9 +40,13 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/login").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll() // Permite crear usuarios
-                .anyRequest().authenticated()
+                .requestMatchers("/api/**").authenticated() // Solo protegemos la API
+                .anyRequest().permitAll() // Permitimos TODO lo demás (archivos estáticos, rutas de Vue, /error, etc)
+            )
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint(new org.springframework.security.web.authentication.HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED))
             )
             .formLogin(form -> form
                 .loginProcessingUrl("/api/auth/login")
