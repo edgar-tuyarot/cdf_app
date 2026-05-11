@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
+import DashboardColaboradorView from '../views/DashboardColaboradorView.vue'
 import EnvasadoView from '../views/EnvasadoView.vue'
 import LoginView from '../views/LoginView.vue'
 import NuevoProductoView from '../views/NuevoProductoView.vue'
@@ -135,6 +136,12 @@ const router = createRouter({
       name: 'ver-picadas',
       component: () => import('../views/ListaPicadasView.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/mi-dashboard',
+      name: 'dashboard-colaborador',
+      component: DashboardColaboradorView,
+      meta: { requiresAuth: true }
     }
   ],
 })
@@ -148,7 +155,7 @@ router.beforeEach((to, from) => {
 
   // Redirección por Rol: Colaborador solo puede ver Producción y Pedidos Actuales
   if (authStore.isAuthenticated && authStore.isColaborador) {
-    const allowedPaths = ['/produccion', '/pedidos/actuales']
+    const allowedPaths = ['/produccion', '/pedidos/actuales', '/mi-dashboard']
     if (!allowedPaths.includes(to.path)) {
       return '/produccion'
     }

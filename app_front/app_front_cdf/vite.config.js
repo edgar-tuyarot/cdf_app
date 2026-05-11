@@ -51,4 +51,11 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Para empaquetar con Spring Boot en un solo .jar:
+    // Cambia esta ruta relativa para que apunte a la carpeta 'static' de tu proyecto Spring Boot.
+    // Ejemplo: outDir: '../../mi-backend-springboot/src/main/resources/static'
+    outDir: 'dist', // <- Reemplazar 'dist' por la ruta hacia resources/static de Spring Boot
+    emptyOutDir: true, // Vacía la carpeta antes de construir
+  }
 })

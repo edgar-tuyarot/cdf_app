@@ -23,7 +23,7 @@ const editForm = ref({
   ubicacionId: ''
 })
 
-const estadosProducto = ['PIEZA', 'FETEADO', 'ENVASADO', 'RECORTES', 'DECOMISADO']
+const estadosProducto = ['PIEZA', 'KILOS', 'FETEADO', 'ENVASADO', 'RECORTES', 'DECOMISADO']
 
 const fetchExistencias = async () => {
   isLoading.value = true
@@ -203,6 +203,9 @@ onMounted(() => {
               <th @click="sortBy('envasados')" class="text-right desktop-only sortable">
                 Envasados <span v-if="sortKey === 'envasados'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               </th>
+              <th @click="sortBy('envasados_kilos')" class="text-right desktop-only sortable">
+                Env. Kg <span v-if="sortKey === 'envasados_kilos'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+              </th>
               <th @click="sortBy('recortes')" class="text-right desktop-only sortable">
                 Recortes <span v-if="sortKey === 'recortes'">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
               </th>
@@ -224,6 +227,7 @@ onMounted(() => {
               <td class="text-right desktop-only">{{ item.kilos.toFixed(3) }}</td>
               <td class="text-right desktop-only">{{ (item.feteados || 0).toFixed(0) }}</td>
               <td class="text-right desktop-only">{{ (item.envasados || 0).toFixed(0) }}</td>
+              <td class="text-right desktop-only">{{ (item.envasados_kilos || 0).toFixed(3) }}</td>
               <td class="text-right desktop-only">{{ (item.recortes || 0).toFixed(3) }}</td>
               <td class="text-right desktop-only">{{ (item.decomisados || 0).toFixed(3) }}</td>
               <td class="text-right desktop-only"><span class="badge">{{ item.ubicacionNombre }}</span></td>
@@ -237,7 +241,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="expandedRow === (item.codigo_producto + item.ubicacionNombre)" class="details-row mobile-only">
-              <td colspan="10">
+              <td colspan="12">
                 <div class="details-content fade-in">
                   <table class="detail-mini-table">
                     <tbody>
@@ -260,6 +264,10 @@ onMounted(() => {
                       <tr>
                         <th>Envasados</th>
                         <td><strong>{{ (item.envasados || 0).toFixed(0) }}</strong></td>
+                      </tr>
+                      <tr>
+                        <th>Env. Kg</th>
+                        <td><strong>{{ (item.envasados_kilos || 0).toFixed(3) }} kg</strong></td>
                       </tr>
                       <tr v-if="item.recortes">
                         <th>Recortes</th>
@@ -285,7 +293,7 @@ onMounted(() => {
           </tbody>
           <tbody v-if="existencias.length === 0 && !isLoading">
             <tr>
-              <td colspan="10" class="text-center text-muted">No hay existencias registradas.</td>
+              <td colspan="12" class="text-center text-muted">No hay existencias registradas.</td>
             </tr>
           </tbody>
         </table>

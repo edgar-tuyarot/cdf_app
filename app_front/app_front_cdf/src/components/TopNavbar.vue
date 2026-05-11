@@ -16,9 +16,14 @@ const handleLogout = () => {
   <nav class="desktop-nav">
     <div class="nav-links">
       <!-- Vista para Colaboradores -->
-      <RouterLink v-if="authStore.isColaborador" to="/produccion" class="nav-link">
-        <span class="material-icons">precision_manufacturing</span> Producción
-      </RouterLink>
+      <template v-if="authStore.isColaborador">
+        <RouterLink to="/mi-dashboard" class="nav-link">
+          <span class="material-icons">dashboard</span> Dashboard
+        </RouterLink>
+        <RouterLink to="/produccion" class="nav-link">
+          <span class="material-icons">precision_manufacturing</span> Producción
+        </RouterLink>
+      </template>
 
       <!-- Vistas para Admin -->
       <template v-if="!authStore.isColaborador">

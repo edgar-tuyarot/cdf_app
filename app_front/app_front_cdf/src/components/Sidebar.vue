@@ -56,6 +56,14 @@ const toggleUsuarios = () => {
           <!-- Vista para Colaboradores -->
           <template v-if="authStore.isColaborador">
             <RouterLink 
+              to="/mi-dashboard" 
+              class="nav-item colab-tab" 
+              :class="{ 'is-active': route.path === '/mi-dashboard' }"
+              @click="$emit('close')"
+            >
+              Dashboard
+            </RouterLink>
+            <RouterLink 
               to="/produccion?tab=existencias" 
               class="nav-item colab-tab" 
               :class="{ 'is-active': route.path === '/produccion' && currentTab === 'existencias' }"

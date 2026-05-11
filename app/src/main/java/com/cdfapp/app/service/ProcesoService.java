@@ -76,7 +76,7 @@ public class ProcesoService {
 
         if (dto.getCantidad() != null && dto.getCantidad() > 0) {
             actualizarYRegistrar(productoDestino, ubicacion, proceso, EstadoProducto.ENVASADO,
-                    MotivoMovimiento.ENTRADA, null, dto.getCantidad());
+                    MotivoMovimiento.ENTRADA, dto.getKilos(), dto.getCantidad());
         }
 
         return proceso;
