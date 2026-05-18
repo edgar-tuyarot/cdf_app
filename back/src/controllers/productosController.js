@@ -337,6 +337,68 @@ exports.descontarDecomiso = async (req, res) => {
   }
 };
 
+// Ingresar recortes desde el formulario externo (Recepcion/Ingresos de Recortes)
+exports.ingresarRecorte = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { codigo, peso, sucursal, fecha } = req.body;
+
+    if (!codigo || peso === undefined || peso === null) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El código del producto y el peso son obligatorios' });
+    }
+
+    const valorPeso = parseFloat(peso);
+    if (isNaN(valorPeso) || valorPeso <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El peso debe ser un número mayor a cero' });
+    }
+
+    // 1. Buscar el producto
+    const producto = await Producto.findByPk(codigo, { transaction });
+    if (!producto) {
+      await transaction.rollback();
+      return res.status(404).json({ error: `El producto con código ${codigo} no existe en el catálogo.` });
+    }
+
+    // 2. Incrementar el campo kg_recorte del producto
+    producto.kg_recorte = (parseFloat(producto.kg_recorte) || 0) + valorPeso;
+    await producto.save({ transaction });
+
+    // 3. Crear un registro en la tabla de procesos como trazabilidad histórica
+    const { Proceso } = require('../models');
+    await Proceso.create({
+      colaborador: sucursal ? `Sucursal: ${sucursal}` : 'Ingreso Externo',
+      proceso: 'Ingreso de Recorte',
+      fecha: fecha || new Date(),
+      codigo: codigo,
+      piezas: 0,
+      peso_bruto: 0,
+      recorte: valorPeso,
+      decomiso: 0,
+      kg_a_desc: 0,
+      kg_a_sumar: 0
+    }, { transaction });
+
+    await transaction.commit();
+
+    res.json({
+      mensaje: 'Recorte ingresado y stock actualizado exitosamente',
+      producto: {
+        codigo: producto.codigo,
+        nombre: producto.nombre,
+        kg_recorte_nuevo: parseFloat(producto.kg_recorte) || 0
+      }
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al ingresar recorte:', error);
+    res.status(500).json({ error: 'Error interno al registrar el ingreso de recorte' });
+  }
+};
+
 
 
 

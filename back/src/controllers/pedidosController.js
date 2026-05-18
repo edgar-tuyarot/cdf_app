@@ -60,18 +60,25 @@ exports.crearPedido = async (req, res) => {
     // 2. Si se suministra un array de items (productos vinculados), los registramos
     if (Array.isArray(items) && items.length > 0) {
       for (const item of items) {
-        const { codigo_producto, pieza, fraccion } = item;
+        const { codigo_producto, pieza, fraccion, peso_enviado, cantidad_enviada, fraccion_enviada } = item;
 
         if (!codigo_producto) {
           await transaction.rollback();
           return res.status(400).json({ error: 'Cada item del pedido debe tener un "codigo_producto" válido.' });
         }
 
-        // Validar que el producto realmente exista en stock
+        // Si el producto no existe en stock, lo creamos dinámicamente como en la carga masiva y edición
         const productoExiste = await Producto.findByPk(codigo_producto, { transaction });
         if (!productoExiste) {
-          await transaction.rollback();
-          return res.status(400).json({ error: `El producto con código ${codigo_producto} no existe.` });
+          await Producto.create({
+            codigo: codigo_producto,
+            nombre: `PRODUCTO AUTOCREADO (${codigo_producto})`,
+            kilos_block: 0,
+            peso_x_pieza: 0,
+            cantidad_piezas: 0,
+            vencimientos: null,
+            kg_x_bolsita: 0
+          }, { transaction });
         }
 
         // Crear la relación en la tabla intermedia
@@ -79,7 +86,10 @@ exports.crearPedido = async (req, res) => {
           id_pedido: nuevoPedido.id,
           codigo_producto,
           pieza: pieza || 0,
-          fraccion: fraccion || 0
+          fraccion: fraccion || 0,
+          peso_enviado: peso_enviado || 0,
+          cantidad_enviada: cantidad_enviada || 0,
+          fraccion_enviada: fraccion_enviada || 0
         }, { transaction });
       }
     }
@@ -110,14 +120,77 @@ exports.crearPedido = async (req, res) => {
 
 // Actualizar los datos de un pedido
 exports.actualizarPedido = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const pedido = await Pedido.findByPk(id);
+    const { codigo, sucursal, fecha, estado, items } = req.body;
+
+    const pedido = await Pedido.findByPk(id, { transaction });
     if (!pedido) {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Pedido no encontrado' });
     }
 
-    await pedido.update(req.body);
+    // 1. Actualizar los datos básicos del pedido
+    await pedido.update({
+      codigo: codigo !== undefined ? codigo : pedido.codigo,
+      sucursal: sucursal !== undefined ? sucursal : pedido.sucursal,
+      fecha: fecha !== undefined ? fecha : pedido.fecha,
+      estado: estado !== undefined ? estado : pedido.estado
+    }, { transaction });
+
+    // 2. Si se suministra la lista de items, la actualizamos
+    if (items !== undefined) {
+      if (!Array.isArray(items)) {
+        await transaction.rollback();
+        return res.status(400).json({ error: 'El campo "items" debe ser un array.' });
+      }
+
+      // Validar e insertar ítems
+      for (const item of items) {
+        const { codigo_producto } = item;
+        if (!codigo_producto) {
+          await transaction.rollback();
+          return res.status(400).json({ error: 'Cada item del pedido debe tener un "codigo_producto" válido.' });
+        }
+
+        // Si el producto no existe en stock, lo creamos dinámicamente como en la carga masiva
+        const productoExiste = await Producto.findByPk(codigo_producto, { transaction });
+        if (!productoExiste) {
+          await Producto.create({
+            codigo: codigo_producto,
+            nombre: `PRODUCTO AUTOCREADO (${codigo_producto})`,
+            kilos_block: 0,
+            peso_x_pieza: 0,
+            cantidad_piezas: 0,
+            vencimientos: null,
+            kg_x_bolsita: 0
+          }, { transaction });
+        }
+      }
+
+      // Eliminar ítems existentes
+      await ProductoPedido.destroy({
+        where: { id_pedido: id },
+        transaction
+      });
+
+      // Crear nuevos ítems
+      for (const item of items) {
+        const { codigo_producto, pieza, fraccion, peso_enviado, cantidad_enviada, fraccion_enviada } = item;
+        await ProductoPedido.create({
+          id_pedido: id,
+          codigo_producto,
+          pieza: pieza || 0,
+          fraccion: fraccion || 0,
+          peso_enviado: peso_enviado || 0,
+          cantidad_enviada: cantidad_enviada || 0,
+          fraccion_enviada: fraccion_enviada || 0
+        }, { transaction });
+      }
+    }
+
+    await transaction.commit();
 
     // Devolver el pedido actualizado con todas sus relaciones cargadas
     const pedidoCompleto = await Pedido.findByPk(id, {
@@ -133,6 +206,9 @@ exports.actualizarPedido = async (req, res) => {
       pedido: pedidoCompleto
     });
   } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     console.error('Error al actualizar pedido:', error);
     res.status(500).json({ error: 'Error al actualizar el pedido' });
   }

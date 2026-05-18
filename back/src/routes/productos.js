@@ -12,6 +12,7 @@ router.post('/', productosController.crearProducto);
 router.post('/upload', upload.single('file'), productosController.uploadExcel);
 router.get('/recortes', productosController.obtenerRecortes);
 router.post('/convertir-recorte', productosController.convertirRecorte);
+router.post('/ingresar-recorte', productosController.ingresarRecorte);
 router.get('/decomisos', productosController.obtenerDecomisos);
 router.post('/descontar-decomiso', productosController.descontarDecomiso);
 router.put('/:id', productosController.actualizarProducto);

@@ -13,6 +13,7 @@ const pageTitle = computed(() => {
   if (path.startsWith('/procesos')) return 'Procesos'
   if (path.startsWith('/pedidos')) return 'Pedidos'
   if (path.startsWith('/recortes')) return 'Recortes'
+  if (path.startsWith('/ingreso-recortes')) return 'Ingreso de Recortes'
   if (path.startsWith('/decomisos')) return 'Decomisos'
   if (path === '/') return 'Dashboard'
   return 'CDF CRM'

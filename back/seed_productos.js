@@ -256,9 +256,8 @@ async function seed() {
         const categoria = descripcion.split(' ')[0] || '';
         
         productosMap.set(codigo, {
-          codigo_interno: codigo,
-          descripcion: descripcion,
-          categoria: categoria
+          codigo: codigo,
+          nombre: descripcion
         });
       }
     }

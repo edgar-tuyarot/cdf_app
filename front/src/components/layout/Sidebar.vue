@@ -18,6 +18,7 @@ const allMenuItems = [
   { name: 'Procesos', path: '/procesos', icon: 'ph-arrows-clockwise', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
   { name: 'Pedidos', path: '/pedidos', icon: 'ph-shopping-cart', roles: ['Admin', 'Referente', 'Preparador'] },
   { name: 'Recortes', path: '/recortes', icon: 'ph-scissors', roles: ['Admin', 'Referente'] },
+  { name: 'Ingreso Recortes', path: '/ingreso-recortes', icon: 'ph-plus-circle', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
   { name: 'Decomisos', path: '/decomisos', icon: 'ph-trash', roles: ['Admin', 'Referente'] },
 ]
 

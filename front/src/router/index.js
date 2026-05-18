@@ -42,6 +42,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
     },
     {
+      path: '/ingreso-recortes',
+      name: 'ingreso-recortes',
+      component: () => import('../views/RecepcionRecortes.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+    },
+    {
       path: '/decomisos',
       name: 'decomisos',
       component: () => import('../views/Decomisos.vue'),

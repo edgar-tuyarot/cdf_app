@@ -97,7 +97,10 @@ const ProductoPedido = sequelize.define('ProductoPedido', {
     }
   },
   pieza: { type: DataTypes.INTEGER, defaultValue: 0 },
-  fraccion: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 }
+  fraccion: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
+  peso_enviado: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
+  cantidad_enviada: { type: DataTypes.INTEGER, defaultValue: 0 },
+  fraccion_enviada: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 }
 }, {
   tableName: 'producto_pedidos',
   timestamps: false
