@@ -14,19 +14,11 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const allMenuItems = [
-  { name: 'Dashboard', path: '/', icon: 'ph-squares-four', roles: ['Admin', 'Preparador', 'Feteador', 'Referente'] },
-  { name: 'Stock de Productos', path: '/stock-feteados', icon: 'ph-scales', roles: ['Admin', 'Preparador', 'Feteador', 'Referente'] },
-  { name: 'Fraccionado', path: '/feteado', icon: 'ph-knife', roles: ['Admin', 'Feteador', 'Envasador', 'Referente'] },
-  { name: 'Feteado Externo', path: '/feteado-externo', icon: 'ph-users', roles: ['Admin', 'Referente'] },
-  { name: 'Envasado', path: '/envasado', icon: 'ph-package', roles: ['Admin', 'Envasador', 'Referente'] },
-  { name: 'Pedido Sucursales', path: '/pedidos-sucursales', icon: 'ph-storefront', roles: ['Admin', 'Preparador', 'Referente'] },
-  { name: 'Recepción Recortes', path: '/recepcion-recortes', icon: 'ph-recycle', roles: ['Admin', 'Referente'] },
-  { name: 'Historial Despachos', path: '/despachos', icon: 'ph-truck', roles: ['Admin'] },
-  { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Referente'] },
-  { name: 'Stock de Piezas', path: '/piezas', icon: 'ph-puzzle-piece', roles: ['Admin', 'Referente'] },
-  { name: 'Ingreso Proveedores', path: '/ingreso-proveedores', icon: 'ph-download-simple', roles: ['Admin'] },
-  { name: 'ABM Globales', path: '/abm-globales', icon: 'ph-database', roles: ['Admin'] },
-  { name: 'Usuarios', path: '/abm-usuarios', icon: 'ph-users-three', roles: ['Admin'] },
+  { name: 'Productos', path: '/productos', icon: 'ph-package', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+  { name: 'Procesos', path: '/procesos', icon: 'ph-arrows-clockwise', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
+  { name: 'Pedidos', path: '/pedidos', icon: 'ph-shopping-cart', roles: ['Admin', 'Referente', 'Preparador'] },
+  { name: 'Recortes', path: '/recortes', icon: 'ph-scissors', roles: ['Admin', 'Referente'] },
+  { name: 'Decomisos', path: '/decomisos', icon: 'ph-trash', roles: ['Admin', 'Referente'] },
 ]
 
 const menuItems = computed(() => {
@@ -89,10 +81,12 @@ const isActive = (path) => {
     </nav>
     
     <div class="sidebar-footer">
+      <!-- 
       <button @click="handleLogout" class="logout-btn">
         <i class="ph ph-sign-out"></i>
         <span>Cerrar Sesión</span>
       </button>
+      -->
     </div>
   </aside>
 </template>

@@ -9,13 +9,11 @@ const emit = defineEmits(['toggle-menu'])
 
 const pageTitle = computed(() => {
   const path = route.path
-  if (path.startsWith('/stock-feteados')) return 'Stock'
-  if (path.startsWith('/despachos')) return 'Despachos'
-  if (path.startsWith('/pedidos-sucursales')) return 'Pedidos'
-  if (path.startsWith('/produccion')) return 'Producción'
-  if (path.startsWith('/ingreso-proveedores')) return 'Proveedores'
-  if (path.startsWith('/abm-globales')) return 'ABM Global'
-  if (path.startsWith('/abm-usuarios')) return 'Usuarios'
+  if (path.startsWith('/productos')) return 'Productos'
+  if (path.startsWith('/procesos')) return 'Procesos'
+  if (path.startsWith('/pedidos')) return 'Pedidos'
+  if (path.startsWith('/recortes')) return 'Recortes'
+  if (path.startsWith('/decomisos')) return 'Decomisos'
   if (path === '/') return 'Dashboard'
   return 'CDF CRM'
 })

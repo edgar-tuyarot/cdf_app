@@ -9,8 +9,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 export default defineConfig({
   plugins: [
     vue(),
-    vueJsx(),
-    vueDevTools(),
+    vueJsx()
   ],
   resolve: {
     alias: {

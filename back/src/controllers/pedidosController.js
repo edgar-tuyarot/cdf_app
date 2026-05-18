@@ -1,265 +1,339 @@
-const { PedidoSucursal, ItemPedido, Producto, Sucursal, StockEnvasado, StockKilos, PreparacionPedido } = require('../models');
+const { Pedido, ProductoPedido, Producto, sequelize } = require('../models');
 
-// Obtener todos los pedidos con sus detalles
+// Obtener todos los pedidos con sus productos asociados
 exports.obtenerPedidos = async (req, res) => {
   try {
-    const pedidos = await PedidoSucursal.findAll({
-      include: [
-        { model: Sucursal, attributes: ['nombre', 'ubicacion'] },
-        { 
-          model: ItemPedido, 
-          include: [{ model: Producto, attributes: ['descripcion', 'codigo_interno', 'categoria'] }] 
-        }
-      ],
-      order: [['fecha_pedido', 'DESC'], ['id_pedido', 'DESC']]
+    const pedidos = await Pedido.findAll({
+      include: [{
+        model: ProductoPedido,
+        as: 'items',
+        include: [{ model: Producto, as: 'Producto', attributes: ['nombre'] }]
+      }]
     });
     res.json(pedidos);
   } catch (error) {
     console.error('Error al obtener pedidos:', error);
-    res.status(500).json({ error: 'Error al obtener el listado de pedidos' });
+    res.status(500).json({ error: 'Error al obtener pedidos' });
   }
 };
 
-// Obtener un solo pedido por su ID (Código PED-...)
+// Obtener un pedido específico por ID
 exports.obtenerPedidoPorId = async (req, res) => {
   try {
     const { id } = req.params;
-    const pedido = await PedidoSucursal.findOne({
-      where: { id_pedido: id },
-      include: [
-        { model: Sucursal, attributes: ['nombre', 'ubicacion'] },
-        { 
-          model: ItemPedido, 
-          include: [{ model: Producto, attributes: ['descripcion', 'codigo_interno', 'categoria'] }] 
-        }
-      ]
+    const pedido = await Pedido.findByPk(id, {
+      include: [{
+        model: ProductoPedido,
+        as: 'items',
+        include: [{ model: Producto, as: 'Producto', attributes: ['nombre'] }]
+      }]
     });
-
     if (!pedido) {
       return res.status(404).json({ error: 'Pedido no encontrado' });
     }
-
     res.json(pedido);
   } catch (error) {
-    console.error('Error al obtener pedido:', error);
-    res.status(500).json({ error: 'Error al obtener el detalle del pedido' });
+    console.error('Error al obtener pedido por ID:', error);
+    res.status(500).json({ error: 'Error al obtener el pedido' });
   }
 };
 
-// Confirmar un pedido (Cambiar estado a 'Confirmado')
-exports.confirmarPedido = async (req, res) => {
+// Crear un nuevo pedido con sus respectivos productos (transaccional)
+exports.crearPedido = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { codigo, sucursal, estado, fecha, items } = req.body;
+
+    if (!codigo) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El campo "codigo" del pedido es obligatorio.' });
+    }
+
+    // 1. Crear el pedido principal
+    const nuevoPedido = await Pedido.create({
+      codigo,
+      fecha: fecha || new Date(),
+      sucursal,
+      estado: estado || 'Pendiente'
+    }, { transaction });
+
+    // 2. Si se suministra un array de items (productos vinculados), los registramos
+    if (Array.isArray(items) && items.length > 0) {
+      for (const item of items) {
+        const { codigo_producto, pieza, fraccion } = item;
+
+        if (!codigo_producto) {
+          await transaction.rollback();
+          return res.status(400).json({ error: 'Cada item del pedido debe tener un "codigo_producto" válido.' });
+        }
+
+        // Validar que el producto realmente exista en stock
+        const productoExiste = await Producto.findByPk(codigo_producto, { transaction });
+        if (!productoExiste) {
+          await transaction.rollback();
+          return res.status(400).json({ error: `El producto con código ${codigo_producto} no existe.` });
+        }
+
+        // Crear la relación en la tabla intermedia
+        await ProductoPedido.create({
+          id_pedido: nuevoPedido.id,
+          codigo_producto,
+          pieza: pieza || 0,
+          fraccion: fraccion || 0
+        }, { transaction });
+      }
+    }
+
+    await transaction.commit();
+
+    // Consultar el pedido recién creado con todos sus datos completos
+    const pedidoCompleto = await Pedido.findByPk(nuevoPedido.id, {
+      include: [{
+        model: ProductoPedido,
+        as: 'items',
+        include: [{ model: Producto, as: 'Producto', attributes: ['nombre'] }]
+      }]
+    });
+
+    res.status(201).json({
+      mensaje: 'Pedido y productos registrados exitosamente',
+      pedido: pedidoCompleto
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al crear pedido:', error);
+    res.status(500).json({ error: 'Error al registrar el pedido' });
+  }
+};
+
+// Actualizar los datos de un pedido
+exports.actualizarPedido = async (req, res) => {
   try {
     const { id } = req.params;
-    const pedido = await PedidoSucursal.findByPk(id);
-
+    const pedido = await Pedido.findByPk(id);
     if (!pedido) {
       return res.status(404).json({ error: 'Pedido no encontrado' });
     }
 
-    pedido.estado = 'Confirmado';
-    await pedido.save();
+    await pedido.update(req.body);
+
+    // Devolver el pedido actualizado con todas sus relaciones cargadas
+    const pedidoCompleto = await Pedido.findByPk(id, {
+      include: [{
+        model: ProductoPedido,
+        as: 'items',
+        include: [{ model: Producto, as: 'Producto', attributes: ['nombre'] }]
+      }]
+    });
 
     res.json({
-      mensaje: 'Pedido confirmado exitosamente',
-      pedido
+      mensaje: 'Pedido actualizado exitosamente',
+      pedido: pedidoCompleto
     });
   } catch (error) {
-    console.error('Error al confirmar pedido:', error);
-    res.status(500).json({ error: 'Error al confirmar el pedido' });
+    console.error('Error al actualizar pedido:', error);
+    res.status(500).json({ error: 'Error al actualizar el pedido' });
   }
 };
 
-// PATCH /api/pedidos/:id/estado
-// Body: { estado: "Preparado" } (o cualquier estado válido)
-exports.cambiarEstado = async (req, res) => {
+// Eliminar un pedido (debido a ON DELETE CASCADE, también borra de forma automática sus producto_pedidos)
+exports.eliminarPedido = async (req, res) => {
   try {
     const { id } = req.params;
-    const { estado } = req.body;
-
-    if (!estado) {
-      return res.status(400).json({ error: 'El campo "estado" es obligatorio' });
-    }
-
-    const pedido = await PedidoSucursal.findByPk(id);
-
+    const pedido = await Pedido.findByPk(id);
     if (!pedido) {
       return res.status(404).json({ error: 'Pedido no encontrado' });
     }
 
-    pedido.estado = estado;
-    await pedido.save();
-
-    res.json({
-      mensaje: `Estado del pedido actualizado a "${estado}"`,
-      pedido
-    });
+    await pedido.destroy();
+    res.json({ mensaje: 'Pedido y sus productos asociados eliminados exitosamente' });
   } catch (error) {
-    console.error('Error al cambiar estado del pedido:', error);
-    res.status(500).json({ error: 'Error al cambiar el estado del pedido' });
+    console.error('Error al eliminar pedido:', error);
+    res.status(500).json({ error: 'Error al eliminar el pedido' });
   }
 };
 
-// GET /api/pedidos/calculo-stock
-// Calcula la diferencia entre lo pedido (estado Pendiente) y el stock de envasados.
-exports.calcularStockVsPedidos = async (req, res) => {
+// Carga masiva de pedidos desde Excel (.xlsx / .xls)
+exports.uploadExcel = async (req, res) => {
   try {
-    // 1. Obtener pedidos pendientes con sus items y productos
-    const pedidosPendientes = await PedidoSucursal.findAll({
-      where: { estado: 'Pendiente' },
-      include: [
-        { 
-          model: ItemPedido, 
-          include: [{ model: Producto, attributes: ['codigo_interno', 'descripcion'] }] 
-        }
-      ]
-    });
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se envió ningún archivo Excel.' });
+    }
 
-    // 2. Obtener todo el stock de envasados
-    const stockEnvasados = await StockEnvasado.findAll();
-    const stockMap = {};
-    stockEnvasados.forEach(s => { stockMap[s.codigo] = s.cantidad; });
+    const xlsx = require('xlsx');
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    
+    // Parsear a JSON
+    const data = xlsx.utils.sheet_to_json(sheet);
+    if (data.length === 0) {
+      return res.status(400).json({ error: 'El archivo Excel está vacío.' });
+    }
 
-    // 3. Estructuras para los resultados
-    const totalesAgrupados = {}; // { "codigo": { nombre, pedido_total } }
-    const porPedido = [];
+    // Helper para parsear la fecha de forma robusta
+    const parseExcelDate = (val) => {
+      if (!val) return new Date();
+      if (val instanceof Date) return val;
 
-    // 4. Procesar la información
-    for (const pedido of pedidosPendientes) {
-      const pedidoInfo = {
-        id_pedido: pedido.id_pedido,
-        sucursal: pedido.id_sucursal, // Podría hacer join con Sucursal para el nombre si se necesita
-        fecha: pedido.fecha_pedido,
-        items: []
-      };
-
-      for (const item of pedido.ItemPedidos) {
-        if (!item.Producto) continue;
-
-        const codigo = item.Producto.codigo_interno;
-        const nombre = item.Producto.descripcion;
-        const cantidadPedida = parseFloat(item.cantidad_fraccionado) || 0;
-
-        // Sumar al total agrupado
-        if (!totalesAgrupados[codigo]) {
-          totalesAgrupados[codigo] = {
-            codigo,
-            nombre,
-            pedido_total: 0
-          };
-        }
-        totalesAgrupados[codigo].pedido_total += cantidadPedida;
-
-        // Añadir al desglose del pedido (solo si se pidió cantidad)
-        if (cantidadPedida > 0) {
-          pedidoInfo.items.push({
-            codigo,
-            nombre,
-            cantidad_pedida: cantidadPedida
-          });
-        }
+      if (typeof val === 'number') {
+        const UTC_DAYS_DIFF = 25569;
+        const MS_PER_DAY = 86400 * 1000;
+        return new Date((val - UTC_DAYS_DIFF) * MS_PER_DAY);
       }
 
-      porPedido.push(pedidoInfo);
-    }
+      const str = String(val).trim();
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+      }
 
-    // 5. Calcular la diferencia final para los totales
-    const totalesArray = Object.values(totalesAgrupados).map(item => {
-      const stockActual = parseFloat(stockMap[item.codigo]) || 0;
-      const diferencia = stockActual - item.pedido_total;
+      const parsed = Date.parse(str);
+      if (!isNaN(parsed)) {
+        return new Date(parsed);
+      }
+      return new Date();
+    };
+
+    // Agrupar y consolidar filas del Excel por Codigo_pedido y Producto
+    const pedidosAgrupados = {};
+
+    for (const row of data) {
+      // Buscar las columnas por coincidencia flexible de mayúsculas/minúsculas o acentos
+      const codigoPedido = row['Codigo_pedido'] || row['codigo_pedido'] || row['Codigo'] || row['codigo'] || row['CODIGO_PEDIDO'] || row['Codigo pedido'];
+      if (!codigoPedido) continue;
+
+      const codProducto = row['Cod'] || row['cod'] || row['codigo_producto'] || row['Cod.'] || row['COD'] || row['Código Producto'];
+      if (!codProducto) continue;
+
+      const fechaRaw = row['Fecha'] || row['fecha'] || row['FECHA'];
+      const sucursal = row['Suc.'] || row['suc.'] || row['Sucursal'] || row['sucursal'] || row['SUC'] || '';
       
-      return {
-        codigo: item.codigo,
-        nombre: item.nombre,
-        pedido_total: item.pedido_total,
-        stock_actual: stockActual,
-        diferencia: diferencia // Puede ser negativo
-      };
-    });
+      const pieza = parseInt(row['Pieza'] || row['pieza'] || row['piezas'] || row['PIEZA'] || 0, 10);
+      const fraccion = parseFloat(row['Fraccionado'] || row['fraccionado'] || row['fraccion'] || row['FRACCIONADO'] || 0);
 
-    // Ordenar los totales por código
-    totalesArray.sort((a, b) => a.codigo.localeCompare(b.codigo));
+      const codigoPedidoStr = String(codigoPedido).trim();
+      const codProductoStr = String(codProducto).trim();
 
-    // 6. Enviar la respuesta unificada
-    res.json({
-      total: totalesArray,
-      por_pedido: porPedido
-    });
-
-  } catch (error) {
-    console.error('Error al calcular el stock vs pedidos:', error);
-    res.status(500).json({ error: 'Error al realizar el cálculo de stock' });
-  }
-};
-
-// POST /api/pedidos/:id/despachar
-// Lee los items preparados en preparacion_pedidos para ese pedido,
-// descuenta de stock_envasados (cantidad_bolsitas) y de stock_kilos (peso preparado).
-// Permite stock negativo.
-exports.despacharPedido = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // 1. Verificar que el pedido existe
-    const pedido = await PedidoSucursal.findByPk(id);
-    if (!pedido) {
-      return res.status(404).json({ error: 'Pedido no encontrado' });
-    }
-
-    // 2. Buscar todos los registros de preparación para este pedido
-    const preparaciones = await PreparacionPedido.findAll({
-      where: { codigo_de_pedido: id }
-    });
-
-    if (preparaciones.length === 0) {
-      return res.status(400).json({ error: 'No hay preparaciones registradas para este pedido' });
-    }
-
-    const resumen = [];
-
-    for (const prep of preparaciones) {
-      const codigo = prep.codigo_producto;
-      const bolsitas = parseInt(prep.cantidad_bolsitas_preparadas) || 0;
-      const pesoPreparado = (parseFloat(prep.peso_piezas_preparadas) || 0) + 
-                            (parseFloat(prep.peso_fracciones_preparadas) || 0);
-
-      // 3. Descontar de stock_envasados (permite negativo)
-      const envasado = await StockEnvasado.findOne({ where: { codigo } });
-      let nuevoStockEnvasado = null;
-      if (envasado) {
-        envasado.cantidad = parseInt(envasado.cantidad) - bolsitas;
-        await envasado.save();
-        nuevoStockEnvasado = envasado.cantidad;
+      if (!pedidosAgrupados[codigoPedidoStr]) {
+        pedidosAgrupados[codigoPedidoStr] = {
+          codigo: codigoPedidoStr,
+          fecha: parseExcelDate(fechaRaw),
+          sucursal: String(sucursal).trim(),
+          items: {} // Consolidar por código de producto en un objeto
+        };
       }
 
-      // 4. Descontar de stock_kilos (permite negativo)
-      const stockKilo = await StockKilos.findOne({ where: { codigo_producto: codigo } });
-      let nuevoStockKilos = null;
-      if (stockKilo) {
-        stockKilo.cantidad_kilos = parseFloat(stockKilo.cantidad_kilos) - pesoPreparado;
-        await stockKilo.save();
-        nuevoStockKilos = parseFloat(stockKilo.cantidad_kilos);
+      if (!pedidosAgrupados[codigoPedidoStr].items[codProductoStr]) {
+        pedidosAgrupados[codigoPedidoStr].items[codProductoStr] = {
+          codigo_producto: codProductoStr,
+          pieza: 0,
+          fraccion: 0
+        };
       }
 
-      resumen.push({
-        codigo,
-        bolsitas_descontadas: bolsitas,
-        peso_descontado: pesoPreparado,
-        nuevo_stock_envasado: nuevoStockEnvasado,
-        nuevo_stock_kilos: nuevoStockKilos
+      // Sumar si el mismo producto viene repetido en el mismo pedido
+      pedidosAgrupados[codigoPedidoStr].items[codProductoStr].pieza += pieza;
+      pedidosAgrupados[codigoPedidoStr].items[codProductoStr].fraccion += fraccion;
+    }
+
+    const codigosNuevos = Object.keys(pedidosAgrupados);
+    if (codigosNuevos.length === 0) {
+      return res.status(400).json({ error: 'El archivo Excel no contenía columnas válidas de pedidos (ej: Codigo_pedido, Cod, Fecha).' });
+    }
+
+    // Buscar cuáles de estos códigos de pedido ya existen en la BBDD
+    const pedidosExistentes = await Pedido.findAll({
+      where: {
+        codigo: codigosNuevos
+      },
+      attributes: ['codigo']
+    });
+
+    const codigosExistentesSet = new Set(pedidosExistentes.map(p => p.codigo));
+
+    // Filtrar para quedarnos únicamente con los pedidos nuevos
+    const pedidosAProcesar = codigosNuevos.filter(cod => !codigosExistentesSet.has(cod));
+
+    if (pedidosAProcesar.length === 0) {
+      return res.json({
+        mensaje: 'Carga masiva finalizada. Todos los pedidos del archivo ya existían en la base de datos (se omitieron).',
+        pedidosRegistrados: 0,
+        pedidosOmitidos: codigosExistentesSet.size
       });
     }
 
-    // 5. Marcar el pedido como Despachado
-    pedido.estado = 'Despachado';
-    await pedido.save();
+    // Iniciar transacción de base de datos para guardar todo el lote
+    const transaction = await sequelize.transaction();
+    let creadosCount = 0;
 
-    res.json({
-      mensaje: `Pedido ${id} despachado correctamente. Stocks descontados.`,
-      resumen
-    });
+    try {
+      for (const codigo of pedidosAProcesar) {
+        const pedData = pedidosAgrupados[codigo];
+
+        // 1. Crear pedido
+        const nuevoPedido = await Pedido.create({
+          codigo: pedData.codigo,
+          fecha: pedData.fecha,
+          sucursal: pedData.sucursal,
+          estado: 'Pendiente'
+        }, { transaction });
+
+        // Convertir el objeto indexado de items a array
+        const itemsArray = Object.values(pedData.items);
+
+        // 2. Crear items del pedido
+        for (const item of itemsArray) {
+          // Validar que el producto exista en la base de datos para cumplir FK
+          const productoExiste = await Producto.findByPk(item.codigo_producto, { transaction });
+          if (!productoExiste) {
+            // Si el producto del pedido no existe en la tabla de productos, lo creamos
+            // con un nombre de fantasía genérico para no arrojar error de llave foránea.
+            await Producto.create({
+              codigo: item.codigo_producto,
+              nombre: `PRODUCTO AUTOCREADO (${item.codigo_producto})`,
+              kilos_block: 0,
+              peso_x_pieza: 0,
+              cantidad_piezas: 0,
+              vencimientos: null,
+              kg_x_bolsita: 0
+            }, { transaction });
+          }
+
+          // Crear ProductoPedido
+          await ProductoPedido.create({
+            id_pedido: nuevoPedido.id,
+            codigo_producto: item.codigo_producto,
+            pieza: item.pieza,
+            fraccion: item.fraccion
+          }, { transaction });
+        }
+        creadosCount++;
+      }
+
+      await transaction.commit();
+
+      res.status(201).json({
+        mensaje: 'Carga masiva de pedidos procesada con éxito.',
+        pedidosRegistrados: creadosCount,
+        pedidosOmitidos: codigosExistentesSet.size
+      });
+
+    } catch (error) {
+      if (!transaction.finished) {
+        await transaction.rollback();
+      }
+      throw error;
+    }
 
   } catch (error) {
-    console.error('Error al despachar pedido:', error);
-    res.status(500).json({ error: 'Error al procesar el despacho del pedido' });
+    console.error('Error al realizar carga masiva de pedidos:', error);
+    res.status(500).json({ error: 'Error al procesar la carga masiva de pedidos.' });
   }
 };
+
