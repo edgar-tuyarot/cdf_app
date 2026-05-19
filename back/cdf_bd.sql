@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
 -- Host:                         127.0.0.1
--- Versión del servidor:        11.8.6-MariaDB-0+deb13u1 from Debian - -- Please help get to 10k stars at https://github.com/MariaDB/Server
--- SO del servidor:              debian-linux-gnu
--- HeidiSQL Versión:            12.17.1.1
+-- Versión del servidor:         12.2.2-MariaDB - MariaDB Server
+-- SO del servidor:              Win64
+-- HeidiSQL Versión:             12.17.0.7270
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS `colaboradores` (
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla cdf_app.colaboradores: ~9 rows (aproximadamente)
-INSERT IGNORE INTO `colaboradores` (`id`, `nombre`) VALUES
+REPLACE INTO `colaboradores` (`id`, `nombre`) VALUES
 	(1, 'Ulises'),
 	(2, 'Mauricio'),
 	(3, 'Juan'),
@@ -43,27 +43,26 @@ CREATE TABLE IF NOT EXISTS `fraccionados` (
   PRIMARY KEY (`id`),
   KEY `codigo_producto_original` (`codigo_producto_original`),
   KEY `codigo_fraccionado` (`codigo_fraccionado`),
-  CONSTRAINT `fraccionados_ibfk_1` FOREIGN KEY (`codigo_producto_original`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fraccionados_ibfk_2` FOREIGN KEY (`codigo_fraccionado`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `1` FOREIGN KEY (`codigo_producto_original`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `2` FOREIGN KEY (`codigo_fraccionado`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla cdf_app.fraccionados: ~15 rows (aproximadamente)
-INSERT IGNORE INTO `fraccionados` (`id`, `codigo_producto_original`, `peso_a_fraccionar`, `codigo_fraccionado`, `peso_a_descontar`) VALUES
+REPLACE INTO `fraccionados` (`id`, `codigo_producto_original`, `peso_a_fraccionar`, `codigo_fraccionado`, `peso_a_descontar`) VALUES
 	(1, '3755', 0.000, '3740', 0.000),
-	(2, '4116', 0.001, '1621', 0.000),
+	(2, '4116', 11.731, '1621', 11.425),
 	(3, '5446', 0.001, '1753', 0.000),
-	(4, '4787', 0.001, '2404', 0.000),
-	(5, '6598', 0.001, '2406', 0.000),
+	(4, '4787', 22.081, '2404', 21.330),
+	(5, '6598', 5.761, '2406', 5.595),
 	(6, '6442', 0.001, '2443', 0.000),
-	(7, '8010', 17.951, '3756', 17.630),
+	(7, '8010', 0.000, '3756', 0.000),
 	(8, '8663', 0.001, '7165', 0.000),
 	(9, '2190', 0.001, '4027', 0.000),
 	(10, '1218', 0.000, '3067', 0.000),
-	(11, '6572', 0.001, '2450', 0.000),
-	(12, '2379', 45.831, '2842', 45.210),
-	(13, '2435', 51.841, '2910', 52.190),
-	(14, '6442', 1.230, '2443', 1.230),
-	(15, '1218', 3.360, '3067', 3.360);
+	(11, '6572', 0.000, '2450', 0.000),
+	(12, '2379', 0.000, '2842', 0.000),
+	(13, '2435', 0.000, '2910', 0.000),
+	(14, '6442', 0.000, '2443', 0.000);
 
 -- Volcando estructura para tabla cdf_app.ingreso_recortes
 CREATE TABLE IF NOT EXISTS `ingreso_recortes` (
@@ -75,12 +74,12 @@ CREATE TABLE IF NOT EXISTS `ingreso_recortes` (
   PRIMARY KEY (`id`),
   KEY `id_sucursal` (`id_sucursal`),
   KEY `id_producto` (`id_producto`),
-  CONSTRAINT `ingreso_recortes_ibfk_1` FOREIGN KEY (`id_sucursal`) REFERENCES `sucursales` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `ingreso_recortes_ibfk_2` FOREIGN KEY (`id_producto`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `1` FOREIGN KEY (`id_sucursal`) REFERENCES `sucursales` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `2` FOREIGN KEY (`id_producto`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla cdf_app.ingreso_recortes: ~1 rows (aproximadamente)
-INSERT IGNORE INTO `ingreso_recortes` (`id`, `id_sucursal`, `fecha`, `id_producto`, `peso_recorte`) VALUES
+REPLACE INTO `ingreso_recortes` (`id`, `id_sucursal`, `fecha`, `id_producto`, `peso_recorte`) VALUES
 	(1, 1, '2026-05-19 00:00:00', '5075', 0.350);
 
 -- Volcando estructura para tabla cdf_app.pedidos
@@ -91,10 +90,10 @@ CREATE TABLE IF NOT EXISTS `pedidos` (
   `sucursal` varchar(255) DEFAULT NULL,
   `estado` varchar(255) DEFAULT 'Pendiente',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=63 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=71 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla cdf_app.pedidos: ~48 rows (aproximadamente)
-INSERT IGNORE INTO `pedidos` (`id`, `codigo`, `fecha`, `sucursal`, `estado`) VALUES
+REPLACE INTO `pedidos` (`id`, `codigo`, `fecha`, `sucursal`, `estado`) VALUES
 	(12, 'PED-1776782622478', '2026-04-21', 'Depot 22-Roca', 'Completado'),
 	(14, 'PED-1777051847213', '2026-04-24', 'Depot 22-Roca', 'Completado'),
 	(15, 'PED-1777390576343', '2026-04-28', 'Depot 22-Roca', 'Completado'),
@@ -142,7 +141,12 @@ INSERT IGNORE INTO `pedidos` (`id`, `codigo`, `fecha`, `sucursal`, `estado`) VAL
 	(57, 'PED-1778846449999', '2026-05-15', 'Depot 16-Ameghino', 'Completado'),
 	(58, 'PED-1778850017999', '2026-05-15', 'Depot 03-Italia', 'Completado'),
 	(59, 'PED-1778861234335', '2026-05-15', 'Depot 09-Barranqueras', 'Completado'),
-	(62, 'PED-20260518-1008', '2026-05-18', 'Depot 03-Italia', 'Pendiente');
+	(62, 'PED-20260518-1008', '2026-05-18', 'Depot 03-Italia ', 'Completado'),
+	(63, 'PED-1779199073442', '2026-05-19', 'Depot 12-Cordoba', 'Pendiente'),
+	(64, 'PED-1779200156487', '2026-05-19', 'Depot 16-Ameghino', 'Pendiente'),
+	(65, 'PED-1779200205212', '2026-05-19', 'Depot 03-Italia', 'Pendiente'),
+	(68, 'PED-1779202075027', '2026-05-19', 'Depot 20-Sarmiento', 'Pendiente'),
+	(70, 'PED-1779206153421', '2026-05-19', 'Depot 22-Roca', 'Pendiente');
 
 -- Volcando estructura para tabla cdf_app.procesos
 CREATE TABLE IF NOT EXISTS `procesos` (
@@ -159,14 +163,14 @@ CREATE TABLE IF NOT EXISTS `procesos` (
   `kg_a_sumar` decimal(10,3) DEFAULT 0.000,
   `colaborador_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `procesos_colaborador_id_foreign_idx` (`colaborador_id`),
   KEY `codigo` (`codigo`),
-  KEY `colaborador_id` (`colaborador_id`),
-  CONSTRAINT `procesos_ibfk_10` FOREIGN KEY (`colaborador_id`) REFERENCES `colaboradores` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT `procesos_ibfk_9` FOREIGN KEY (`codigo`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+  CONSTRAINT `1` FOREIGN KEY (`codigo`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `procesos_colaborador_id_foreign_idx` FOREIGN KEY (`colaborador_id`) REFERENCES `colaboradores` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=34 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla cdf_app.procesos: ~10 rows (aproximadamente)
-INSERT IGNORE INTO `procesos` (`id`, `colaborador`, `proceso`, `fecha`, `codigo`, `piezas`, `peso_bruto`, `recorte`, `decomiso`, `kg_a_desc`, `kg_a_sumar`, `colaborador_id`) VALUES
+-- Volcando datos para la tabla cdf_app.procesos: ~7 rows (aproximadamente)
+REPLACE INTO `procesos` (`id`, `colaborador`, `proceso`, `fecha`, `codigo`, `piezas`, `peso_bruto`, `recorte`, `decomiso`, `kg_a_desc`, `kg_a_sumar`, `colaborador_id`) VALUES
 	(1, 'Edgar', 'Fraccionamiento', '2026-05-17', '2912', 2, 11.060, 0.740, 1.980, 3.420, 4.560, NULL),
 	(6, 'Edgar', 'Fraccionamiento', '2026-05-17', '2912', 1, 1.000, 0.100, 0.000, 0.000, 1.500, NULL),
 	(11, 'Edgar', 'Fraccionamiento', '2026-05-17', '1218', 1, 3.250, 0.180, 0.085, 2.985, 3.015, NULL),
@@ -176,7 +180,21 @@ INSERT IGNORE INTO `procesos` (`id`, `colaborador`, `proceso`, `fecha`, `codigo`
 	(16, 'Braian', 'Fraccionamiento', '2026-05-18', '2379', 5, 22.830, 0.000, 0.000, 22.830, 23.170, NULL),
 	(17, 'Uliese', 'Fraccionamiento', '2026-05-18', '2435', 4, 15.270, 0.485, 0.115, 14.670, 15.370, NULL),
 	(18, 'Ulises', 'Fraccionamiento', '2026-05-18', '8010', 5, 17.630, 0.525, 0.130, 16.975, 17.950, NULL),
-	(19, 'Braian', 'Fraccionamiento', '2026-05-18', '2379', 5, 22.380, 0.000, 0.000, 22.380, 22.660, NULL);
+	(19, 'Braian', 'Fraccionamiento', '2026-05-18', '2379', 5, 22.380, 0.000, 0.000, 22.380, 22.660, NULL),
+	(20, NULL, 'Fraccionamiento', '2026-05-19', '1218', 2, 8.575, 0.550, 0.160, 7.865, 10.270, 5),
+	(21, NULL, 'Fraccionamiento', '2026-05-19', '8010', 5, 19.160, 0.935, 0.165, 18.060, 20.795, 5),
+	(22, NULL, 'Fraccionamiento', '2026-05-19', '1218', 3, 10.535, 0.470, 0.160, 9.905, 10.355, 5),
+	(23, NULL, 'Fraccionamiento', '2026-05-19', '8010', 5, 17.650, 0.570, 0.075, 17.005, 17.450, 3),
+	(24, NULL, 'Fraccionamiento', '2026-05-19', '2379', 5, 23.000, 0.000, 0.000, 23.000, 23.310, 4),
+	(25, NULL, 'Fraccionamiento', '2026-05-19', '3755', 5, 28.500, 1.450, 0.250, 26.800, 27.690, 9),
+	(26, NULL, 'Fraccionamiento', '2026-05-19', '6572', 6, 20.910, 0.590, 0.165, 20.155, 21.190, 5),
+	(27, NULL, 'Fraccionamiento', '2026-05-19', '2435', 4, 14.490, 0.885, 0.195, 13.410, 13.980, 3),
+	(28, NULL, 'Fraccionamiento', '2026-05-19', '2379', 5, 22.700, 0.000, 0.000, 22.700, 23.020, 4),
+	(29, NULL, 'Fraccionamiento', '2026-05-19', '4787', 4, 23.070, 1.455, 0.285, 21.330, 22.080, 3),
+	(30, NULL, 'Fraccionamiento', '2026-05-19', '2420', 6, 28.180, 0.900, 0.090, 27.190, 28.010, 9),
+	(31, NULL, 'Fraccionamiento', '2026-05-19', '2422', 6, 25.180, 0.000, 0.000, 25.180, 25.620, 4),
+	(32, NULL, 'Fraccionamiento', '2026-05-19', '4116', 4, 12.185, 0.260, 0.500, 11.425, 11.730, 3),
+	(33, NULL, 'Fraccionamiento', '2026-05-19', '6598', 6, 6.515, 0.505, 0.415, 5.595, 5.760, 1);
 
 -- Volcando estructura para tabla cdf_app.producto_pedidos
 CREATE TABLE IF NOT EXISTS `producto_pedidos` (
@@ -191,12 +209,12 @@ CREATE TABLE IF NOT EXISTS `producto_pedidos` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `producto_pedidos_codigo_producto_id_pedido_unique` (`id_pedido`,`codigo_producto`),
   KEY `codigo_producto` (`codigo_producto`),
-  CONSTRAINT `producto_pedidos_ibfk_17` FOREIGN KEY (`id_pedido`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `producto_pedidos_ibfk_18` FOREIGN KEY (`codigo_producto`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=1497 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+  CONSTRAINT `5` FOREIGN KEY (`id_pedido`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `6` FOREIGN KEY (`codigo_producto`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1707 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla cdf_app.producto_pedidos: ~991 rows (aproximadamente)
-INSERT IGNORE INTO `producto_pedidos` (`id`, `id_pedido`, `codigo_producto`, `pieza`, `fraccion`, `peso_enviado`, `cantidad_enviada`, `fraccion_enviada`) VALUES
+-- Volcando datos para la tabla cdf_app.producto_pedidos: ~988 rows (aproximadamente)
+REPLACE INTO `producto_pedidos` (`id`, `id_pedido`, `codigo_producto`, `pieza`, `fraccion`, `peso_enviado`, `cantidad_enviada`, `fraccion_enviada`) VALUES
 	(474, 31, '1218', 0, 45.000, 0.000, 0, 0.000),
 	(475, 31, '2254', 0, 35.000, 0.000, 0, 0.000),
 	(476, 31, '2264', 0, 12.000, 0.000, 0, 0.000),
@@ -1161,33 +1179,117 @@ INSERT IGNORE INTO `producto_pedidos` (`id`, `id_pedido`, `codigo_producto`, `pi
 	(1465, 30, '6598', 0, 15.000, 0.000, 0, 0.000),
 	(1466, 30, '7718', 0, 13.000, 0.000, 0, 0.000),
 	(1467, 30, '8974', 0, 5.000, 0.000, 0, 0.000),
-	(1470, 62, '3740', 0, 40.000, 0.000, 0, 0.000),
-	(1471, 62, '1621', 0, 20.000, 0.000, 0, 0.000),
-	(1472, 62, '1753', 0, 20.000, 0.000, 0, 0.000),
-	(1473, 62, '2406', 0, 15.000, 0.000, 0, 0.000),
-	(1474, 62, '1541', 0, 5.000, 0.000, 0, 0.000),
-	(1475, 62, '1806', 0, 5.000, 0.000, 0, 0.000),
-	(1476, 62, '2250', 0, 20.000, 0.000, 0, 0.000),
-	(1477, 62, '8016', 0, 20.000, 0.000, 0, 0.000),
-	(1478, 62, '2912', 0, 40.000, 0.000, 0, 0.000),
-	(1479, 62, '3781', 0, 40.000, 0.000, 0, 0.000),
-	(1480, 62, '2925', 0, 10.000, 0.000, 0, 0.000),
-	(1481, 62, '6152', 0, 20.000, 0.000, 0, 0.000),
-	(1482, 62, '3817', 0, 15.000, 0.000, 0, 0.000),
-	(1483, 62, '2443', 0, 10.000, 0.000, 0, 0.000),
-	(1484, 62, '2842', 0, 50.000, 0.000, 0, 0.000),
-	(1485, 62, '2910', 0, 80.000, 0.000, 0, 0.000),
-	(1486, 62, '3067', 0, 15.000, 0.000, 0, 0.000),
-	(1487, 62, '3756', 0, 70.000, 0.000, 0, 0.000),
-	(1488, 62, '4027', 0, 10.000, 0.000, 0, 0.000),
-	(1489, 62, '2422', 0, 20.000, 0.000, 0, 0.000),
-	(1490, 62, '2420', 0, 20.000, 0.000, 0, 0.000),
-	(1491, 62, '2431', 0, 15.000, 0.000, 0, 0.000),
-	(1492, 62, '1922', 0, 50.000, 0.000, 0, 0.000),
-	(1493, 62, '7718', 0, 15.000, 0.000, 0, 0.000),
 	(1494, 12, '1218', 0, 30.000, 0.000, 0, 0.000),
 	(1495, 12, '1922', 0, 50.000, 0.000, 0, 0.000),
-	(1496, 12, '2379', 0, 50.000, 0.000, 0, 0.000);
+	(1496, 12, '2379', 0, 50.000, 0.000, 0, 0.000),
+	(1538, 65, '1922', 0, 50.000, 0.000, 0, 0.000),
+	(1539, 65, '2264', 0, 10.000, 0.000, 0, 0.000),
+	(1540, 65, '2420', 0, 30.000, 0.000, 0, 0.000),
+	(1541, 65, '2422', 0, 30.000, 0.000, 0, 0.000),
+	(1542, 65, '2438', 0, 15.000, 0.000, 0, 0.000),
+	(1543, 65, '2440', 0, 20.000, 0.000, 0, 0.000),
+	(1544, 65, '2912', 0, 40.000, 0.000, 0, 0.000),
+	(1545, 65, '2914', 0, 10.000, 0.000, 0, 0.000),
+	(1546, 65, '3781', 0, 30.000, 0.000, 0, 0.000),
+	(1547, 65, '4929', 0, 20.000, 0.000, 0, 0.000),
+	(1548, 65, '6152', 0, 20.000, 0.000, 0, 0.000),
+	(1549, 65, '7700', 0, 10.000, 0.000, 0, 0.000),
+	(1550, 65, '7718', 0, 20.000, 0.000, 0, 0.000),
+	(1551, 65, '8085', 20, 0.000, 0.000, 0, 0.000),
+	(1570, 64, '2254', 0, 20.000, 0.000, 0, 0.000),
+	(1571, 64, '2420', 0, 100.000, 0.000, 0, 0.000),
+	(1572, 64, '2422', 0, 20.000, 0.000, 0, 0.000),
+	(1573, 64, '2842', 0, 20.000, 0.000, 0, 0.000),
+	(1574, 64, '2910', 0, 40.000, 0.000, 0, 0.000),
+	(1575, 64, '3740', 0, 40.000, 0.000, 0, 0.000),
+	(1576, 64, '3756', 0, 40.000, 0.000, 0, 0.000),
+	(1577, 64, '3817', 0, 20.000, 0.000, 0, 0.000),
+	(1578, 64, '4787', 20, 0.000, 0.000, 0, 0.000),
+	(1579, 64, '2404', 0, 40.000, 0.000, 0, 0.000),
+	(1580, 64, '1621', 0, 15.000, 0.000, 0, 0.000),
+	(1581, 64, '2450', 0, 10.000, 0.000, 0, 0.000),
+	(1582, 63, '1922', 0, 35.000, 0.000, 0, 0.000),
+	(1583, 63, '2264', 0, 12.000, 0.000, 0, 0.000),
+	(1584, 63, '2420', 0, 75.000, 0.000, 0, 0.000),
+	(1585, 63, '2422', 0, 45.000, 0.000, 0, 0.000),
+	(1586, 63, '2438', 0, 75.000, 0.000, 0, 0.000),
+	(1587, 63, '2912', 0, 65.000, 0.000, 0, 0.000),
+	(1588, 63, '3781', 0, 75.000, 0.000, 0, 0.000),
+	(1589, 63, '6152', 0, 12.000, 0.000, 0, 0.000),
+	(1590, 63, '8016', 0, 11.000, 0.000, 0, 0.000),
+	(1591, 63, '3740', 0, 30.000, 0.000, 0, 0.000),
+	(1592, 63, '2404', 0, 30.000, 0.000, 0, 0.000),
+	(1593, 63, '2910', 0, 40.000, 0.000, 0, 0.000),
+	(1594, 63, '1621', 0, 15.000, 0.000, 0, 0.000),
+	(1623, 68, '1254', 0, 10.000, 0.000, 0, 0.000),
+	(1624, 68, '1621', 0, 10.000, 0.000, 0, 0.000),
+	(1625, 68, '1753', 0, 10.000, 0.000, 0, 0.000),
+	(1626, 68, '2250', 0, 15.000, 0.000, 0, 0.000),
+	(1627, 68, '2254', 0, 50.000, 0.000, 0, 0.000),
+	(1628, 68, '2404', 0, 50.000, 0.000, 0, 0.000),
+	(1629, 68, '2406', 0, 10.000, 0.000, 0, 0.000),
+	(1630, 68, '2420', 0, 100.000, 0.000, 0, 0.000),
+	(1631, 68, '2422', 0, 40.000, 0.000, 0, 0.000),
+	(1632, 68, '2438', 0, 20.000, 0.000, 0, 0.000),
+	(1633, 68, '2443', 0, 10.000, 0.000, 0, 0.000),
+	(1634, 68, '2842', 0, 50.000, 0.000, 0, 0.000),
+	(1635, 68, '2910', 0, 100.000, 0.000, 0, 0.000),
+	(1636, 68, '2912', 0, 50.000, 0.000, 0, 0.000),
+	(1637, 68, '2925', 0, 5.000, 0.000, 0, 0.000),
+	(1638, 68, '3067', 0, 30.000, 0.000, 0, 0.000),
+	(1639, 68, '3365', 0, 10.000, 0.000, 0, 0.000),
+	(1640, 68, '3740', 0, 50.000, 0.000, 0, 0.000),
+	(1641, 68, '3756', 0, 50.000, 0.000, 0, 0.000),
+	(1642, 68, '3781', 2, 100.000, 0.000, 0, 0.000),
+	(1643, 68, '3817', 0, 20.000, 0.000, 0, 0.000),
+	(1644, 68, '4027', 0, 15.000, 0.000, 0, 0.000),
+	(1645, 68, '5075', 12, 0.000, 0.000, 0, 0.000),
+	(1646, 68, '6152', 0, 15.000, 0.000, 0, 0.000),
+	(1647, 68, '7165', 0, 30.000, 0.000, 0, 0.000),
+	(1648, 68, '7700', 0, 10.000, 0.000, 0, 0.000),
+	(1649, 68, '8016', 10, 5.000, 0.000, 0, 0.000),
+	(1650, 68, '8657', 0, 10.000, 0.000, 0, 0.000),
+	(1666, 70, '1621', 0, 25.000, 0.000, 0, 0.000),
+	(1667, 70, '1922', 0, 40.000, 0.000, 0, 0.000),
+	(1668, 70, '2420', 0, 40.000, 0.000, 0, 0.000),
+	(1669, 70, '2422', 0, 50.000, 0.000, 0, 0.000),
+	(1670, 70, '2438', 0, 10.000, 0.000, 0, 0.000),
+	(1671, 70, '2450', 0, 20.000, 0.000, 0, 0.000),
+	(1672, 70, '2842', 0, 30.000, 0.000, 0, 0.000),
+	(1673, 70, '2910', 0, 30.000, 0.000, 0, 0.000),
+	(1674, 70, '2912', 0, 25.000, 0.000, 0, 0.000),
+	(1675, 70, '2914', 0, 20.000, 0.000, 0, 0.000),
+	(1676, 70, '3067', 0, 30.000, 0.000, 0, 0.000),
+	(1677, 70, '3740', 0, 40.000, 0.000, 0, 0.000),
+	(1678, 70, '3756', 0, 50.000, 0.000, 0, 0.000),
+	(1679, 70, '3781', 0, 40.000, 0.000, 0, 0.000),
+	(1680, 70, '3817', 0, 20.000, 0.000, 0, 0.000),
+	(1681, 70, '6152', 0, 40.000, 0.000, 0, 0.000),
+	(1682, 70, '7165', 0, 40.000, 0.000, 0, 0.000),
+	(1683, 62, '1541', 0, 5.000, 0.000, 0, 0.000),
+	(1684, 62, '1621', 0, 20.000, 0.000, 0, 0.000),
+	(1685, 62, '1753', 0, 20.000, 0.000, 0, 0.000),
+	(1686, 62, '1806', 0, 5.000, 0.000, 0, 0.000),
+	(1687, 62, '1922', 0, 50.000, 8.380, 0, 0.000),
+	(1688, 62, '2250', 0, 20.000, 4.295, 0, 0.000),
+	(1689, 62, '2406', 0, 15.000, 0.000, 0, 0.000),
+	(1690, 62, '2420', 0, 20.000, 5.530, 0, 0.000),
+	(1691, 62, '2422', 0, 20.000, 0.000, 0, 0.000),
+	(1692, 62, '2431', 0, 15.000, 4.420, 0, 0.000),
+	(1693, 62, '2443', 0, 10.000, 1.230, 0, 0.000),
+	(1694, 62, '2842', 0, 50.000, 22.660, 0, 0.000),
+	(1695, 62, '2910', 0, 80.000, 9.575, 0, 0.000),
+	(1696, 62, '2912', 0, 40.000, 5.340, 0, 0.000),
+	(1697, 62, '2925', 0, 10.000, 0.000, 0, 0.000),
+	(1698, 62, '3067', 0, 15.000, 3.360, 0, 0.000),
+	(1699, 62, '3740', 0, 40.000, 0.000, 0, 0.000),
+	(1700, 62, '3756', 0, 70.000, 7.460, 0, 0.000),
+	(1701, 62, '3781', 0, 40.000, 13.180, 0, 0.000),
+	(1702, 62, '3817', 0, 15.000, 1.825, 0, 0.000),
+	(1703, 62, '4027', 0, 10.000, 0.000, 0, 0.000),
+	(1704, 62, '6152', 0, 20.000, 0.000, 0, 0.000),
+	(1705, 62, '7718', 0, 15.000, 0.000, 0, 0.000),
+	(1706, 62, '8016', 0, 20.000, 0.805, 0, 0.000);
 
 -- Volcando estructura para tabla cdf_app.productos
 CREATE TABLE IF NOT EXISTS `productos` (
@@ -1205,9 +1307,10 @@ CREATE TABLE IF NOT EXISTS `productos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla cdf_app.productos: ~102 rows (aproximadamente)
-INSERT IGNORE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza`, `cantidad_piezas`, `vencimientos`, `kg_x_bolsita`, `kg_fraccionados`, `kg_decomiso`, `kg_recorte`) VALUES
+REPLACE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza`, `cantidad_piezas`, `vencimientos`, `kg_x_bolsita`, `kg_fraccionados`, `kg_decomiso`, `kg_recorte`) VALUES
 	('', '', NULL, NULL, NULL, NULL, NULL, 0.000, 0.000, 0.000),
-	('1218', 'FIQU PAULINA MUZZARELLA  P/FETEAR X KG', 52.8700, 3.520, 14, '46181', 0.000, 0.000, 0.000, 0.000),
+	('1218', 'FIQU PAULINA MUZZARELLA  P/FETEAR X KG', 33.7600, 3.520, 9, '46181', 0.000, 0.000, 0.320, 1.020),
+	('1254', 'PRODUCTO AUTOCREADO (1254)', 0.0000, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('1541', 'FIAM CAGNOLI SALAMIN P/F x KG', 0.0550, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('1611', 'FIAM LARIO BONDIOLA (122)', 1.3390, 1.370, 1, '46234', 0.000, 0.000, 0.000, 0.000),
 	('1617', 'FIAM RAFAELA JAM COCIDO  NAT X KG', 12.8200, 5.220, 3, '46180', 0.000, 0.000, 0.000, 0.000),
@@ -1227,46 +1330,47 @@ INSERT IGNORE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza
 	('2264', 'FIAM PALADINI MILAN', 6.2100, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('2266', 'FIAM PALADINI SALAMIN T/C', 0.7400, 0.115, 5, '46164', 0.000, 0.000, 0.000, 0.000),
 	('2374', 'FIAM LARIO SALAME BAST GRUESO', 2.8950, 1.130, 2, '46227', 0.000, 0.000, 0.000, 0.000),
-	('2379', 'FIQU PAULINA CREMOSO X KG', 70.2990, 4.595, 32, '46211', 0.000, 0.000, 0.000, 0.000),
+	('2379', 'FIQU PAULINA CREMOSO X KG', 24.5990, 4.595, 22, '46211', 0.000, 0.000, 0.000, 0.000),
 	('2381', 'FIAM LARIO JAMON CRUDO', 3.2060, 1.100, 3, '46228', 0.000, 0.000, 0.000, 0.000),
 	('2404', 'FRAC CAGNOLI PALETA CERDO X KG', 0.0000, 0.000, 0, '', 0.180, 0.000, 0.000, 0.000),
 	('2406', 'FRAC CAGNOLI PANCETA AHUM X KG', 0.0000, 0.000, 0, '', 0.120, 0.000, 0.000, 0.000),
-	('2420', 'FIQU TREGAR DANBO X KG.', 75.3000, 4.635, 9, '46293', 0.000, 0.000, 0.000, 0.000),
-	('2422', 'FIQU TREGAR CREMOSO X KG', 170.3000, 4.180, 22, '46194', 0.000, 0.000, 0.000, 0.000),
+	('2420', 'FIQU TREGAR DANBO X KG.', 47.1200, 4.635, 3, '46293', 0.000, 0.000, 0.090, 0.900),
+	('2422', 'FIQU TREGAR CREMOSO X KG', 145.1200, 4.180, 16, '46194', 0.000, 0.000, 0.000, 0.000),
 	('2424', 'FIQU TREGAR CRIOLLO X KG', 30.4150, 4.535, 7, '46221', 0.000, 0.000, 0.000, 0.000),
 	('2427', 'FIQU TREGAR FONTINA X KG', 17.7850, 8.900, 2, '46174', 0.000, 0.000, 0.000, 0.000),
 	('2431', 'FIQU TREGAR PATEGRAS X KG', 17.3650, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('2434', 'FIQU TREGAR HOLANDA X KG', 24.9600, 3.745, 6, '46186', 0.000, 0.000, 0.000, 0.000),
-	('2435', 'FIQU PAULINA DAMBO X KG', 101.3520, 3.635, 44, '46264', 0.000, 0.000, 0.355, 2.140),
+	('2435', 'FIQU PAULINA DAMBO X KG', 86.8620, 3.635, 40, '46264', 0.000, 0.000, 0.550, 3.025),
 	('2438', 'FIQU TREGAR MUZZARELLA BARRA X KG', 7.5550, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('2440', 'FIQU TREGAR PORT SALUT X KG', 59.3100, 3.830, 10, '46182', 0.000, 0.000, 0.000, 0.000),
 	('2441', 'FIQU TREGAR PORT SALUT DIET X KG', 61.0900, 3.800, 15, '46175', 0.000, 0.000, 0.000, 0.000),
-	('2443', 'FRAC PAULINA AZUL X KG', 0.0000, 0.000, 0, '', 0.200, 0.000, 0.000, 0.000),
-	('2450', 'FRAC PAULINA CHEDDAR X KG', 0.0000, 0.000, 0, '', 0.140, 0.000, 0.000, 0.000),
-	('2842', 'FRAC PAULINA CREMOSO X KG', 0.0000, 0.000, 0, '', 0.300, 0.000, 0.000, 0.000),
-	('2910', 'FRAC PAULINA DAMBO X KG', 0.0000, 0.000, 0, '', 0.170, 0.000, 0.000, 0.000),
+	('2443', 'FRAC PAULINA AZUL X KG', 0.0000, 0.000, 0, '', 0.200, 1.230, 0.000, 0.000),
+	('2450', 'FRAC PAULINA CHEDDAR X KG', 0.0000, 0.000, 0, '', 0.140, 21.191, 0.000, 0.000),
+	('2842', 'FRAC PAULINA CREMOSO X KG', 0.0000, 0.000, 0, '', 0.300, 92.161, 0.000, 0.000),
+	('2910', 'FRAC PAULINA DAMBO X KG', 0.0000, 0.000, 0, '', 0.170, 47.540, 0.000, 0.000),
 	('2912', 'FIAM RECREO FIAMB COC PATA CERDO(405)', 19.0700, 5.530, 6, '46269', 0.180, 16.395, 0.000, 0.000),
 	('2914', 'FIAM RECREO MORTADELA BOLG VEJ', 35.6960, 5.200, 4, '46210', 0.000, 0.000, 0.000, 0.000),
 	('2925', 'FIAM RECREO JAMON CRUDO', 24.3300, 2.510, 6, '46317', 0.000, 0.000, 0.000, 0.000),
-	('3067', 'FRAC PAULINA MUZZARELLA  P/FETEAR X KG', 0.0000, 0.000, 0, '', 0.150, 3.016, 0.000, 0.000),
+	('3067', 'FRAC PAULINA MUZZARELLA  P/FETEAR X KG', 0.0000, 0.000, 0, '', 0.150, 27.001, 0.000, 0.000),
+	('3365', 'PRODUCTO AUTOCREADO (3365)', 0.0000, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('3483', 'FIAM LARIO LOMO COC. NAT xKG', 3.0450, 1.525, 2, '46231', 0.000, 0.000, 0.000, 0.000),
-	('3740', 'FRAC CAGNOLI JAM COCIDO. XKG', 0.0000, 0.000, 0, NULL, 0.185, 3.550, 0.000, 0.000),
-	('3755', 'FIAM CAGNOLI JAM COCIDO. X KG', 113.5580, 6.025, 32, '46247', 0.185, 0.000, 0.000, 0.000),
-	('3756', 'FRAC PAULINA PAT. P/ SAND x KG', 0.0000, 0.000, 0, '', 0.170, 0.000, 0.000, 0.000),
+	('3740', 'FRAC CAGNOLI JAM COCIDO. XKG', 0.0000, 0.000, 0, NULL, 0.185, 31.240, 0.000, 0.000),
+	('3755', 'FIAM CAGNOLI JAM COCIDO. X KG', 85.0580, 6.025, 27, '46247', 0.185, 0.000, 0.250, 1.450),
+	('3756', 'FRAC PAULINA PAT. P/ SAND x KG', 0.0000, 0.000, 0, '', 0.170, 56.196, 0.000, 0.000),
 	('3781', 'FIAM RECREO JAM COCIDO X KG', 53.2460, 5.365, 14, '46236', 0.000, 0.000, 0.000, 0.000),
 	('3817', 'FIAM RECREO SALCHICHON PRIMAVERA', 2.2620, 2.820, 5, '46267', 0.000, 0.000, 0.000, 0.000),
 	('4027', 'FRAC PAULINA PATEGRAS X KG', 0.0000, 0.000, 0, '', 0.200, 0.000, 0.000, 0.000),
-	('4116', 'FIAM CAGNOLI MILAN X KG', 27.5070, 2.910, 12, '46210', 0.000, 0.000, 0.000, 0.000),
+	('4116', 'FIAM CAGNOLI MILAN X KG', 15.3220, 2.910, 8, '46210', 0.000, 0.000, 0.500, 0.260),
 	('4186', 'FIAM PALADINI LOMO COC x KG', 0.1250, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('4318', 'FIQU TREGAR AZUL HORMA x KG', 34.6850, 2.445, 14, '46223', 0.000, 0.000, 0.000, 0.000),
-	('4787', 'FIAM CAGNOLI PALETA CERDO X KG', 66.8900, 5.835, 17, '46247', 0.000, 0.000, 0.000, 0.000),
+	('4787', 'FIAM CAGNOLI PALETA CERDO X KG', 43.8200, 5.835, 13, '46247', 0.000, 0.000, 0.285, 1.455),
 	('4898', 'FIAM CAGNOLI SALAME BAST P/F  X KG', 2.3500, 0.660, 3, '46188', 0.000, 0.000, 0.000, 0.000),
 	('4929', 'FIQU PAULINA PORT SALUT X KG', 16.8650, 4.030, 4, '46199', 0.000, 0.000, 0.000, 0.000),
 	('4998', 'FIAM CAGNOLI SALAME BAST P/G X KG', 2.3400, 0.680, 3, '46187', 0.000, 0.000, 0.000, 0.000),
 	('5048', 'FIAM LARIO MORTADELA BOLOGNA', 24.8270, 4.105, 6, '46178', 0.000, 0.000, 0.000, 0.000),
 	('5052', 'PRODUCTO AUTOCREADO (5052)', 0.0000, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('5072', 'FIAM LARIO MILAN FINO', 5.7950, 2.600, 2, '46234', 0.000, 0.000, 0.000, 0.000),
-	('5075', 'FIAM LARIO SALAMIN TAND P/F', 6.7690, 0.130, 35, '46222', 0.000, 0.000, 0.000, 0.000),
+	('5075', 'PRODUCTO 5075', 6.7690, 0.130, 35, '46222', 0.000, 0.000, 0.000, 0.000),
 	('5076', 'FIAM LARIO SALAMIN TAND P/G', 6.9250, 0.130, 34, '46220', 0.000, 0.000, 0.000, 0.000),
 	('5409', 'PRODUCTO AUTOCREADO (5409)', 0.0000, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('5446', 'FIAM CAGNOLI MORTADELA x KG', 8.6290, 4.900, 5, '46197', 0.000, 0.000, 0.000, 0.000),
@@ -1276,8 +1380,8 @@ INSERT IGNORE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza
 	('6152', 'FIAM RECREO MILAN X KG', 2.5650, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('6253', 'FIAM PALADINI SALCH PRIMAV', 0.2250, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('6442', 'FIQU PAULINA AZUL X KG', 9.6050, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
-	('6572', 'FIQU PAULINA CHEDDAR X KG', 28.2050, 3.515, 11, '46288', 0.000, 0.000, 0.000, 0.000),
-	('6598', 'FIAM CAGNOLI PANCETA AHUM X KG', 0.0600, 1.030, 9, '46195', 0.000, 0.000, 0.000, 0.000),
+	('6572', 'FIQU PAULINA CHEDDAR X KG', 7.2950, 3.515, 5, '46288', 0.000, 0.000, 0.165, 0.590),
+	('6598', 'FIAM CAGNOLI PANCETA AHUM X KG', -6.4550, 1.030, 3, '46195', 0.000, 0.000, 0.415, 0.505),
 	('663717', 'INSU BOLS VACIO CERVENY 15X25X70 FIAM 1X', 2500.0000, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('665072', 'HUMM KYROS CLASICO 230X', 24.0000, 0.000, 18, NULL, 0.000, 0.000, 0.000, 0.000),
 	('665073', 'HUMM KYROS ACEITE OLIVA 230X', 24.0000, 0.000, 18, NULL, 0.000, 0.000, 0.000, 0.000),
@@ -1301,10 +1405,11 @@ INSERT IGNORE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza
 	('7165', 'FRAC PAULINA TYBO XKG', 0.0000, 0.000, 0, '', 0.175, 0.000, 0.000, 0.000),
 	('7700', 'FIAM CAGNOLI JAM COCIDO C.LENTA 5.5X', 6.6950, 5.785, 1, '46240', 0.000, 0.000, 0.000, 0.000),
 	('7718', 'FIAM PICADITAS X KG', 60.9800, 0.000, 0, NULL, 0.000, 0.000, 4.385, 0.000),
-	('8010', 'FIQU PAULINA PAT. P/ SAND x KG', 92.4350, 3.540, 66, '46254', 0.000, 0.000, 0.130, 0.525),
+	('8010', 'FIQU PAULINA PAT. P/ SAND x KG', 55.6250, 3.540, 56, '46254', 0.000, 0.000, 0.370, 2.030),
 	('8016', 'FIAM RECREO BONDIOLA X KG', 7.0500, 1.240, 6, '46274', 0.000, 0.000, 0.000, 0.000),
 	('8085', 'FIAM PALADINI JAM COCIDO BAJO SODIO X KG.', 7.9450, 4.490, 1, '46224', 0.000, 0.000, 0.000, 0.000),
 	('8654', 'PRODUCTO AUTOCREADO (8654)', 0.0000, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
+	('8657', 'PRODUCTO AUTOCREADO (8657)', 0.0000, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
 	('8663', 'INSU PAULINA TYBO X KG', 15.3600, 3.990, 4, '46256', 0.000, 0.000, 0.000, 0.000),
 	('8974', 'FIAM CAGNOLI BONDIOLA', 4.1250, 0.875, 5, '46169', 0.000, 0.000, 0.000, 0.000),
 	('9778', 'FIQU RICREM DANBO X KG', 1.3450, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000);
@@ -1318,9 +1423,9 @@ CREATE TABLE IF NOT EXISTS `sucursales` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla cdf_app.sucursales: ~6 rows (aproximadamente)
-INSERT IGNORE INTO `sucursales` (`id`, `sucursal`, `numero`, `direccion`) VALUES
-	(1, 'Italia', 3, 'italia 1137'),
+-- Volcando datos para la tabla cdf_app.sucursales: ~1 rows (aproximadamente)
+REPLACE INTO `sucursales` (`id`, `sucursal`, `numero`, `direccion`) VALUES
+	(1, 'Sucursal Central', 1, 'Av. Principal 100'),
 	(2, 'sarmiento', 20, 'sarmiento 999'),
 	(3, 'ameguino', 16, 'ameghino 601'),
 	(4, 'laprida', 9, 'laprida 4999'),

@@ -54,9 +54,9 @@ exports.obtenerProcesoPorId = async (req, res) => {
 exports.crearProceso = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const { 
-      colaborador_id, proceso, fecha, codigo, piezas, 
-      peso_bruto, recorte, decomiso, kg_a_desc, kg_a_sumar 
+    const {
+      colaborador_id, proceso, fecha, codigo, piezas,
+      peso_bruto, recorte, decomiso, kg_a_desc, kg_a_sumar
     } = req.body;
 
     if (!codigo) {
@@ -64,14 +64,14 @@ exports.crearProceso = async (req, res) => {
       return res.status(400).json({ error: 'El campo "codigo" de producto es obligatorio.' });
     }
 
-    // Validar que el producto exista
+    //Validar que el producto exista
     const producto = await Producto.findByPk(codigo, { transaction });
     if (!producto) {
       await transaction.rollback();
       return res.status(400).json({ error: `El producto con código ${codigo} no existe.` });
     }
 
-    // Parsear valores numéricos
+    //Parsear valores numéricos
     const valPesoBruto = parseFloat(peso_bruto) || 0;
     const valRecorte = parseFloat(recorte) || 0;
     const valDecomiso = parseFloat(decomiso) || 0;
@@ -109,7 +109,7 @@ exports.crearProceso = async (req, res) => {
 
     // 4. Si el código está en fraccionados como producto original, actualizamos peso_a_fraccionar y peso_a_descontar
     const valKgASumar = parseFloat(kg_a_sumar) || 0;
-    const valKgADescontar = parseFloat(valPesoBruto) || 0;
+    const valKgADescontar = parseFloat(kg_a_desc) || 0;
     if (valKgASumar > 0 || valKgADescontar > 0) {
       const mappings = await Fraccionado.findAll({
         where: { codigo_producto_original: codigo },
@@ -203,7 +203,7 @@ exports.eliminarProceso = async (req, res) => {
       // 1. Restar recorte y decomiso
       const recorteActual = parseFloat(producto.kg_recorte) || 0;
       const decomisoActual = parseFloat(producto.kg_decomiso) || 0;
-      
+
       producto.kg_recorte = Math.max(0, recorteActual - valRecorte);
       producto.kg_decomiso = Math.max(0, decomisoActual - valDecomiso);
 

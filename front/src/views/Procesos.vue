@@ -949,13 +949,6 @@ const getBadgeType = (tipo) => {
   return ''
 }
 
-const closeProductDropdownOnOutsideClick = (e) => {
-  if (!e.target.closest('.product-selector-container')) {
-    showProductDropdown.value = false
-    showOrigDropdown.value = false
-    showDestDropdown.value = false
-  }
-}
 
 // Búsqueda y Ordenación Reactiva - Procesos
 const filteredAndSortedProcesos = computed(() => {
@@ -1048,7 +1041,6 @@ const sortBy = (key) => {
 
 onMounted(() => {
   fetchInitialData()
-  document.addEventListener('click', closeProductDropdownOnOutsideClick)
 })
 </script>
 
