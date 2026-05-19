@@ -13,11 +13,17 @@ const productosRoutes = require('././src/routes/productos');
 const procesosRoutes = require('./src/routes/procesos');
 const fraccionadosRoutes = require('./src/routes/fraccionados');
 const pedidosRoutes = require('./src/routes/pedidos');
+const colaboradoresRoutes = require('./src/routes/colaboradores');
+const sucursalesRoutes = require('./src/routes/sucursales');
+const ingresoRecortesRoutes = require('./src/routes/ingresoRecortes');
 
 app.use('/api/productos', productosRoutes);
 app.use('/api/procesos', procesosRoutes);
 app.use('/api/fraccionados', fraccionadosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/colaboradores', colaboradoresRoutes);
+app.use('/api/sucursales', sucursalesRoutes);
+app.use('/api/ingreso-recortes', ingresoRecortesRoutes);
 
 
 // Arrancar servidor

@@ -413,3 +413,52 @@ exports.uploadExcel = async (req, res) => {
   }
 };
 
+// Obtener promedio de fracciones (kilos) por sucursal y producto
+exports.obtenerPromedioFraccionPorSucursal = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+          p.sucursal,
+          pp.codigo_producto,
+          pr.nombre as nombre_producto,
+          CEILING(AVG(pp.fraccion)) AS mayor_fraccion_pedida
+      FROM pedidos p
+      INNER JOIN producto_pedidos pp 
+          ON p.id = pp.id_pedido
+      LEFT JOIN productos pr 
+          ON pp.codigo_producto = pr.codigo
+      GROUP BY 
+          p.sucursal,
+          pp.codigo_producto,
+          pr.nombre
+      ORDER BY 
+          p.sucursal,
+          pp.codigo_producto;
+    `;
+    const [resultados] = await sequelize.query(query);
+
+    // Agrupar por sucursal para unificar la vista en el frontend
+    const sucursalesMap = {};
+    resultados.forEach(row => {
+      const sucursal = row.sucursal || 'Sin Sucursal';
+      if (!sucursalesMap[sucursal]) {
+        sucursalesMap[sucursal] = {
+          sucursal: sucursal,
+          productos: []
+        };
+      }
+      sucursalesMap[sucursal].productos.push({
+        codigo_producto: row.codigo_producto,
+        nombre: row.nombre_producto || 'Desconocido',
+        mayor_fraccion_pedida: parseInt(row.mayor_fraccion_pedida || 0)
+      });
+    });
+
+    res.json(Object.values(sucursalesMap));
+  } catch (error) {
+    console.error('Error al obtener el promedio de fracciones por sucursal:', error);
+    res.status(500).json({ error: 'Error al obtener estadísticas de sucursales' });
+  }
+};
+
+

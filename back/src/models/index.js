@@ -17,10 +17,60 @@ const Producto = sequelize.define('Producto', {
   timestamps: false 
 });
 
+const Colaborador = sequelize.define('Colaborador', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nombre: { type: DataTypes.STRING, allowNull: false }
+}, {
+  tableName: 'colaboradores',
+  timestamps: false
+});
+
+const Sucursal = sequelize.define('Sucursal', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  sucursal: { type: DataTypes.STRING, allowNull: false },
+  numero: { type: DataTypes.INTEGER, allowNull: true },
+  direccion: { type: DataTypes.STRING, allowNull: true }
+}, {
+  tableName: 'sucursales',
+  timestamps: false
+});
+
+const IngresoRecorte = sequelize.define('IngresoRecorte', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  id_sucursal: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'sucursales',
+      key: 'id'
+    }
+  },
+  fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  id_producto: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'productos',
+      key: 'codigo'
+    }
+  },
+  peso_recorte: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 }
+}, {
+  tableName: 'ingreso_recortes',
+  timestamps: false
+});
 
 const Proceso = sequelize.define('Proceso', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  colaborador: { type: DataTypes.STRING },
+  colaborador: { type: DataTypes.STRING, allowNull: true },
+  colaborador_id: { 
+    type: DataTypes.INTEGER, 
+    allowNull: true,
+    references: {
+      model: 'colaboradores',
+      key: 'id'
+    }
+  },
   proceso: { type: DataTypes.STRING },
   fecha: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
   codigo: { 
@@ -110,6 +160,9 @@ const ProductoPedido = sequelize.define('ProductoPedido', {
 Producto.hasMany(Proceso, { foreignKey: 'codigo' });
 Proceso.belongsTo(Producto, { foreignKey: 'codigo' });
 
+Colaborador.hasMany(Proceso, { foreignKey: 'colaborador_id', as: 'Procesos' });
+Proceso.belongsTo(Colaborador, { foreignKey: 'colaborador_id', as: 'Colaborador' });
+
 Producto.hasMany(Fraccionado, { foreignKey: 'codigo_producto_original', as: 'Originales' });
 Producto.hasMany(Fraccionado, { foreignKey: 'codigo_fraccionado', as: 'Fraccionados' });
 Fraccionado.belongsTo(Producto, { foreignKey: 'codigo_producto_original', as: 'ProductoOriginal' });
@@ -125,9 +178,18 @@ ProductoPedido.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'Product
 Pedido.belongsToMany(Producto, { through: ProductoPedido, foreignKey: 'id_pedido', otherKey: 'codigo_producto', as: 'productos' });
 Producto.belongsToMany(Pedido, { through: ProductoPedido, foreignKey: 'codigo_producto', otherKey: 'id_pedido', as: 'pedidos' });
 
+Sucursal.hasMany(IngresoRecorte, { foreignKey: 'id_sucursal', as: 'IngresosRecortes' });
+IngresoRecorte.belongsTo(Sucursal, { foreignKey: 'id_sucursal', as: 'Sucursal' });
+
+Producto.hasMany(IngresoRecorte, { foreignKey: 'id_producto', as: 'IngresosRecortes' });
+IngresoRecorte.belongsTo(Producto, { foreignKey: 'id_producto', as: 'Producto' });
+
 module.exports = {
   sequelize,
   Producto,
+  Colaborador,
+  Sucursal,
+  IngresoRecorte,
   Proceso,
   Fraccionado,
   Pedido,

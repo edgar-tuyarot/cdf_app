@@ -1,6 +1,7 @@
 <template>
   <div class="page-container animate-fade">
-    <!-- Encabezado de la Vista -->
+    <div v-if="!isEditingMode">
+      <!-- Encabezado de la Vista -->
     <div class="page-header">
       <div class="header-content">
         <h2 class="page-title">Gestión de Pedidos</h2>
@@ -51,7 +52,6 @@
           <table v-if="!loading && filteredAndSortedPedidos.length > 0">
             <thead>
               <tr>
-                <th style="width: 40px;" class="text-center">Items</th>
                 <th @click="sortBy('codigo')" class="sortable">Código / ID <i v-if="sortKey === 'codigo'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
                 <th @click="sortBy('fecha')" class="sortable">Fecha <i v-if="sortKey === 'fecha'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
                 <th @click="sortBy('sucursal')" class="sortable">Sucursal <i v-if="sortKey === 'sucursal'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
@@ -63,16 +63,7 @@
             <tbody>
               <!-- Iteración de Pedidos -->
               <template v-for="p in filteredAndSortedPedidos" :key="p.id">
-                <tr :class="{'bg-active-row': expandedPedidos[p.id]}">
-                  <td class="text-center">
-                    <button 
-                      class="icon-btn" 
-                      style="min-height: auto; padding: 0.25rem; font-size: 0.9rem;"
-                      @click="togglePedidoExpand(p.id)"
-                    >
-                      <i :class="['ph', expandedPedidos[p.id] ? 'ph-caret-down' : 'ph-caret-right']"></i>
-                    </button>
-                  </td>
+                <tr>
                   <td><strong>{{ p.codigo }}</strong></td>
                   <td>{{ formatDate(p.fecha) }}</td>
                   <td>{{ p.sucursal || '-' }}</td>
@@ -88,74 +79,15 @@
                   </td>
                   <td class="text-center">
                     <div style="display: flex; gap: 0.25rem; justify-content: center;">
+                      <button class="icon-btn" title="Imprimir Remito" @click="printPedido(p)">
+                        <i class="ph ph-printer text-blue"></i>
+                      </button>
                       <button class="icon-btn" title="Editar" @click="openEditModal(p)">
                         <i class="ph ph-pencil-simple text-blue"></i>
                       </button>
                       <button class="icon-btn" title="Eliminar" @click="confirmDeletePedido(p)">
                         <i class="ph ph-trash text-red"></i>
                       </button>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- Detalle Desplegable (Accordion) del Pedido -->
-                <tr v-if="expandedPedidos[p.id]" class="detail-row">
-                  <td colspan="7" style="padding: 0.5rem 1rem; background-color: var(--bg-secondary);">
-                    <div class="card" style="box-shadow: var(--inset-shadow); border: 1px solid var(--bevel-dark); background: var(--bg-window);">
-                      <div class="card-header" style="background-color: var(--bevel-dark); padding: 0.25rem 0.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.75rem; font-weight: bold; color: white;">Productos de la Orden [{{ p.codigo }}]</span>
-                        <button 
-                          type="button" 
-                          class="btn btn-secondary no-print" 
-                          style="height: 20px; padding: 0 0.4rem; font-size: 0.7rem; display: flex; align-items: center; gap: 0.25rem; background: var(--bg-secondary); color: var(--text-primary); border-color: var(--bevel-light);"
-                          @click="printPedido(p)"
-                        >
-                          <i class="ph ph-printer"></i> Imprimir PDF / Remito
-                        </button>
-                      </div>
-                      
-                      <!-- Listado de Productos del Pedido -->
-                      <table class="sub-table" style="width: 100%; border: none;">
-                        <thead>
-                          <tr style="background-color: var(--bg-secondary);">
-                            <th style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Cód. Producto</th>
-                            <th style="font-size: 0.7rem; padding: 0.25rem 0.5rem;">Descripción del Producto</th>
-                            <th style="font-size: 0.7rem; padding: 0.25rem 0.5rem;" class="text-right">Pzs Pedidas</th>
-                            <th style="font-size: 0.7rem; padding: 0.25rem 0.5rem;" class="text-right">Frac Pedida</th>
-                            <th style="font-size: 0.7rem; padding: 0.25rem 0.5rem;" class="text-right text-green">Pzs Enviadas</th>
-                            <th style="font-size: 0.7rem; padding: 0.25rem 0.5rem;" class="text-right text-green">Frac Enviada</th>
-                            <th style="font-size: 0.7rem; padding: 0.25rem 0.5rem;" class="text-right text-green">Peso Enviado</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="item in p.items" :key="item.id" style="border-bottom: 1px solid var(--bg-secondary);">
-                            <td style="font-size: 0.7rem; padding: 0.3rem 0.5rem;">
-                              <strong>{{ item.codigo_producto }}</strong>
-                            </td>
-                            <td style="font-size: 0.7rem; padding: 0.3rem 0.5rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="item.Producto?.nombre">
-                              <span v-if="item.Producto?.nombre?.includes('AUTOCREADO')" class="text-orange" title="El producto fue auto-creado porque no existía en el catálogo inicial">
-                                <i class="ph ph-warning-circle"></i> {{ item.Producto?.nombre }}
-                              </span>
-                              <span v-else>{{ item.Producto?.nombre || 'Sin nombre cargado' }}</span>
-                            </td>
-                            <td style="font-size: 0.7rem; padding: 0.3rem 0.5rem;" class="text-right fw-bold text-muted">
-                              {{ item.pieza }}
-                            </td>
-                            <td style="font-size: 0.7rem; padding: 0.3rem 0.5rem;" class="text-right fw-bold text-blue">
-                              {{ parseFloat(item.fraccion).toFixed(3) }}
-                            </td>
-                            <td style="font-size: 0.7rem; padding: 0.3rem 0.5rem;" class="text-right fw-bold text-green">
-                              {{ item.cantidad_enviada || 0 }}
-                            </td>
-                            <td style="font-size: 0.7rem; padding: 0.3rem 0.5rem;" class="text-right fw-bold text-green">
-                              {{ parseFloat(item.fraccion_enviada || 0).toFixed(3) }}
-                            </td>
-                            <td style="font-size: 0.7rem; padding: 0.3rem 0.5rem;" class="text-right fw-bold text-green">
-                              {{ parseFloat(item.peso_enviado || 0).toFixed(3) }} kg
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
                     </div>
                   </td>
                 </tr>
@@ -169,48 +101,56 @@
             Cargando registros de pedidos...
           </div>
 
-          <!-- Historial Vacío -->
           <div v-if="!loading && filteredAndSortedPedidos.length === 0" class="empty-state">
             <i class="ph ph-file-xls icon-xl"></i>
             No se encontraron pedidos registrados. ¡Usa la Carga Masiva arriba o crea uno nuevo!
           </div>
         </div>
       </div>
+    </div> <!-- closes v-if="!isEditingMode" -->
 
-  </div>
+    <!-- VISTA DE EDICIÓN DE PEDIDO -->
+    <div v-else class="animate-fade">
+      <div class="page-header">
+        <div class="header-content">
+          <h2 class="page-title">Editar Pedido: {{ editForm.codigo }}</h2>
+          <p class="page-description">Modifica los detalles, cantidades pedidas y enviadas de los productos del pedido.</p>
+        </div>
+        <div class="header-actions mt-2">
+          <button class="btn btn-secondary" style="display: flex; align-items: center; gap: 0.25rem;" @click="isEditingMode = false">
+            <i class="ph ph-arrow-left"></i> Volver al Historial
+          </button>
+        </div>
+      </div>
 
-  <!-- Modal de Edición de Pedido -->
-  <Teleport to="body">
-    <div v-if="showEditModal" class="modal-overlay" @mousedown.self="showEditModal = false">
-      <div class="modal-card" style="max-width: 1100px; width: 95%;">
-        <div class="modal-header">
-          <h3 class="modal-title">Editar Pedido: {{ editForm.codigo }}</h3>
-          <button class="icon-btn" @click="showEditModal = false"><i class="ph ph-x"></i></button>
+      <div class="card" style="margin-top: 1rem;">
+        <div class="card-header" style="background-color: var(--bevel-dark);">
+          <span class="card-title" style="color: var(--text-primary); font-weight: bold;">Datos de la Orden</span>
         </div>
         
         <form @submit.prevent="saveEditPedido">
-          <div class="modal-body" style="max-height: 70vh; overflow-y: auto; padding-right: 0.5rem;">
+          <div class="card-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
             
             <!-- Metadatos de la Orden -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 2px solid var(--bevel-light); padding-bottom: 1rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-bottom: 2px solid var(--bevel-light); padding-bottom: 1.25rem;">
               <div class="form-group">
                 <label class="form-label">Código de Pedido</label>
-                <input type="text" v-model="editForm.codigo" class="form-control" required />
+                <input type="text" v-model="editForm.codigo" class="form-control" required style="color: var(--text-primary);" />
               </div>
               
               <div class="form-group">
                 <label class="form-label">Sucursal</label>
-                <input type="text" v-model="editForm.sucursal" class="form-control" />
+                <input type="text" v-model="editForm.sucursal" class="form-control" style="color: var(--text-primary);" />
               </div>
               
               <div class="form-group">
                 <label class="form-label">Fecha</label>
-                <input type="date" v-model="editForm.fecha" class="form-control" required />
+                <input type="date" v-model="editForm.fecha" class="form-control" required style="color: var(--text-primary);" />
               </div>
               
               <div class="form-group">
                 <label class="form-label">Estado</label>
-                <select v-model="editForm.estado" class="form-control" required style="height: 30px;">
+                <select v-model="editForm.estado" class="form-control" required style="height: 30px; color: var(--text-primary);">
                   <option value="Pendiente">Pendiente</option>
                   <option value="Procesando">Procesando</option>
                   <option value="Completado">Completado</option>
@@ -220,81 +160,81 @@
 
             <!-- Listado dinámico de Ítems -->
             <div class="card mb-3" style="box-shadow: var(--inset-shadow); background: var(--bg-secondary); border: 1px solid var(--bevel-dark);">
-              <div class="card-header" style="background-color: var(--bevel-dark); padding: 0.3rem 0.5rem;">
-                <span style="font-size: 0.8rem; font-weight: bold; color: white;">Productos en este Pedido ({{ editForm.items.length }})</span>
+              <div class="card-header" style="background-color: var(--bevel-dark); padding: 0.4rem 0.6rem;">
+                <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-primary);">Productos en este Pedido ({{ editForm.items.length }})</span>
               </div>
               
-              <div style="padding: 0.5rem; max-height: 220px; overflow-y: auto;">
+              <div style="padding: 0.5rem; overflow-x: auto;">
                 <table class="sub-table" style="width: 100%; border: none;">
                   <thead>
                     <tr style="background-color: var(--bg-window);">
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem;">Cód. Producto</th>
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem;">Descripción</th>
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem; width: 65px;" class="text-right">Pzs Pedidas</th>
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem; width: 75px;" class="text-right">Frac Pedida</th>
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem; width: 65px; color: var(--accent-success);" class="text-right">Pzs Envia.</th>
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem; width: 75px; color: var(--accent-success);" class="text-right">Frac Envia.</th>
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem; width: 75px; color: var(--accent-success);" class="text-right">Peso Env.(kg)</th>
-                      <th style="font-size: 0.7rem; padding: 0.25rem 0.4rem; width: 40px;" class="text-center">Quitar</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; color: var(--text-primary) !important;">Cód. Producto</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; color: var(--text-primary) !important;">Descripción</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; width: 85px; color: var(--text-primary) !important;" class="text-right">Pzs Pedidas</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; width: 95px; color: var(--text-primary) !important;" class="text-right">Frac Pedida</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; width: 85px; color: var(--text-primary) !important;" class="text-right">Pzs Envia.</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; width: 95px; color: var(--text-primary) !important;" class="text-right">Frac Envia.</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; width: 95px; color: var(--text-primary) !important;" class="text-right">Peso Env.(kg)</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; width: 50px; color: var(--text-primary) !important;" class="text-center">Quitar</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="(item, idx) in editForm.items" :key="idx" style="border-bottom: 1px solid var(--bevel-light);">
-                      <td style="font-size: 0.75rem; padding: 0.3rem 0.4rem;">
+                      <td style="font-size: 0.75rem; padding: 0.4rem; color: var(--text-primary);">
                         <strong>{{ item.codigo_producto }}</strong>
                       </td>
-                      <td style="font-size: 0.75rem; padding: 0.3rem 0.4rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="item.Producto?.nombre">
+                      <td style="font-size: 0.75rem; padding: 0.4rem; color: var(--text-primary); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="item.Producto?.nombre">
                         {{ item.Producto?.nombre || 'Sin nombre cargado' }}
                       </td>
-                      <td style="font-size: 0.75rem; padding: 0.2rem 0.3rem;" class="text-right">
+                      <td style="font-size: 0.75rem; padding: 0.3rem;" class="text-right">
                         <input 
                           type="number" 
                           v-model.number="item.pieza" 
                           min="0"
                           class="form-control" 
-                          style="text-align: right; height: 24px; padding: 0 0.3rem; font-size: 0.75rem;" 
+                          style="text-align: right; height: 26px; padding: 0 0.4rem; font-size: 0.75rem; color: var(--text-primary);" 
                         />
                       </td>
-                      <td style="font-size: 0.75rem; padding: 0.2rem 0.3rem;" class="text-right">
+                      <td style="font-size: 0.75rem; padding: 0.3rem;" class="text-right">
                         <input 
                           type="number" 
                           step="0.001" 
                           v-model.number="item.fraccion" 
                           min="0"
                           class="form-control" 
-                          style="text-align: right; height: 24px; padding: 0 0.3rem; font-size: 0.75rem;" 
+                          style="text-align: right; height: 26px; padding: 0 0.4rem; font-size: 0.75rem; color: var(--text-primary);" 
                         />
                       </td>
-                      <td style="font-size: 0.75rem; padding: 0.2rem 0.3rem;" class="text-right">
+                      <td style="font-size: 0.75rem; padding: 0.3rem;" class="text-right">
                         <input 
                           type="number" 
                           v-model.number="item.cantidad_enviada" 
                           min="0"
                           class="form-control" 
-                          style="text-align: right; height: 24px; padding: 0 0.3rem; font-size: 0.75rem; border-color: var(--accent-success);" 
+                          style="text-align: right; height: 26px; padding: 0 0.4rem; font-size: 0.75rem; border-color: var(--bevel-dark); color: var(--text-primary);" 
                         />
                       </td>
-                      <td style="font-size: 0.75rem; padding: 0.2rem 0.3rem;" class="text-right">
+                      <td style="font-size: 0.75rem; padding: 0.3rem;" class="text-right">
                         <input 
                           type="number" 
                           step="0.001" 
                           v-model.number="item.fraccion_enviada" 
                           min="0"
                           class="form-control" 
-                          style="text-align: right; height: 24px; padding: 0 0.3rem; font-size: 0.75rem; border-color: var(--accent-success);" 
+                          style="text-align: right; height: 26px; padding: 0 0.4rem; font-size: 0.75rem; border-color: var(--bevel-dark); color: var(--text-primary);" 
                         />
                       </td>
-                      <td style="font-size: 0.75rem; padding: 0.2rem 0.3rem;" class="text-right">
+                      <td style="font-size: 0.75rem; padding: 0.3rem;" class="text-right">
                         <input 
                           type="number" 
                           step="0.001" 
                           v-model.number="item.peso_enviado" 
                           min="0"
                           class="form-control" 
-                          style="text-align: right; height: 24px; padding: 0 0.3rem; font-size: 0.75rem; border-color: var(--accent-success);" 
+                          style="text-align: right; height: 26px; padding: 0 0.4rem; font-size: 0.75rem; border-color: var(--bevel-dark); color: var(--text-primary);" 
                         />
                       </td>
-                      <td style="font-size: 0.75rem; padding: 0.2rem 0.3rem;" class="text-center">
+                      <td style="font-size: 0.75rem; padding: 0.3rem;" class="text-center">
                         <button type="button" class="icon-btn text-red" style="padding: 0.1rem 0.3rem;" @click="removeEditItem(idx)">
                           <i class="ph ph-trash"></i>
                         </button>
@@ -302,7 +242,7 @@
                     </tr>
                     
                     <tr v-if="editForm.items.length === 0">
-                      <td colspan="5" class="text-center text-muted" style="padding: 1rem; font-size: 0.75rem;">
+                      <td colspan="8" class="text-center text-muted" style="padding: 1.5rem; font-size: 0.75rem; color: var(--text-primary);">
                         No hay productos en esta orden. Añade un producto usando el formulario de abajo.
                       </td>
                     </tr>
@@ -312,52 +252,63 @@
             </div>
 
             <!-- Formulario de Agregar Nuevo Ítem -->
-            <div class="card" style="border: 1px solid var(--bevel-light); padding: 0.5rem; background: var(--bg-window);">
-              <div style="font-size: 0.75rem; font-weight: bold; margin-bottom: 0.4rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem;">
+            <div class="card" style="border: 1px solid var(--bevel-light); padding: 0.75rem;">
+              <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.25rem;">
                 <i class="ph ph-plus-circle"></i> Agregar Producto a la Orden
               </div>
               
-              <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: end;">
+              <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.75rem; align-items: end;">
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" style="font-size: 0.7rem; margin-bottom: 0.15rem;">Producto *</label>
+                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.15rem; color: var(--text-primary);">Producto *</label>
                   <input 
+                    type="text"
                     list="catalog-products-list-edit"
-                    v-model="selectedProductCode"
+                    v-model="editProductSearchInput"
+                    @input="handleEditProductInput"
                     class="form-control" 
                     placeholder="Escribe código o nombre..."
-                    style="font-size: 0.75rem; height: 26px; padding: 0 0.25rem;"
+                    style="font-size: 0.75rem; height: 28px; padding: 0 0.4rem; color: var(--text-primary);"
                   />
                   <datalist id="catalog-products-list-edit">
                     <option v-for="prod in catalogProducts" :key="prod.codigo" :value="prod.codigo">
                       {{ prod.nombre }}
                     </option>
                   </datalist>
+                  <!-- Vista previa del producto seleccionado -->
+                  <div 
+                    v-if="selectedEditProduct" 
+                    class="selected-product-badge mt-1 animate-fade"
+                    style="font-size: 0.7rem; padding: 0.25rem 0.5rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); display: flex; align-items: center; gap: 0.25rem; color: var(--text-primary);"
+                  >
+                    <i class="ph ph-circle-wavy-check text-green" style="font-size: 0.9rem;"></i>
+                    <span>{{ selectedEditProduct.nombre }}</span>
+                  </div>
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" style="font-size: 0.7rem; margin-bottom: 0.15rem;">Piezas</label>
+                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.15rem; color: var(--text-primary);">Piezas</label>
                   <input 
                     type="number" 
                     v-model.number="newProductPiece" 
                     min="0"
                     class="form-control" 
-                    style="font-size: 0.75rem; height: 26px; padding: 0 0.25rem;" 
+                    style="font-size: 0.75rem; height: 28px; padding: 0 0.4rem; color: var(--text-primary);" 
                   />
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label" style="font-size: 0.7rem; margin-bottom: 0.15rem;">Fracción</label>
+                  <label class="form-label" style="font-size: 0.75rem; margin-bottom: 0.15rem; color: var(--text-primary);">Fracción</label>
                   <input 
                     type="number" 
                     step="0.001" 
                     v-model.number="newProductFraccion" 
                     min="0"
                     class="form-control" 
-                    style="font-size: 0.75rem; height: 26px; padding: 0 0.25rem;" 
+                    style="font-size: 0.75rem; height: 28px; padding: 0 0.4rem; color: var(--text-primary);" 
                   />
                 </div>
                 
-                <button type="button" class="btn btn-secondary" style="height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; padding: 0 0.5rem;" @click="addEditItem">
+                <button type="button" class="btn btn-secondary" style="height: 28px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; padding: 0 0.75rem; color: var(--text-primary);" @click="addEditItem">
                   <i class="ph ph-plus"></i> Añadir
                 </button>
               </div>
@@ -365,20 +316,19 @@
 
           </div>
           
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="showEditModal = false">
+          <div class="card-footer" style="padding: 1rem; border-top: 1px solid var(--bevel-light); display: flex; justify-content: flex-end; gap: 0.5rem; background: var(--bg-secondary);">
+            <button type="button" class="btn btn-secondary" @click="isEditingMode = false" style="color: var(--text-primary);">
               <i class="ph ph-x"></i> Cancelar
             </button>
             <button type="submit" class="btn btn-primary" :disabled="savingEdit">
               <i class="ph ph-spinner spinner" v-if="savingEdit"></i>
-              <i class="ph ph-floppy-disk" v-else></i> 
-              {{ savingEdit ? 'Guardando...' : 'Guardar Cambios' }}
+              <i class="ph ph-floppy-disk" v-else></i> Guardar Cambios
             </button>
           </div>
         </form>
       </div>
     </div>
-  </Teleport>
+  </div>
 
   <!-- Modal de Alta de Pedido -->
   <Teleport to="body">
@@ -422,7 +372,7 @@
             <!-- Listado dinámico de Ítems -->
             <div class="card mb-3" style="box-shadow: var(--inset-shadow); background: var(--bg-secondary); border: 1px solid var(--bevel-dark);">
               <div class="card-header" style="background-color: var(--bevel-dark); padding: 0.3rem 0.5rem;">
-                <span style="font-size: 0.8rem; font-weight: bold; color: white;">Productos en este Pedido ({{ createForm.items.length }})</span>
+                <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-primary);">Productos en este Pedido ({{ createForm.items.length }})</span>
               </div>
               
               <div style="padding: 0.5rem; max-height: 220px; overflow-y: auto;">
@@ -481,7 +431,7 @@
             </div>
 
             <!-- Formulario de Agregar Nuevo Ítem -->
-            <div class="card" style="border: 1px solid var(--bevel-light); padding: 0.5rem; background: var(--bg-window);">
+            <div class="card" style="border: 1px solid var(--bevel-light); padding: 0.5rem;">
               <div style="font-size: 0.75rem; font-weight: bold; margin-bottom: 0.4rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem;">
                 <i class="ph ph-plus-circle"></i> Agregar Producto a la Orden
               </div>
@@ -490,8 +440,10 @@
                 <div class="form-group" style="margin-bottom: 0;">
                   <label class="form-label" style="font-size: 0.7rem; margin-bottom: 0.15rem;">Producto *</label>
                   <input 
+                    type="text"
                     list="catalog-products-list-create"
-                    v-model="selectedCreateProductCode"
+                    v-model="createProductSearchInput"
+                    @input="handleCreateProductInput"
                     class="form-control" 
                     placeholder="Escribe código o nombre..."
                     style="font-size: 0.75rem; height: 26px; padding: 0 0.25rem;"
@@ -501,6 +453,15 @@
                       {{ prod.nombre }}
                     </option>
                   </datalist>
+                  <!-- Vista previa del producto seleccionado -->
+                  <div 
+                    v-if="selectedCreateProduct" 
+                    class="selected-product-badge mt-1 animate-fade"
+                    style="font-size: 0.65rem; padding: 0.2rem 0.4rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); display: flex; align-items: center; gap: 0.25rem;"
+                  >
+                    <i class="ph ph-circle-wavy-check text-green" style="font-size: 0.8rem;"></i>
+                    <span>{{ selectedCreateProduct.nombre }}</span>
+                  </div>
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
@@ -609,8 +570,8 @@
           <!-- Historial de Resultados de la Carga -->
           <div v-if="uploadResult" class="card" style="box-shadow: var(--inset-shadow); background: var(--bg-secondary); border-color: var(--bevel-dark); margin-top: 0.5rem;">
             <div class="card-header" style="background-color: var(--bevel-dark); padding: 0.2rem 0.5rem; display: flex; justify-content: space-between;">
-              <span style="font-size: 0.75rem; font-weight: bold; color: white;">Resultado de Importación</span>
-              <button @click="uploadResult = null" style="background: none; border: none; color: white; cursor: pointer; font-size: 0.7rem;"><i class="ph ph-x"></i></button>
+              <span style="font-size: 0.75rem; font-weight: bold; color: var(--text-primary);">Resultado de Importación</span>
+              <button @click="uploadResult = null" style="background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 0.7rem;"><i class="ph ph-x"></i></button>
             </div>
             <div class="p-3 text-xs" style="line-height: 1.5; color: var(--text-primary);">
               <div class="fw-bold mb-2 text-blue">{{ uploadResult.mensaje }}</div>
@@ -730,7 +691,7 @@ const fileInput = ref(null)
 
 // Estados reactivos para la Edición de Pedidos
 const catalogProducts = ref([])
-const showEditModal = ref(false)
+const isEditingMode = ref(false)
 const editingPedido = ref(null)
 const editForm = ref({
   id: null,
@@ -746,6 +707,21 @@ const selectedProductCode = ref('')
 const newProductPiece = ref(0)
 const newProductFraccion = ref(0)
 
+const editProductSearchInput = ref('')
+const selectedEditProduct = ref(null)
+
+const handleEditProductInput = () => {
+  const code = editProductSearchInput.value.trim()
+  const found = catalogProducts.value.find(p => p.codigo === code)
+  if (found) {
+    selectedEditProduct.value = found
+    selectedProductCode.value = found.codigo
+  } else {
+    selectedEditProduct.value = null
+    selectedProductCode.value = ''
+  }
+}
+
 const pedidoToDelete = ref(null)
 
 // Estados reactivos para la Creación de Pedidos
@@ -760,6 +736,21 @@ const createForm = ref({
 const selectedCreateProductCode = ref('')
 const newCreateProductPiece = ref(0)
 const newCreateProductFraccion = ref(0)
+
+const createProductSearchInput = ref('')
+const selectedCreateProduct = ref(null)
+
+const handleCreateProductInput = () => {
+  const code = createProductSearchInput.value.trim()
+  const found = catalogProducts.value.find(p => p.codigo === code)
+  if (found) {
+    selectedCreateProduct.value = found
+    selectedCreateProductCode.value = found.codigo
+  } else {
+    selectedCreateProduct.value = null
+    selectedCreateProductCode.value = ''
+  }
+}
 
 // Búsqueda y Ordenación
 const searchQuery = ref('')
@@ -967,6 +958,8 @@ const openCreateModal = () => {
   }
   
   selectedCreateProductCode.value = ''
+  createProductSearchInput.value = ''
+  selectedCreateProduct.value = null
   newCreateProductPiece.value = 0
   newCreateProductFraccion.value = 0
   
@@ -1008,6 +1001,8 @@ const addCreateItem = () => {
 
   // Reiniciar
   selectedCreateProductCode.value = ''
+  createProductSearchInput.value = ''
+  selectedCreateProduct.value = null
   newCreateProductPiece.value = 0
   newCreateProductFraccion.value = 0
 }
@@ -1086,10 +1081,12 @@ const openEditModal = (pedido) => {
   }
 
   selectedProductCode.value = ''
+  editProductSearchInput.value = ''
+  selectedEditProduct.value = null
   newProductPiece.value = 0
   newProductFraccion.value = 0
 
-  showEditModal.value = true
+  isEditingMode.value = true
   
   if (catalogProducts.value.length === 0) {
     fetchCatalogProducts()
@@ -1133,6 +1130,8 @@ const addEditItem = () => {
 
   // Reiniciar campos
   selectedProductCode.value = ''
+  editProductSearchInput.value = ''
+  selectedEditProduct.value = null
   newProductPiece.value = 0
   newProductFraccion.value = 0
 }
@@ -1167,7 +1166,7 @@ const saveEditPedido = async () => {
     const data = await res.json()
     if (res.ok) {
       showAlert('Pedido actualizado correctamente')
-      showEditModal.value = false
+      isEditingMode.value = false
       fetchPedidos()
     } else {
       showAlert(data.error || 'Error al actualizar el pedido', 'error')
@@ -1277,18 +1276,16 @@ th i {
   vertical-align: middle;
 }
 
-/* Estilo Subtabla de Items en Acordeón */
 .sub-table th {
   background-color: var(--bg-secondary) !important;
-  color: var(--text-secondary);
+  color: var(--text-primary) !important;
   font-weight: bold;
   border-bottom: 1px solid var(--bevel-dark);
   border-top: none;
 }
 
 .sub-table td {
-  border: none;
-  background: transparent !important;
+
 }
 
 .sub-table tr:hover {

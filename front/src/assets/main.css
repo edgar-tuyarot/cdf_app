@@ -486,15 +486,6 @@ tr:hover td {
   background: #d4d0c8;
 }
 
-.icon-btn {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1rem;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0;
-}
 
 /* Inputs dentro del modal teleportado */
 .prep-modal-input {

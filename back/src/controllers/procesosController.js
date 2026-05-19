@@ -1,13 +1,20 @@
-const { Proceso, Producto, Fraccionado, sequelize } = require('../models');
+const { Proceso, Producto, Fraccionado, Colaborador, sequelize } = require('../models');
 
 // Obtener todos los procesos (con datos del producto asociado)
 exports.obtenerProcesos = async (req, res) => {
   try {
     const procesos = await Proceso.findAll({
-      include: [{
-        model: Producto,
-        attributes: ['nombre']
-      }]
+      include: [
+        {
+          model: Producto,
+          attributes: ['nombre']
+        },
+        {
+          model: Colaborador,
+          as: 'Colaborador',
+          attributes: ['nombre']
+        }
+      ]
     });
     res.json(procesos);
   } catch (error) {
@@ -21,10 +28,17 @@ exports.obtenerProcesoPorId = async (req, res) => {
   try {
     const { id } = req.params;
     const proceso = await Proceso.findByPk(id, {
-      include: [{
-        model: Producto,
-        attributes: ['nombre']
-      }]
+      include: [
+        {
+          model: Producto,
+          attributes: ['nombre']
+        },
+        {
+          model: Colaborador,
+          as: 'Colaborador',
+          attributes: ['nombre']
+        }
+      ]
     });
     if (!proceso) {
       return res.status(404).json({ error: 'Proceso no encontrado' });
@@ -41,7 +55,7 @@ exports.crearProceso = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { 
-      colaborador, proceso, fecha, codigo, piezas, 
+      colaborador_id, proceso, fecha, codigo, piezas, 
       peso_bruto, recorte, decomiso, kg_a_desc, kg_a_sumar 
     } = req.body;
 
@@ -65,7 +79,8 @@ exports.crearProceso = async (req, res) => {
 
     // Crear el proceso
     const nuevoProceso = await Proceso.create({
-      colaborador,
+      colaborador_id,
+      colaborador: null, // Dejando sin efecto el nombre (string)
       proceso,
       fecha: fecha || new Date(),
       codigo,

@@ -36,6 +36,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador'] },
     },
     {
+      path: '/top-productos',
+      name: 'top-productos',
+      component: () => import('../views/TopProductos.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador'] },
+    },
+    {
       path: '/recortes',
       name: 'recortes',
       component: () => import('../views/Recortes.vue'),
@@ -52,6 +58,18 @@ const router = createRouter({
       name: 'decomisos',
       component: () => import('../views/Decomisos.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
+    },
+    {
+      path: '/colaboradores',
+      name: 'colaboradores',
+      component: () => import('../views/Colaboradores.vue'),
+      meta: { requiresAuth: true, roles: ['Admin'] },
+    },
+    {
+      path: '/sucursales',
+      name: 'sucursales',
+      component: () => import('../views/Sucursales.vue'),
+      meta: { requiresAuth: true, roles: ['Admin'] },
     }
   ],
 })

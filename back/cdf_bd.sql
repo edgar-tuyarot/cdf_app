@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
 -- Host:                         127.0.0.1
--- Versión del servidor:         12.2.2-MariaDB - MariaDB Server
--- SO del servidor:              Win64
--- HeidiSQL Versión:             12.17.0.7270
+-- Versión del servidor:        11.8.6-MariaDB-0+deb13u1 from Debian - -- Please help get to 10k stars at https://github.com/MariaDB/Server
+-- SO del servidor:              debian-linux-gnu
+-- HeidiSQL Versión:            12.17.1.1
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -14,8 +14,41 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
--- Volcando datos para la tabla cdf_app.fraccionados: ~0 rows (aproximadamente)
-REPLACE INTO `fraccionados` (`id`, `codigo_producto_original`, `peso_a_fraccionar`, `codigo_fraccionado`, `peso_a_descontar`) VALUES
+-- Volcando estructura para tabla cdf_app.colaboradores
+CREATE TABLE IF NOT EXISTS `colaboradores` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla cdf_app.colaboradores: ~9 rows (aproximadamente)
+INSERT IGNORE INTO `colaboradores` (`id`, `nombre`) VALUES
+	(1, 'Ulises'),
+	(2, 'Mauricio'),
+	(3, 'Juan'),
+	(4, 'Braian'),
+	(5, 'Jotabe'),
+	(6, 'Recreo'),
+	(7, 'Tregar'),
+	(8, 'Paladini'),
+	(9, 'Edgar');
+
+-- Volcando estructura para tabla cdf_app.fraccionados
+CREATE TABLE IF NOT EXISTS `fraccionados` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `codigo_producto_original` varchar(255) NOT NULL,
+  `peso_a_fraccionar` decimal(10,3) DEFAULT 0.000,
+  `codigo_fraccionado` varchar(255) NOT NULL,
+  `peso_a_descontar` decimal(10,3) DEFAULT 0.000,
+  PRIMARY KEY (`id`),
+  KEY `codigo_producto_original` (`codigo_producto_original`),
+  KEY `codigo_fraccionado` (`codigo_fraccionado`),
+  CONSTRAINT `fraccionados_ibfk_1` FOREIGN KEY (`codigo_producto_original`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fraccionados_ibfk_2` FOREIGN KEY (`codigo_fraccionado`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla cdf_app.fraccionados: ~15 rows (aproximadamente)
+INSERT IGNORE INTO `fraccionados` (`id`, `codigo_producto_original`, `peso_a_fraccionar`, `codigo_fraccionado`, `peso_a_descontar`) VALUES
 	(1, '3755', 0.000, '3740', 0.000),
 	(2, '4116', 0.001, '1621', 0.000),
 	(3, '5446', 0.001, '1753', 0.000),
@@ -32,8 +65,37 @@ REPLACE INTO `fraccionados` (`id`, `codigo_producto_original`, `peso_a_fracciona
 	(14, '6442', 1.230, '2443', 1.230),
 	(15, '1218', 3.360, '3067', 3.360);
 
--- Volcando datos para la tabla cdf_app.pedidos: ~46 rows (aproximadamente)
-REPLACE INTO `pedidos` (`id`, `codigo`, `fecha`, `sucursal`, `estado`) VALUES
+-- Volcando estructura para tabla cdf_app.ingreso_recortes
+CREATE TABLE IF NOT EXISTS `ingreso_recortes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_sucursal` int(11) NOT NULL,
+  `fecha` datetime DEFAULT NULL,
+  `id_producto` varchar(255) NOT NULL,
+  `peso_recorte` decimal(10,3) DEFAULT 0.000,
+  PRIMARY KEY (`id`),
+  KEY `id_sucursal` (`id_sucursal`),
+  KEY `id_producto` (`id_producto`),
+  CONSTRAINT `ingreso_recortes_ibfk_1` FOREIGN KEY (`id_sucursal`) REFERENCES `sucursales` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `ingreso_recortes_ibfk_2` FOREIGN KEY (`id_producto`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla cdf_app.ingreso_recortes: ~1 rows (aproximadamente)
+INSERT IGNORE INTO `ingreso_recortes` (`id`, `id_sucursal`, `fecha`, `id_producto`, `peso_recorte`) VALUES
+	(1, 1, '2026-05-19 00:00:00', '5075', 0.350);
+
+-- Volcando estructura para tabla cdf_app.pedidos
+CREATE TABLE IF NOT EXISTS `pedidos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `codigo` varchar(255) NOT NULL,
+  `fecha` date DEFAULT NULL,
+  `sucursal` varchar(255) DEFAULT NULL,
+  `estado` varchar(255) DEFAULT 'Pendiente',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=63 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla cdf_app.pedidos: ~48 rows (aproximadamente)
+INSERT IGNORE INTO `pedidos` (`id`, `codigo`, `fecha`, `sucursal`, `estado`) VALUES
+	(12, 'PED-1776782622478', '2026-04-21', 'Depot 22-Roca', 'Completado'),
 	(14, 'PED-1777051847213', '2026-04-24', 'Depot 22-Roca', 'Completado'),
 	(15, 'PED-1777390576343', '2026-04-28', 'Depot 22-Roca', 'Completado'),
 	(16, 'PED-1777567235699', '2026-04-30', 'Depot 22-Roca', 'Completado'),
@@ -80,20 +142,61 @@ REPLACE INTO `pedidos` (`id`, `codigo`, `fecha`, `sucursal`, `estado`) VALUES
 	(57, 'PED-1778846449999', '2026-05-15', 'Depot 16-Ameghino', 'Completado'),
 	(58, 'PED-1778850017999', '2026-05-15', 'Depot 03-Italia', 'Completado'),
 	(59, 'PED-1778861234335', '2026-05-15', 'Depot 09-Barranqueras', 'Completado'),
-	(62, 'PED-20260518-1008', '2026-05-18', 'Depot 03-Italia ', 'Pendiente');
+	(62, 'PED-20260518-1008', '2026-05-18', 'Depot 03-Italia', 'Pendiente');
 
--- Volcando datos para la tabla cdf_app.procesos: ~0 rows (aproximadamente)
-REPLACE INTO `procesos` (`id`, `colaborador`, `proceso`, `fecha`, `codigo`, `piezas`, `peso_bruto`, `recorte`, `decomiso`, `kg_a_desc`, `kg_a_sumar`) VALUES
-	(12, 'Mauri', 'Fraccionamiento', '2026-05-18', '2435', 5, 18.330, 0.725, 0.080, 17.525, 18.280),
-	(13, 'Juan', 'Fraccionamiento', '2026-05-18', '2435', 5, 18.590, 0.930, 0.160, 17.500, 18.190),
-	(15, 'Edgar', 'Decomiso Directo', '2026-05-18', '7718', 0, 4.385, 0.000, 4.385, 0.000, 0.000),
-	(16, 'Braian', 'Fraccionamiento', '2026-05-18', '2379', 5, 22.830, 0.000, 0.000, 22.830, 23.170),
-	(17, 'Uliese', 'Fraccionamiento', '2026-05-18', '2435', 4, 15.270, 0.485, 0.115, 14.670, 15.370),
-	(18, 'Ulises', 'Fraccionamiento', '2026-05-18', '8010', 5, 17.630, 0.525, 0.130, 16.975, 17.950),
-	(19, 'Braian', 'Fraccionamiento', '2026-05-18', '2379', 5, 22.380, 0.000, 0.000, 22.380, 22.660);
+-- Volcando estructura para tabla cdf_app.procesos
+CREATE TABLE IF NOT EXISTS `procesos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `colaborador` varchar(255) DEFAULT NULL,
+  `proceso` varchar(255) DEFAULT NULL,
+  `fecha` date DEFAULT NULL,
+  `codigo` varchar(255) NOT NULL,
+  `piezas` int(11) DEFAULT 0,
+  `peso_bruto` decimal(10,3) DEFAULT 0.000,
+  `recorte` decimal(10,3) DEFAULT 0.000,
+  `decomiso` decimal(10,3) DEFAULT 0.000,
+  `kg_a_desc` decimal(10,3) DEFAULT 0.000,
+  `kg_a_sumar` decimal(10,3) DEFAULT 0.000,
+  `colaborador_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `codigo` (`codigo`),
+  KEY `colaborador_id` (`colaborador_id`),
+  CONSTRAINT `procesos_ibfk_10` FOREIGN KEY (`colaborador_id`) REFERENCES `colaboradores` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `procesos_ibfk_9` FOREIGN KEY (`codigo`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
--- Volcando datos para la tabla cdf_app.producto_pedidos: ~988 rows (aproximadamente)
-REPLACE INTO `producto_pedidos` (`id`, `id_pedido`, `codigo_producto`, `pieza`, `fraccion`, `peso_enviado`, `cantidad_enviada`, `fraccion_enviada`) VALUES
+-- Volcando datos para la tabla cdf_app.procesos: ~10 rows (aproximadamente)
+INSERT IGNORE INTO `procesos` (`id`, `colaborador`, `proceso`, `fecha`, `codigo`, `piezas`, `peso_bruto`, `recorte`, `decomiso`, `kg_a_desc`, `kg_a_sumar`, `colaborador_id`) VALUES
+	(1, 'Edgar', 'Fraccionamiento', '2026-05-17', '2912', 2, 11.060, 0.740, 1.980, 3.420, 4.560, NULL),
+	(6, 'Edgar', 'Fraccionamiento', '2026-05-17', '2912', 1, 1.000, 0.100, 0.000, 0.000, 1.500, NULL),
+	(11, 'Edgar', 'Fraccionamiento', '2026-05-17', '1218', 1, 3.250, 0.180, 0.085, 2.985, 3.015, NULL),
+	(12, 'Mauri', 'Fraccionamiento', '2026-05-18', '2435', 5, 18.330, 0.725, 0.080, 17.525, 18.280, NULL),
+	(13, 'Juan', 'Fraccionamiento', '2026-05-18', '2435', 5, 18.590, 0.930, 0.160, 17.500, 18.190, NULL),
+	(15, 'Edgar', 'Decomiso Directo', '2026-05-18', '7718', 0, 4.385, 0.000, 4.385, 0.000, 0.000, NULL),
+	(16, 'Braian', 'Fraccionamiento', '2026-05-18', '2379', 5, 22.830, 0.000, 0.000, 22.830, 23.170, NULL),
+	(17, 'Uliese', 'Fraccionamiento', '2026-05-18', '2435', 4, 15.270, 0.485, 0.115, 14.670, 15.370, NULL),
+	(18, 'Ulises', 'Fraccionamiento', '2026-05-18', '8010', 5, 17.630, 0.525, 0.130, 16.975, 17.950, NULL),
+	(19, 'Braian', 'Fraccionamiento', '2026-05-18', '2379', 5, 22.380, 0.000, 0.000, 22.380, 22.660, NULL);
+
+-- Volcando estructura para tabla cdf_app.producto_pedidos
+CREATE TABLE IF NOT EXISTS `producto_pedidos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id_pedido` int(11) NOT NULL,
+  `codigo_producto` varchar(255) NOT NULL,
+  `pieza` int(11) DEFAULT 0,
+  `fraccion` decimal(10,3) DEFAULT 0.000,
+  `peso_enviado` decimal(10,3) DEFAULT 0.000,
+  `cantidad_enviada` int(11) DEFAULT 0,
+  `fraccion_enviada` decimal(10,3) DEFAULT 0.000,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `producto_pedidos_codigo_producto_id_pedido_unique` (`id_pedido`,`codigo_producto`),
+  KEY `codigo_producto` (`codigo_producto`),
+  CONSTRAINT `producto_pedidos_ibfk_17` FOREIGN KEY (`id_pedido`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `producto_pedidos_ibfk_18` FOREIGN KEY (`codigo_producto`) REFERENCES `productos` (`codigo`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=1497 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla cdf_app.producto_pedidos: ~991 rows (aproximadamente)
+INSERT IGNORE INTO `producto_pedidos` (`id`, `id_pedido`, `codigo_producto`, `pieza`, `fraccion`, `peso_enviado`, `cantidad_enviada`, `fraccion_enviada`) VALUES
 	(474, 31, '1218', 0, 45.000, 0.000, 0, 0.000),
 	(475, 31, '2254', 0, 35.000, 0.000, 0, 0.000),
 	(476, 31, '2264', 0, 12.000, 0.000, 0, 0.000),
@@ -1081,10 +1184,28 @@ REPLACE INTO `producto_pedidos` (`id`, `id_pedido`, `codigo_producto`, `pieza`, 
 	(1490, 62, '2420', 0, 20.000, 0.000, 0, 0.000),
 	(1491, 62, '2431', 0, 15.000, 0.000, 0, 0.000),
 	(1492, 62, '1922', 0, 50.000, 0.000, 0, 0.000),
-	(1493, 62, '7718', 0, 15.000, 0.000, 0, 0.000);
+	(1493, 62, '7718', 0, 15.000, 0.000, 0, 0.000),
+	(1494, 12, '1218', 0, 30.000, 0.000, 0, 0.000),
+	(1495, 12, '1922', 0, 50.000, 0.000, 0, 0.000),
+	(1496, 12, '2379', 0, 50.000, 0.000, 0, 0.000);
+
+-- Volcando estructura para tabla cdf_app.productos
+CREATE TABLE IF NOT EXISTS `productos` (
+  `codigo` varchar(255) NOT NULL,
+  `nombre` varchar(255) NOT NULL,
+  `kilos_block` decimal(10,4) DEFAULT NULL,
+  `peso_x_pieza` decimal(10,3) DEFAULT NULL,
+  `cantidad_piezas` int(11) DEFAULT NULL,
+  `vencimientos` varchar(255) DEFAULT NULL,
+  `kg_x_bolsita` decimal(10,3) DEFAULT NULL,
+  `kg_fraccionados` decimal(10,3) DEFAULT 0.000,
+  `kg_decomiso` decimal(10,3) DEFAULT 0.000,
+  `kg_recorte` decimal(10,3) DEFAULT 0.000,
+  PRIMARY KEY (`codigo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
 
 -- Volcando datos para la tabla cdf_app.productos: ~102 rows (aproximadamente)
-REPLACE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza`, `cantidad_piezas`, `vencimientos`, `kg_x_bolsita`, `kg_fraccionados`, `kg_decomiso`, `kg_recorte`) VALUES
+INSERT IGNORE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza`, `cantidad_piezas`, `vencimientos`, `kg_x_bolsita`, `kg_fraccionados`, `kg_decomiso`, `kg_recorte`) VALUES
 	('', '', NULL, NULL, NULL, NULL, NULL, 0.000, 0.000, 0.000),
 	('1218', 'FIQU PAULINA MUZZARELLA  P/FETEAR X KG', 52.8700, 3.520, 14, '46181', 0.000, 0.000, 0.000, 0.000),
 	('1541', 'FIAM CAGNOLI SALAMIN P/F x KG', 0.0550, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000),
@@ -1187,6 +1308,24 @@ REPLACE INTO `productos` (`codigo`, `nombre`, `kilos_block`, `peso_x_pieza`, `ca
 	('8663', 'INSU PAULINA TYBO X KG', 15.3600, 3.990, 4, '46256', 0.000, 0.000, 0.000, 0.000),
 	('8974', 'FIAM CAGNOLI BONDIOLA', 4.1250, 0.875, 5, '46169', 0.000, 0.000, 0.000, 0.000),
 	('9778', 'FIQU RICREM DANBO X KG', 1.3450, 0.000, 0, NULL, 0.000, 0.000, 0.000, 0.000);
+
+-- Volcando estructura para tabla cdf_app.sucursales
+CREATE TABLE IF NOT EXISTS `sucursales` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `sucursal` varchar(255) NOT NULL,
+  `numero` int(11) DEFAULT NULL,
+  `direccion` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+-- Volcando datos para la tabla cdf_app.sucursales: ~6 rows (aproximadamente)
+INSERT IGNORE INTO `sucursales` (`id`, `sucursal`, `numero`, `direccion`) VALUES
+	(1, 'Italia', 3, 'italia 1137'),
+	(2, 'sarmiento', 20, 'sarmiento 999'),
+	(3, 'ameguino', 16, 'ameghino 601'),
+	(4, 'laprida', 9, 'laprida 4999'),
+	(5, 'roca', 22, 'roca 275'),
+	(6, 'cordoba', 12, 'cordoba 575');
 
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;

@@ -50,7 +50,12 @@
           
           <div class="form-group">
             <label class="form-label">Colaborador *</label>
-            <input type="text" v-model="form.colaborador" class="form-control" placeholder="Nombre del colaborador" required />
+            <select v-model="form.colaborador_id" class="form-control" required style="padding: 0 0.25rem;">
+              <option :value="null" disabled>Seleccione un colaborador</option>
+              <option v-for="c in colaboradores" :key="c.id" :value="c.id">
+                {{ c.nombre }}
+              </option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -70,35 +75,41 @@
           </div>
 
           <!-- Selector Autocomplete de Producto -->
-          <div class="form-group product-selector-container" style="position: relative;">
+          <div class="form-group">
             <label class="form-label">Producto Asociado *</label>
-            <div style="display: flex; gap: 0.25rem;">
+            <div style="position: relative; display: flex; align-items: center;">
+              <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
               <input 
                 type="text" 
                 v-model="productSearch" 
-                @focus="showProductDropdown = true" 
-                placeholder="Escriba código o nombre..." 
+                list="catalog-products-list-main" 
+                @input="handleProductInput" 
                 class="form-control" 
+                placeholder="Escribe código o nombre para buscar..." 
                 required 
+                style="padding-left: 2rem; height: 32px;"
               />
-              <button v-if="productSearch" type="button" @click="clearProductSelect" class="btn btn-secondary" style="padding: 0 0.5rem; min-height: auto; height: 26px;">
-                <i class="ph ph-x"></i>
-              </button>
             </div>
-            <!-- Dropdown con resultados -->
-            <div 
-              v-if="showProductDropdown && filteredProductsForDropdown.length > 0" 
-              style="position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--bg-window); border: 1px solid var(--bevel-dark); box-shadow: var(--outset-shadow); max-height: 200px; overflow-y: auto; margin-top: 2px;"
-            >
-              <div 
-                v-for="p in filteredProductsForDropdown" 
+            <datalist id="catalog-products-list-main">
+              <option 
+                v-for="p in productos" 
                 :key="p.codigo" 
-                @click="selectProductFromDropdown(p)"
-                style="padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; border-bottom: 1px solid var(--bg-secondary);"
-                class="dropdown-item"
+                :value="p.codigo"
               >
-                <strong>[{{ p.codigo }}]</strong> {{ p.nombre }}
-              </div>
+                {{ p.nombre }}
+              </option>
+            </datalist>
+            
+            <!-- Vista previa del producto seleccionado -->
+            <div 
+              v-if="selectedMainProduct" 
+              class="selected-product-badge mt-2 animate-fade"
+              style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary);"
+            >
+              <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
+              <span>
+                Seleccionado: <strong>{{ selectedMainProduct.nombre }}</strong>
+              </span>
             </div>
           </div>
 
@@ -157,35 +168,41 @@
         <form @submit.prevent="submitFraccionadoForm" class="p-4" style="display: flex; flex-direction: column; gap: 0.75rem;">
           
           <!-- Producto Original -->
-          <div class="form-group product-selector-container" style="position: relative;">
+          <div class="form-group">
             <label class="form-label">Producto Original (Origen) *</label>
-            <div style="display: flex; gap: 0.25rem;">
+            <div style="position: relative; display: flex; align-items: center;">
+              <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
               <input 
                 type="text" 
                 v-model="origSearchQuery" 
-                @focus="showOrigDropdown = true" 
-                placeholder="Escriba código o nombre..." 
+                list="catalog-products-list-orig" 
+                @input="handleOrigProductInput" 
                 class="form-control" 
+                placeholder="Escribe código o nombre para buscar..." 
                 required 
+                style="padding-left: 2rem; height: 32px;"
               />
-              <button v-if="origSearchQuery" type="button" @click="clearOrigProduct" class="btn btn-secondary" style="padding: 0 0.5rem; min-height: auto; height: 26px;">
-                <i class="ph ph-x"></i>
-              </button>
             </div>
-            <!-- Dropdown con resultados -->
-            <div 
-              v-if="showOrigDropdown && filteredOrigProducts.length > 0" 
-              style="position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--bg-window); border: 1px solid var(--bevel-dark); box-shadow: var(--outset-shadow); max-height: 200px; overflow-y: auto; margin-top: 2px;"
-            >
-              <div 
-                v-for="p in filteredOrigProducts" 
+            <datalist id="catalog-products-list-orig">
+              <option 
+                v-for="p in productos" 
                 :key="p.codigo" 
-                @click="selectOrigProduct(p)"
-                style="padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; border-bottom: 1px solid var(--bg-secondary);"
-                class="dropdown-item"
+                :value="p.codigo"
               >
-                <strong>[{{ p.codigo }}]</strong> {{ p.nombre }}
-              </div>
+                {{ p.nombre }}
+              </option>
+            </datalist>
+            
+            <!-- Vista previa del producto seleccionado -->
+            <div 
+              v-if="selectedOrigProduct" 
+              class="selected-product-badge mt-2 animate-fade"
+              style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary);"
+            >
+              <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
+              <span>
+                Seleccionado: <strong>{{ selectedOrigProduct.nombre }}</strong>
+              </span>
             </div>
           </div>
 
@@ -217,35 +234,41 @@
           </div>
 
           <!-- Producto Fraccionado Resultante -->
-          <div class="form-group product-selector-container" style="position: relative;">
+          <div class="form-group">
             <label class="form-label">Producto Fraccionado (Destino) *</label>
-            <div style="display: flex; gap: 0.25rem;">
+            <div style="position: relative; display: flex; align-items: center;">
+              <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
               <input 
                 type="text" 
                 v-model="destSearchQuery" 
-                @focus="showDestDropdown = true" 
-                placeholder="Escriba código o nombre..." 
+                list="catalog-products-list-dest" 
+                @input="handleDestProductInput" 
                 class="form-control" 
+                placeholder="Escribe código o nombre para buscar..." 
                 required 
+                style="padding-left: 2rem; height: 32px;"
               />
-              <button v-if="destSearchQuery" type="button" @click="clearDestProduct" class="btn btn-secondary" style="padding: 0 0.5rem; min-height: auto; height: 26px;">
-                <i class="ph ph-x"></i>
-              </button>
             </div>
-            <!-- Dropdown con resultados -->
-            <div 
-              v-if="showDestDropdown && filteredDestProducts.length > 0" 
-              style="position: absolute; top: 100%; left: 0; right: 0; z-index: 100; background: var(--bg-window); border: 1px solid var(--bevel-dark); box-shadow: var(--outset-shadow); max-height: 200px; overflow-y: auto; margin-top: 2px;"
-            >
-              <div 
-                v-for="p in filteredDestProducts" 
+            <datalist id="catalog-products-list-dest">
+              <option 
+                v-for="p in productos" 
                 :key="p.codigo" 
-                @click="selectDestProduct(p)"
-                style="padding: 0.3rem 0.5rem; cursor: pointer; font-size: 0.8rem; border-bottom: 1px solid var(--bg-secondary);"
-                class="dropdown-item"
+                :value="p.codigo"
               >
-                <strong>[{{ p.codigo }}]</strong> {{ p.nombre }}
-              </div>
+                {{ p.nombre }}
+              </option>
+            </datalist>
+            
+            <!-- Vista previa del producto seleccionado -->
+            <div 
+              v-if="selectedDestProduct" 
+              class="selected-product-badge mt-2 animate-fade"
+              style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary);"
+            >
+              <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
+              <span>
+                Seleccionado: <strong>{{ selectedDestProduct.nombre }}</strong>
+              </span>
             </div>
           </div>
 
@@ -302,7 +325,7 @@
                 <td>
                   <span :class="['badge', getBadgeType(p.proceso)]">{{ p.proceso }}</span>
                 </td>
-                <td>{{ p.colaborador }}</td>
+                <td>{{ p.Colaborador?.nombre || p.colaborador || 'Sin Colaborador' }}</td>
                 <td>
                   <span class="text-xs" :title="p.codigo">
                     <strong>{{ p.codigo }}</strong> - {{ p.Producto?.nombre || 'Desconocido' }}
@@ -495,6 +518,7 @@ const activeTab = ref('procesos')
 const procesos = ref([])
 const fraccionados = ref([])
 const productos = ref([])
+const colaboradores = ref([])
 const loadingData = ref(true)
 const loadingFraccionados = ref(false)
 const submitting = ref(false)
@@ -513,7 +537,7 @@ const alert = ref({ show: false, message: '', type: 'success' })
 const getTodayString = () => new Date().toISOString().split('T')[0]
 
 const defaultForm = {
-  colaborador: authStore.user?.usuario || 'Edgar',
+  colaborador_id: null,
   proceso: 'Fraccionamiento',
   fecha: getTodayString(),
   codigo: '',
@@ -537,80 +561,50 @@ const defaultFraccionadoForm = {
 
 const fraccionadoForm = ref({ ...defaultFraccionadoForm })
 
-// Autocomplete Procesos Generales
+// Autocomplete Preselección (Nueva Lógica)
 const productSearch = ref('')
-const showProductDropdown = ref(false)
+const selectedMainProduct = ref(null)
 
-// Autocomplete Conversión (Original)
 const origSearchQuery = ref('')
-const showOrigDropdown = ref(false)
+const selectedOrigProduct = ref(null)
 
-// Autocomplete Conversión (Destino / Fraccionado)
 const destSearchQuery = ref('')
-const showDestDropdown = ref(false)
+const selectedDestProduct = ref(null)
 
-const filteredProductsForDropdown = computed(() => {
-  const query = productSearch.value.toLowerCase().trim()
-  if (!query) return productos.value
-  if (query.startsWith('[') && query.includes(']')) return productos.value
-  return productos.value.filter(p => 
-    p.codigo.toLowerCase().includes(query) || p.nombre.toLowerCase().includes(query)
-  )
-})
-
-const selectProductFromDropdown = (prod) => {
-  form.value.codigo = prod.codigo
-  productSearch.value = `[${prod.codigo}] ${prod.nombre}`
-  showProductDropdown.value = false
+const handleProductInput = () => {
+  const code = productSearch.value.trim()
+  const found = productos.value.find(p => p.codigo === code)
+  if (found) {
+    selectedMainProduct.value = found
+    form.value.codigo = found.codigo
+  } else {
+    selectedMainProduct.value = null
+    form.value.codigo = ''
+  }
 }
 
-const clearProductSelect = () => {
-  form.value.codigo = ''
-  productSearch.value = ''
-  showProductDropdown.value = false
+const handleOrigProductInput = () => {
+  const code = origSearchQuery.value.trim()
+  const found = productos.value.find(p => p.codigo === code)
+  if (found) {
+    selectedOrigProduct.value = found
+    fraccionadoForm.value.codigo_producto_original = found.codigo
+  } else {
+    selectedOrigProduct.value = null
+    fraccionadoForm.value.codigo_producto_original = ''
+  }
 }
 
-// Filtros para Autocomplete de Conversión
-const filteredOrigProducts = computed(() => {
-  const query = origSearchQuery.value.toLowerCase().trim()
-  if (!query) return productos.value
-  if (query.startsWith('[') && query.includes(']')) return productos.value
-  return productos.value.filter(p => 
-    p.codigo.toLowerCase().includes(query) || p.nombre.toLowerCase().includes(query)
-  )
-})
-
-const selectOrigProduct = (prod) => {
-  fraccionadoForm.value.codigo_producto_original = prod.codigo
-  origSearchQuery.value = `[${prod.codigo}] ${prod.nombre}`
-  showOrigDropdown.value = false
-}
-
-const clearOrigProduct = () => {
-  fraccionadoForm.value.codigo_producto_original = ''
-  origSearchQuery.value = ''
-  showOrigDropdown.value = false
-}
-
-const filteredDestProducts = computed(() => {
-  const query = destSearchQuery.value.toLowerCase().trim()
-  if (!query) return productos.value
-  if (query.startsWith('[') && query.includes(']')) return productos.value
-  return productos.value.filter(p => 
-    p.codigo.toLowerCase().includes(query) || p.nombre.toLowerCase().includes(query)
-  )
-})
-
-const selectDestProduct = (prod) => {
-  fraccionadoForm.value.codigo_fraccionado = prod.codigo
-  destSearchQuery.value = `[${prod.codigo}] ${prod.nombre}`
-  showDestDropdown.value = false
-}
-
-const clearDestProduct = () => {
-  fraccionadoForm.value.codigo_fraccionado = ''
-  destSearchQuery.value = ''
-  showDestDropdown.value = false
+const handleDestProductInput = () => {
+  const code = destSearchQuery.value.trim()
+  const found = productos.value.find(p => p.codigo === code)
+  if (found) {
+    selectedDestProduct.value = found
+    fraccionadoForm.value.codigo_fraccionado = found.codigo
+  } else {
+    selectedDestProduct.value = null
+    fraccionadoForm.value.codigo_fraccionado = ''
+  }
 }
 
 // Watcher para calcular automáticamente "Kg a Descontar" = peso_bruto - (decomiso + recorte)
@@ -635,10 +629,26 @@ const showAlert = (msg, type = 'success') => {
   setTimeout(() => { alert.value.show = false }, 3500)
 }
 
+const fetchColaboradores = async () => {
+  try {
+    const res = await fetch('/api/colaboradores')
+    if (res.ok) {
+      colaboradores.value = await res.json()
+      if (colaboradores.value.length > 0 && !form.value.colaborador_id && !isEditing.value) {
+        const userMatched = colaboradores.value.find(c => c.nombre.toLowerCase() === (authStore.user?.usuario || '').toLowerCase())
+        form.value.colaborador_id = userMatched ? userMatched.id : colaboradores.value[0].id
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching colaboradores:', error)
+  }
+}
+
 // Cargar Datos Iniciales de Procesos
 const fetchInitialData = async () => {
   loadingData.value = true
   try {
+    await fetchColaboradores()
     const resProd = await fetch('/api/productos')
     if (resProd.ok) {
       productos.value = await resProd.json()
@@ -744,7 +754,7 @@ const loadProcesoToForm = (proceso) => {
   editId.value = proceso.id
   
   form.value = {
-    colaborador: proceso.colaborador,
+    colaborador_id: proceso.colaborador_id,
     proceso: proceso.proceso,
     fecha: proceso.fecha ? proceso.fecha.split('T')[0] : getTodayString(),
     codigo: proceso.codigo,
@@ -757,7 +767,8 @@ const loadProcesoToForm = (proceso) => {
   }
 
   const matched = productos.value.find(p => p.codigo === proceso.codigo)
-  productSearch.value = matched ? `[${matched.codigo}] ${matched.nombre}` : proceso.codigo
+  productSearch.value = matched ? matched.codigo : proceso.codigo
+  selectedMainProduct.value = matched || null
 }
 
 const cancelEdit = () => {
@@ -769,11 +780,14 @@ const resetForm = () => {
   editId.value = null
   form.value = { 
     ...defaultForm, 
-    colaborador: authStore.user?.usuario || 'Edgar',
     fecha: getTodayString() 
   }
+  if (colaboradores.value.length > 0) {
+    const userMatched = colaboradores.value.find(c => c.nombre.toLowerCase() === (authStore.user?.usuario || '').toLowerCase())
+    form.value.colaborador_id = userMatched ? userMatched.id : colaboradores.value[0].id
+  }
   productSearch.value = ''
-  showProductDropdown.value = false
+  selectedMainProduct.value = null
 }
 
 // ==============================================
@@ -830,10 +844,12 @@ const loadFraccionadoToForm = (item) => {
   }
 
   const matchedOrig = productos.value.find(p => p.codigo === item.codigo_producto_original)
-  origSearchQuery.value = matchedOrig ? `[${matchedOrig.codigo}] ${matchedOrig.nombre}` : item.codigo_producto_original
+  origSearchQuery.value = matchedOrig ? matchedOrig.codigo : item.codigo_producto_original
+  selectedOrigProduct.value = matchedOrig || null
 
   const matchedDest = productos.value.find(p => p.codigo === item.codigo_fraccionado)
-  destSearchQuery.value = matchedDest ? `[${matchedDest.codigo}] ${matchedDest.nombre}` : item.codigo_fraccionado
+  destSearchQuery.value = matchedDest ? matchedDest.codigo : item.codigo_fraccionado
+  selectedDestProduct.value = matchedDest || null
 }
 
 const cancelFraccionadoEdit = () => {
@@ -846,8 +862,8 @@ const resetFraccionadoForm = () => {
   fraccionadoForm.value = { ...defaultFraccionadoForm }
   origSearchQuery.value = ''
   destSearchQuery.value = ''
-  showOrigDropdown.value = false
-  showDestDropdown.value = false
+  selectedOrigProduct.value = null
+  selectedDestProduct.value = null
 }
 
 // ==============================================
@@ -949,7 +965,8 @@ const filteredAndSortedProcesos = computed(() => {
     const query = searchQuery.value.toLowerCase().trim()
     result = result.filter(p => {
       const idMatch = p.id ? p.id.toString().includes(query) : false
-      const colabMatch = p.colaborador ? p.colaborador.toLowerCase().includes(query) : false
+      const colabName = p.Colaborador?.nombre || p.colaborador || ''
+      const colabMatch = colabName.toLowerCase().includes(query)
       const procMatch = p.proceso ? p.proceso.toLowerCase().includes(query) : false
       const codMatch = p.codigo ? p.codigo.toLowerCase().includes(query) : false
       const prodNameMatch = p.Producto?.nombre ? p.Producto.nombre.toLowerCase().includes(query) : false
@@ -961,6 +978,11 @@ const filteredAndSortedProcesos = computed(() => {
     result.sort((a, b) => {
       let valA = a[sortKey.value]
       let valB = b[sortKey.value]
+
+      if (sortKey.value === 'colaborador') {
+        valA = a.Colaborador?.nombre || a.colaborador || ''
+        valB = b.Colaborador?.nombre || b.colaborador || ''
+      }
 
       if (valA === undefined || valA === null) valA = ''
       if (valB === undefined || valB === null) valB = ''
@@ -1032,21 +1054,13 @@ onMounted(() => {
 
 <style scoped>
 .procesos-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-  align-items: start;
-}
-
-@media (min-width: 992px) {
-  .procesos-grid {
-    grid-template-columns: 4fr 8fr;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .form-column {
-  position: sticky;
-  top: 0.5rem;
+  /* Scroll naturally in stacked layout */
 }
 
 .list-column {
