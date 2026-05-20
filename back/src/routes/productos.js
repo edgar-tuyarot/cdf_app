@@ -10,6 +10,7 @@ router.get('/', productosController.obtenerProductos);
 router.post('/', productosController.crearProducto);
 // Ruta para carga masiva (admite FormData con un archivo "file" o un JSON Array en el body)
 router.post('/upload', upload.single('file'), productosController.uploadExcel);
+router.post('/cargar-stock', upload.single('file'), productosController.cargarStockExcel);
 router.get('/recortes', productosController.obtenerRecortes);
 router.post('/convertir-recorte', productosController.convertirRecorte);
 router.post('/ingresar-recorte', productosController.ingresarRecorte);

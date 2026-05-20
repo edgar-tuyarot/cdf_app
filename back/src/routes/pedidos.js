@@ -10,6 +10,7 @@ router.get('/promedio-sucursal', pedidosController.obtenerPromedioFraccionPorSuc
 router.get('/:id', pedidosController.obtenerPedidoPorId);
 router.post('/', pedidosController.crearPedido);
 router.post('/upload', upload.single('file'), pedidosController.uploadExcel);
+router.post('/:id/confirmar', pedidosController.confirmarPedido);
 router.put('/:id', pedidosController.actualizarPedido);
 router.delete('/:id', pedidosController.eliminarPedido);
 

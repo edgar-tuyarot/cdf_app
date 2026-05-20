@@ -154,6 +154,7 @@
                   <option value="Pendiente">Pendiente</option>
                   <option value="Procesando">Procesando</option>
                   <option value="Completado">Completado</option>
+                  <option value="Enviado">Enviado</option>
                 </select>
               </div>
             </div>
@@ -175,6 +176,7 @@
                       <th style="font-size: 0.75rem; padding: 0.4rem; width: 85px; color: var(--text-primary) !important;" class="text-right">Pzs Envia.</th>
                       <th style="font-size: 0.75rem; padding: 0.4rem; width: 95px; color: var(--text-primary) !important;" class="text-right">Frac Envia.</th>
                       <th style="font-size: 0.75rem; padding: 0.4rem; width: 95px; color: var(--text-primary) !important;" class="text-right">Peso Env.(kg)</th>
+                      <th style="font-size: 0.75rem; padding: 0.4rem; width: 85px; color: var(--text-primary) !important;" class="text-right">Stock (kg)</th>
                       <th style="font-size: 0.75rem; padding: 0.4rem; width: 50px; color: var(--text-primary) !important;" class="text-center">Quitar</th>
                     </tr>
                   </thead>
@@ -234,6 +236,9 @@
                           style="text-align: right; height: 26px; padding: 0 0.4rem; font-size: 0.75rem; border-color: var(--bevel-dark); color: var(--text-primary);" 
                         />
                       </td>
+                      <td style="font-size: 0.75rem; padding: 0.3rem; text-align: right; font-weight: bold; color: var(--text-primary); vertical-align: middle;">
+                        {{ getStockActual(item.codigo_producto) }}
+                      </td>
                       <td style="font-size: 0.75rem; padding: 0.3rem;" class="text-center">
                         <button type="button" class="icon-btn text-red" style="padding: 0.1rem 0.3rem;" @click="removeEditItem(idx)">
                           <i class="ph ph-trash"></i>
@@ -242,7 +247,7 @@
                     </tr>
                     
                     <tr v-if="editForm.items.length === 0">
-                      <td colspan="8" class="text-center text-muted" style="padding: 1.5rem; font-size: 0.75rem; color: var(--text-primary);">
+                      <td colspan="9" class="text-center text-muted" style="padding: 1.5rem; font-size: 0.75rem; color: var(--text-primary);">
                         No hay productos en esta orden. Añade un producto usando el formulario de abajo.
                       </td>
                     </tr>
@@ -316,14 +321,30 @@
 
           </div>
           
-          <div class="card-footer" style="padding: 1rem; border-top: 1px solid var(--bevel-light); display: flex; justify-content: flex-end; gap: 0.5rem; background: var(--bg-secondary);">
-            <button type="button" class="btn btn-secondary" @click="isEditingMode = false" style="color: var(--text-primary);">
-              <i class="ph ph-x"></i> Cancelar
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="savingEdit">
-              <i class="ph ph-spinner spinner" v-if="savingEdit"></i>
-              <i class="ph ph-floppy-disk" v-else></i> Guardar Cambios
-            </button>
+          <div class="card-footer" style="padding: 1rem; border-top: 1px solid var(--bevel-light); display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary);">
+            <div>
+              <button 
+                type="button" 
+                class="btn" 
+                style="background: #1a7f37; color: #fff; border: 1px solid #15692e; display: flex; align-items: center; gap: 0.3rem;"
+                :disabled="confirmingPedido || editForm.estado === 'Enviado'"
+                @click="showConfirmEnvioModal = true"
+                :title="editForm.estado === 'Enviado' ? 'Este pedido ya fue enviado' : 'Confirmar envío y descontar stock'"
+              >
+                <i class="ph ph-spinner spinner" v-if="confirmingPedido"></i>
+                <i class="ph ph-truck" v-else></i> 
+                {{ editForm.estado === 'Enviado' ? 'Ya Enviado' : 'Confirmar Envío' }}
+              </button>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" class="btn btn-secondary" @click="isEditingMode = false" style="color: var(--text-primary);">
+                <i class="ph ph-x"></i> Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="savingEdit">
+                <i class="ph ph-spinner spinner" v-if="savingEdit"></i>
+                <i class="ph ph-floppy-disk" v-else></i> Guardar Cambios
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -527,6 +548,61 @@
         <div class="win-dialog-footer">
           <button class="win-dialog-btn win-dialog-btn-ok" @click="deletePedido">Sí</button>
           <button class="win-dialog-btn" @click="pedidoToDelete = null">No</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- Modal Confirmación Envío Pedido -->
+  <Teleport to="body">
+    <div v-if="showConfirmEnvioModal" class="win-dialog-overlay" @mousedown.self="showConfirmEnvioModal = false">
+      <div class="win-dialog" style="max-width: 520px;">
+        <div class="win-dialog-titlebar">
+          <span class="win-dialog-titlebar-text">Confirmar Envío del Pedido</span>
+          <button class="win-dialog-close" @click="showConfirmEnvioModal = false"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="win-dialog-body" style="padding: 1rem;">
+          <i class="ph ph-truck win-dialog-icon" style="color: #1a7f37; font-size: 2rem;"></i>
+          <p class="win-dialog-msg" style="margin-top: 0.5rem; line-height: 1.5;">
+            ¿Estás seguro de confirmar el envío del pedido <strong>{{ editForm.codigo }}</strong>?<br><br>
+            Se descontará del stock los siguientes pesos enviados:
+          </p>
+          <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
+            <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
+              <thead>
+                <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--bevel-dark);">
+                  <th style="text-align: left; padding: 0.3rem 0.5rem; color: var(--text-primary);">Código</th>
+                  <th style="text-align: left; padding: 0.3rem 0.5rem; color: var(--text-primary);">Producto</th>
+                  <th style="text-align: right; padding: 0.3rem 0.5rem; color: var(--text-primary);">Peso Env. (kg)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in itemsConPeso" :key="item.codigo_producto" style="border-bottom: 1px solid var(--bevel-light);">
+                  <td style="padding: 0.3rem 0.5rem; color: var(--text-primary);"><strong>{{ item.codigo_producto }}</strong></td>
+                  <td style="padding: 0.3rem 0.5rem; color: var(--text-primary);">{{ item.Producto?.nombre || '-' }}</td>
+                  <td style="padding: 0.3rem 0.5rem; text-align: right; font-weight: bold; color: var(--text-primary);">{{ parseFloat(item.peso_enviado).toFixed(3) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-if="itemsConPeso.length === 0" style="margin-top: 0.5rem; padding: 0.75rem; background: var(--bg-secondary); text-align: center; font-size: 0.8rem; color: var(--text-secondary); border: 1px solid var(--bevel-light);">
+            <i class="ph ph-warning-circle" style="font-size: 1.2rem; color: var(--accent-orange);"></i><br>
+            No hay items con peso enviado > 0. Completa la columna "Peso Env.(kg)" antes de confirmar.
+          </div>
+          <div v-if="confirmError" class="alert-box error" style="margin-top: 0.75rem; font-size: 0.8rem;">
+            {{ confirmError }}
+          </div>
+        </div>
+        <div class="win-dialog-footer">
+          <button 
+            class="win-dialog-btn win-dialog-btn-ok" 
+            :disabled="itemsConPeso.length === 0 || confirmingPedido" 
+            @click="confirmarPedido"
+          >
+            <i class="ph ph-spinner spinner" v-if="confirmingPedido" style="margin-right: 0.25rem;"></i>
+            {{ confirmingPedido ? 'Procesando...' : 'Sí, Confirmar Envío' }}
+          </button>
+          <button class="win-dialog-btn" @click="showConfirmEnvioModal = false">Cancelar</button>
         </div>
       </div>
     </div>
@@ -874,6 +950,7 @@ const getEstadoBadgeClass = (estado) => {
   if (estado === 'Pendiente') return 'badge-warning'
   if (estado === 'Completado') return 'badge-success'
   if (estado === 'Procesando') return 'badge-primary'
+  if (estado === 'Enviado') return 'badge-success'
   return 'badge-secondary'
 }
 
@@ -938,6 +1015,15 @@ const fetchCatalogProducts = async () => {
   } catch (error) {
     console.error('Error fetching catalog products:', error)
   }
+}
+
+// Obtener stock actual de un producto para mostrar en la tabla
+const getStockActual = (codigo) => {
+  const prod = catalogProducts.value.find(p => p.codigo === codigo)
+  if (prod) {
+    return parseFloat(prod.kilos_block || 0).toFixed(3)
+  }
+  return '-'
 }
 
 // Métodos para la Creación de Pedidos
@@ -1205,6 +1291,59 @@ const deletePedido = async () => {
     showAlert('Error de conexión al eliminar', 'error')
   } finally {
     pedidoToDelete.value = null
+  }
+}
+
+// Confirmar envío: descontar stock
+const showConfirmEnvioModal = ref(false)
+const confirmingPedido = ref(false)
+const confirmError = ref('')
+
+// Items que tienen peso_enviado > 0
+const itemsConPeso = computed(() => {
+  return editForm.value.items.filter(item => parseFloat(item.peso_enviado) > 0)
+})
+
+const confirmarPedido = async () => {
+  confirmingPedido.value = true
+  confirmError.value = ''
+
+  try {
+    const itemsPayload = itemsConPeso.value.map(item => ({
+      codigo: item.codigo_producto,
+      peso: parseFloat(item.peso_enviado)
+    }))
+
+    const res = await fetch(`/api/pedidos/${editForm.value.id}/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: itemsPayload })
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      showConfirmEnvioModal.value = false
+      editForm.value.estado = 'Enviado'
+      showAlert('Pedido confirmado y stock descontado exitosamente')
+      isEditingMode.value = false
+      fetchPedidos()
+    } else {
+      // Mostrar detalle de productos sin stock si viene
+      if (data.productos_sin_stock && data.productos_sin_stock.length > 0) {
+        const detalles = data.productos_sin_stock.map(p => 
+          `${p.codigo} (${p.nombre}): stock ${p.stock_actual} kg, solicitado ${p.peso_solicitado} kg`
+        ).join(' | ')
+        confirmError.value = `${data.error} ${detalles}`
+      } else {
+        confirmError.value = data.error || 'Error al confirmar el pedido'
+      }
+    }
+  } catch (error) {
+    console.error('Error confirming order:', error)
+    confirmError.value = 'Error de conexión con el servidor'
+  } finally {
+    confirmingPedido.value = false
   }
 }
 

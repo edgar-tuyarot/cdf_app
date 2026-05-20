@@ -153,9 +153,9 @@ exports.procesarFraccionamiento = async (req, res) => {
       return res.status(400).json({ error: `El producto fraccionado de destino con código ${codigoDestino} no existe.` });
     }
 
-    // 3. Sumar peso_a_fraccionar a kg_fraccionados del producto final
-    const kgFraccionadosActual = parseFloat(productoDestino.kg_fraccionados) || 0;
-    productoDestino.kg_fraccionados = kgFraccionadosActual + valPesoAFraccionar;
+    // 3. Sumar peso_a_fraccionar a kilos_block del producto final
+    const kilosBlockActual = parseFloat(productoDestino.kilos_block) || 0;
+    productoDestino.kilos_block = kilosBlockActual + valPesoAFraccionar;
     await productoDestino.save({ transaction });
 
     // 4. Limpiar los pesos del registro fraccionado (poner a 0)
@@ -170,7 +170,7 @@ exports.procesarFraccionamiento = async (req, res) => {
       productoDestinoActualizado: {
         codigo: productoDestino.codigo,
         nombre: productoDestino.nombre,
-        kg_fraccionados_nuevo: productoDestino.kg_fraccionados
+        kilos_block_nuevo: productoDestino.kilos_block
       },
       fraccionadoLimpio: fraccionado
     });

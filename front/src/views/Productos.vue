@@ -11,6 +11,11 @@
           <i class="ph ph-spinner spinner" v-if="uploading"></i>
           <i class="ph ph-upload-simple" v-else></i> Subir Excel
         </button>
+        <input type="file" ref="stockFileInput" accept=".xlsx, .xls" style="display: none" @change="handleStockFileUpload" />
+        <button class="btn btn-secondary" style="background: #1a7f37; color: #fff; border: 1px solid #15692e;" @click="triggerStockFileInput" :disabled="uploadingStock">
+          <i class="ph ph-spinner spinner" v-if="uploadingStock"></i>
+          <i class="ph ph-package" v-else></i> Cargar Stock (Excel)
+        </button>
         <button class="btn btn-primary" @click="openModal()">
           <i class="ph ph-plus"></i> Nuevo Producto
         </button>
@@ -237,7 +242,9 @@ const showModal = ref(false)
 const isEditing = ref(false)
 const itemToDelete = ref(null)
 const uploading = ref(false)
+const uploadingStock = ref(false)
 const fileInput = ref(null)
+const stockFileInput = ref(null)
 
 const alert = ref({
   show: false,
@@ -436,6 +443,44 @@ const handleFileUpload = async (event) => {
     // Limpiar el input para permitir subir el mismo archivo de nuevo
     if (fileInput.value) {
       fileInput.value.value = ''
+    }
+  }
+}
+
+const triggerStockFileInput = () => {
+  if (stockFileInput.value) {
+    stockFileInput.value.click()
+  }
+}
+
+const handleStockFileUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  uploadingStock.value = true
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    const res = await fetch('/api/productos/cargar-stock', {
+      method: 'POST',
+      body: formData
+    })
+
+    const result = await res.json()
+    if (res.ok) {
+      showAlert(`${result.mensaje}`)
+      fetchProductos()
+    } else {
+      showAlert(`Error: ${result.error || 'No se pudo procesar el archivo'}`, 'error')
+    }
+  } catch (error) {
+    console.error('Error subiendo stock:', error)
+    showAlert('Error de conexión al subir archivo de stock', 'error')
+  } finally {
+    uploadingStock.value = false
+    if (stockFileInput.value) {
+      stockFileInput.value.value = ''
     }
   }
 }

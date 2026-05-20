@@ -1,4 +1,4 @@
-const { Pedido, ProductoPedido, Producto, sequelize } = require('../models');
+const { Pedido, ProductoPedido, Producto, Fraccionado, DescuentoStock, sequelize } = require('../models');
 
 // Obtener todos los pedidos con sus productos asociados
 exports.obtenerPedidos = async (req, res) => {
@@ -461,4 +461,139 @@ exports.obtenerPromedioFraccionPorSucursal = async (req, res) => {
   }
 };
 
+// Confirmar pedido: descontar stock y cambiar estado a "Enviado"
+// POST /api/pedidos/:id/confirmar
+// Body: { items: [{ codigo, peso }, ...] }
+exports.confirmarPedido = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { items } = req.body;
 
+    // 1. Validar que el pedido existe
+    const pedido = await Pedido.findByPk(id, { transaction });
+    if (!pedido) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
+    // 2. Validar que el pedido no fue ya enviado/confirmado
+    if (pedido.estado === 'Enviado') {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Este pedido ya fue enviado. No se puede volver a confirmar.' });
+    }
+
+    // 3. Validar items
+    if (!Array.isArray(items) || items.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Debe enviar un array "items" con al menos un elemento [{ codigo, peso }].' });
+    }
+
+    // 5. Primera pasada: validar stock suficiente para TODOS los items antes de descontar
+    const productosSinStock = [];
+    const operaciones = []; // Guardar las operaciones a realizar
+
+    for (const item of items) {
+      const { codigo, peso } = item;
+
+      if (!codigo || peso === undefined || peso === null) {
+        await transaction.rollback();
+        return res.status(400).json({ error: 'Cada item debe tener "codigo" y "peso".' });
+      }
+
+      const valorPeso = parseFloat(peso);
+      if (isNaN(valorPeso) || valorPeso <= 0) {
+        await transaction.rollback();
+        return res.status(400).json({ error: `El peso del producto ${codigo} debe ser un número mayor a cero.` });
+      }
+
+      const producto = await Producto.findByPk(codigo, { transaction });
+      if (!producto) {
+        await transaction.rollback();
+        return res.status(404).json({ error: `El producto con código ${codigo} no existe.` });
+      }
+
+      // Determinar de qué campo descontar: SIEMPRE de kilos_block según requerimiento
+      const campo = 'kilos_block';
+      const stockActual = parseFloat(producto[campo]) || 0;
+
+      if (stockActual < valorPeso) {
+        productosSinStock.push({
+          codigo,
+          nombre: producto.nombre,
+          campo,
+          stock_actual: stockActual,
+          peso_solicitado: valorPeso
+        });
+      } else {
+        operaciones.push({
+          producto,
+          campo,
+          valorPeso,
+          codigo
+        });
+      }
+    }
+
+    // Si hay productos sin stock, rechazar todo
+    if (productosSinStock.length > 0) {
+      await transaction.rollback();
+      const detalle = productosSinStock.map(p => 
+        `• ${p.codigo} (${p.nombre}): stock en ${p.campo} = ${p.stock_actual} kg, solicitado = ${p.peso_solicitado} kg`
+      ).join('\n');
+      return res.status(400).json({
+        error: 'No hay stock suficiente para los siguientes productos:',
+        productos_sin_stock: productosSinStock,
+        detalle
+      });
+    }
+
+    // 6. Segunda pasada: realizar los descuentos y crear registros de trazabilidad
+    const descuentosRealizados = [];
+
+    for (const op of operaciones) {
+      const stockActual = parseFloat(op.producto[op.campo]) || 0;
+      op.producto[op.campo] = stockActual - op.valorPeso;
+      await op.producto.save({ transaction });
+
+      // Crear registro de trazabilidad
+      await DescuentoStock.create({
+        id_pedido: parseInt(id),
+        codigo_producto: op.codigo,
+        peso_descontado: op.valorPeso,
+        campo_descontado: op.campo,
+        fecha: new Date()
+      }, { transaction });
+
+      descuentosRealizados.push({
+        codigo: op.codigo,
+        nombre: op.producto.nombre,
+        campo: op.campo,
+        peso_descontado: op.valorPeso,
+        stock_restante: parseFloat(op.producto[op.campo]) || 0
+      });
+    }
+
+    // 7. Cambiar estado del pedido a "Enviado"
+    pedido.estado = 'Enviado';
+    await pedido.save({ transaction });
+
+    await transaction.commit();
+
+    res.json({
+      mensaje: 'Pedido confirmado y stock descontado exitosamente.',
+      pedido: {
+        id: pedido.id,
+        codigo: pedido.codigo,
+        estado: pedido.estado
+      },
+      descuentos: descuentosRealizados
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al confirmar pedido:', error);
+    res.status(500).json({ error: 'Error interno al confirmar el pedido y descontar stock.' });
+  }
+};

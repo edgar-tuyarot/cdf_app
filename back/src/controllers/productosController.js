@@ -399,6 +399,87 @@ exports.ingresarRecorte = async (req, res) => {
   }
 };
 
+// Carga masiva de stock desde Excel (suma peso a kilos_block)
+// POST /api/productos/cargar-stock
+// Archivo Excel con columnas: codigo, peso
+exports.cargarStockExcel = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    if (!req.file) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'No se envió ningún archivo Excel.' });
+    }
 
+    const xlsx = require('xlsx');
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
 
+    const data = xlsx.utils.sheet_to_json(sheet);
+    if (data.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El archivo Excel está vacío.' });
+    }
 
+    let procesados = 0;
+    let omitidos = 0;
+    const detalles = [];
+    const errores = [];
+
+    for (const row of data) {
+      // Buscar columnas con flexibilidad de nombre
+      const codigo = row['Codigo'] || row['codigo'] || row['CODIGO'] || row['Código'] || row['Cod'] || row['cod'] || row['COD'];
+      const peso = row['Peso'] || row['peso'] || row['PESO'] || row['Kilos'] || row['kilos'] || row['KILOS'] || row['kg'] || row['Kg'];
+
+      if (!codigo) {
+        omitidos++;
+        continue;
+      }
+
+      const valorPeso = parseFloat(peso);
+      if (isNaN(valorPeso) || valorPeso <= 0) {
+        omitidos++;
+        continue;
+      }
+
+      const codigoStr = String(codigo).trim();
+
+      // Buscar el producto
+      const producto = await Producto.findByPk(codigoStr, { transaction });
+      if (!producto) {
+        errores.push(`Código ${codigoStr}: producto no encontrado`);
+        omitidos++;
+        continue;
+      }
+
+      // Reemplazar kilos_block con el valor del Excel
+      producto.kilos_block = valorPeso;
+      await producto.save({ transaction });
+
+      detalles.push({
+        codigo: codigoStr,
+        nombre: producto.nombre,
+        peso_sumado: valorPeso,
+        kilos_block_nuevo: parseFloat(producto.kilos_block)
+      });
+
+      procesados++;
+    }
+
+    await transaction.commit();
+
+    res.json({
+      mensaje: `Carga de stock procesada. ${procesados} producto(s) actualizados, ${omitidos} fila(s) omitidas.`,
+      procesados,
+      omitidos,
+      errores: errores.length > 0 ? errores : undefined,
+      detalles
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al cargar stock desde Excel:', error);
+    res.status(500).json({ error: 'Error interno al procesar la carga de stock.' });
+  }
+};

@@ -156,6 +156,32 @@ const ProductoPedido = sequelize.define('ProductoPedido', {
   timestamps: false
 });
 
+const DescuentoStock = sequelize.define('DescuentoStock', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  id_pedido: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'pedidos',
+      key: 'id'
+    }
+  },
+  codigo_producto: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'productos',
+      key: 'codigo'
+    }
+  },
+  peso_descontado: { type: DataTypes.DECIMAL(10, 3), allowNull: false },
+  campo_descontado: { type: DataTypes.STRING, allowNull: false }, // 'kg_fraccionados' o 'kilos_block'
+  fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, {
+  tableName: 'descuento_stocks',
+  timestamps: false
+});
+
 // Relaciones
 Producto.hasMany(Proceso, { foreignKey: 'codigo' });
 Proceso.belongsTo(Producto, { foreignKey: 'codigo' });
@@ -184,6 +210,12 @@ IngresoRecorte.belongsTo(Sucursal, { foreignKey: 'id_sucursal', as: 'Sucursal' }
 Producto.hasMany(IngresoRecorte, { foreignKey: 'id_producto', as: 'IngresosRecortes' });
 IngresoRecorte.belongsTo(Producto, { foreignKey: 'id_producto', as: 'Producto' });
 
+Pedido.hasMany(DescuentoStock, { foreignKey: 'id_pedido', as: 'Descuentos' });
+DescuentoStock.belongsTo(Pedido, { foreignKey: 'id_pedido', as: 'Pedido' });
+
+Producto.hasMany(DescuentoStock, { foreignKey: 'codigo_producto', as: 'DescuentosStock' });
+DescuentoStock.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'ProductoDesc' });
+
 module.exports = {
   sequelize,
   Producto,
@@ -193,6 +225,7 @@ module.exports = {
   Proceso,
   Fraccionado,
   Pedido,
-  ProductoPedido
+  ProductoPedido,
+  DescuentoStock
 };
 

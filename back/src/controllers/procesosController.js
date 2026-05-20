@@ -98,8 +98,17 @@ exports.crearProceso = async (req, res) => {
     producto.kg_decomiso = (parseFloat(producto.kg_decomiso) || 0) + valDecomiso;
 
     // 2. Restar peso bruto de kilos_block
+    let descuentoBlock = valPesoBruto;
+    const esConvertible = await Fraccionado.count({
+      where: { codigo_producto_original: codigo },
+      transaction
+    });
+    if (esConvertible === 0) {
+      descuentoBlock = 0; // No descontar si no es un código convertible
+    }
+
     const blockActual = parseFloat(producto.kilos_block) || 0;
-    producto.kilos_block = blockActual - valPesoBruto;
+    producto.kilos_block = blockActual - descuentoBlock;
 
     // 3. Restar piezas de cantidad_piezas
     const piezasActual = parseInt(producto.cantidad_piezas, 10) || 0;
@@ -207,9 +216,18 @@ exports.eliminarProceso = async (req, res) => {
       producto.kg_recorte = Math.max(0, recorteActual - valRecorte);
       producto.kg_decomiso = Math.max(0, decomisoActual - valDecomiso);
 
-      // 2. Sumar peso_bruto a kilos_block
+      // 2. Sumar peso_bruto a kilos_block (restaurar)
+      let sumarBlock = valPesoBruto;
+      const esConvertible = await Fraccionado.count({
+        where: { codigo_producto_original: proceso.codigo },
+        transaction
+      });
+      if (esConvertible === 0) {
+        sumarBlock = 0; // No sumar porque no se había descontado
+      }
+
       const blockActual = parseFloat(producto.kilos_block) || 0;
-      producto.kilos_block = blockActual + valPesoBruto;
+      producto.kilos_block = blockActual + sumarBlock;
 
       // 3. Sumar piezas a cantidad_piezas
       const piezasActual = parseInt(producto.cantidad_piezas, 10) || 0;
