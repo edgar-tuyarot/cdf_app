@@ -15,11 +15,15 @@ const authStore = useAuthStore()
 
 const allMenuItems = [
   { name: 'Productos', path: '/productos', icon: 'ph-package', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+  { name: 'Vencimientos', path: '/vencimientos', icon: 'ph-calendar', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
   { name: 'Procesos', path: '/procesos', icon: 'ph-arrows-clockwise', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
+  { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
   { name: 'Pedidos', path: '/pedidos', icon: 'ph-shopping-cart', roles: ['Admin', 'Referente', 'Preparador'] },
   { name: 'Top Productos', path: '/top-productos', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Preparador'] },
+  { name: 'Reporte Producción', path: '/reporte-produccion', icon: 'ph-chart-line', roles: ['Admin', 'Referente'] },
   { name: 'Recortes', path: '/recortes', icon: 'ph-scissors', roles: ['Admin', 'Referente'] },
   { name: 'Ingreso Recortes', path: '/ingreso-recortes', icon: 'ph-plus-circle', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+  { name: 'Ingreso Proveedores', path: '/ingreso-proveedores', icon: 'ph-truck', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
   { name: 'Decomisos', path: '/decomisos', icon: 'ph-trash', roles: ['Admin', 'Referente'] },
   { name: 'Colaboradores', path: '/colaboradores', icon: 'ph-users', roles: ['Admin'] },
   { name: 'Sucursales', path: '/sucursales', icon: 'ph-storefront', roles: ['Admin'] },

@@ -24,9 +24,21 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
     },
     {
+      path: '/vencimientos',
+      name: 'vencimientos',
+      component: () => import('../views/Vencimientos.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+    },
+    {
       path: '/procesos',
       name: 'procesos',
       component: () => import('../views/Procesos.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
+    },
+    {
+      path: '/conversiones',
+      name: 'conversiones',
+      component: () => import('../views/Conversiones.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
     },
     {
@@ -42,6 +54,12 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador'] },
     },
     {
+      path: '/reporte-produccion',
+      name: 'reporte-produccion',
+      component: () => import('../views/ReporteProduccion.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
+    },
+    {
       path: '/recortes',
       name: 'recortes',
       component: () => import('../views/Recortes.vue'),
@@ -51,6 +69,12 @@ const router = createRouter({
       path: '/ingreso-recortes',
       name: 'ingreso-recortes',
       component: () => import('../views/RecepcionRecortes.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+    },
+    {
+      path: '/ingreso-proveedores',
+      name: 'ingreso-proveedores',
+      component: () => import('../views/IngresoProveedores.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
     },
     {

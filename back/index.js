@@ -16,6 +16,7 @@ const pedidosRoutes = require('./src/routes/pedidos');
 const colaboradoresRoutes = require('./src/routes/colaboradores');
 const sucursalesRoutes = require('./src/routes/sucursales');
 const ingresoRecortesRoutes = require('./src/routes/ingresoRecortes');
+const reportesRoutes = require('./src/routes/reportes');
 
 app.use('/api/productos', productosRoutes);
 app.use('/api/procesos', procesosRoutes);
@@ -24,6 +25,7 @@ app.use('/api/pedidos', pedidosRoutes);
 app.use('/api/colaboradores', colaboradoresRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/ingreso-recortes', ingresoRecortesRoutes);
+app.use('/api/reportes', reportesRoutes);
 
 
 // Arrancar servidor

@@ -16,6 +16,9 @@ router.post('/convertir-recorte', productosController.convertirRecorte);
 router.post('/ingresar-recorte', productosController.ingresarRecorte);
 router.get('/decomisos', productosController.obtenerDecomisos);
 router.post('/descontar-decomiso', productosController.descontarDecomiso);
+router.get('/vencimientos-cercanos', productosController.obtenerVencimientosCercanos);
+router.post('/ingresar-proveedor', productosController.ingresarProveedor);
+router.get('/ingresos-proveedores', productosController.obtenerIngresosProveedores);
 router.put('/:id', productosController.actualizarProducto);
 router.delete('/:id', productosController.eliminarProducto);
 

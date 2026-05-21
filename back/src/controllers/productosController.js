@@ -1,9 +1,16 @@
-const { Producto, sequelize } = require('../models');
+const { Producto, ProductoVencimiento, IngresoProveedor, sequelize } = require('../models');
 
 // Obtener todos los productos
 exports.obtenerProductos = async (req, res) => {
   try {
-    const productos = await Producto.findAll();
+    const productos = await Producto.findAll({
+      include: [
+        {
+          model: ProductoVencimiento,
+          as: 'vencimientosList'
+        }
+      ]
+    });
     res.json(productos);
   } catch (error) {
     console.error('Error al obtener productos:', error);
@@ -13,19 +20,29 @@ exports.obtenerProductos = async (req, res) => {
 
 // Crear un nuevo producto
 exports.crearProducto = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const { 
       codigo, nombre, kilos_block, peso_x_pieza, cantidad_piezas, 
-      vencimientos, kg_x_bolsita, kg_fraccionados, kg_decomiso, kg_recorte 
+      vencimientos, kg_x_bolsita, kg_fraccionados, kg_decomiso, kg_recorte,
+      vencimientosList
     } = req.body;
 
     if (!codigo || !nombre) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'codigo y nombre son obligatorios' });
     }
 
-    const existe = await Producto.findByPk(codigo);
+    const existe = await Producto.findByPk(codigo, { transaction });
     if (existe) {
+      await transaction.rollback();
       return res.status(400).json({ error: 'Ya existe un producto con ese código' });
+    }
+
+    // Sum pieces across vencimientosList if provided
+    let calculatedPieces = cantidad_piezas || 0;
+    if (Array.isArray(vencimientosList) && vencimientosList.length > 0) {
+      calculatedPieces = vencimientosList.reduce((acc, curr) => acc + (parseInt(curr.piezas, 10) || 0), 0);
     }
 
     const nuevoProducto = await Producto.create({
@@ -33,19 +50,42 @@ exports.crearProducto = async (req, res) => {
       nombre,
       kilos_block,
       peso_x_pieza,
-      cantidad_piezas,
+      cantidad_piezas: calculatedPieces,
       vencimientos,
       kg_x_bolsita,
       kg_fraccionados,
       kg_decomiso,
       kg_recorte
+    }, { transaction });
+
+    if (Array.isArray(vencimientosList) && vencimientosList.length > 0) {
+      const activeVencimientos = vencimientosList
+        .filter(v => v.vencimiento && (parseInt(v.piezas, 10) || 0) > 0)
+        .map(v => ({
+          codigo_producto: codigo,
+          vencimiento: v.vencimiento,
+          piezas: parseInt(v.piezas, 10) || 0
+        }));
+      if (activeVencimientos.length > 0) {
+        await ProductoVencimiento.bulkCreate(activeVencimientos, { transaction });
+      }
+    }
+
+    await transaction.commit();
+
+    // Fetch product with vencimientos list to return complete data
+    const finalProduct = await Producto.findByPk(codigo, {
+      include: [{ model: ProductoVencimiento, as: 'vencimientosList' }]
     });
 
     res.status(201).json({
       mensaje: 'Producto creado exitosamente',
-      producto: nuevoProducto
+      producto: finalProduct
     });
   } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     console.error('Error al crear producto:', error);
     res.status(500).json({ error: 'Error al crear el producto' });
   }
@@ -53,21 +93,66 @@ exports.crearProducto = async (req, res) => {
 
 // Actualizar producto
 exports.actualizarProducto = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const { id } = req.params; // codigo
-    const producto = await Producto.findByPk(id);
+    const producto = await Producto.findByPk(id, { transaction });
     
     if (!producto) {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    await producto.update(req.body);
+    const { vencimientosList, ...otherFields } = req.body;
+
+    // Check if vencimientosList is provided
+    if (vencimientosList !== undefined) {
+      // Delete existing vencimientos
+      await ProductoVencimiento.destroy({
+        where: { codigo_producto: id },
+        transaction
+      });
+
+      // Filter and insert new vencimientos
+      let calculatedPieces = 0;
+      if (Array.isArray(vencimientosList) && vencimientosList.length > 0) {
+        const activeVencimientos = vencimientosList
+          .filter(v => v.vencimiento && (parseInt(v.piezas, 10) || 0) > 0)
+          .map(v => {
+            const piezasCount = parseInt(v.piezas, 10) || 0;
+            calculatedPieces += piezasCount;
+            return {
+              codigo_producto: id,
+              vencimiento: v.vencimiento,
+              piezas: piezasCount
+            };
+          });
+
+        if (activeVencimientos.length > 0) {
+          await ProductoVencimiento.bulkCreate(activeVencimientos, { transaction });
+        }
+      }
+
+      // Override/update cantidad_piezas in otherFields or set it directly
+      otherFields.cantidad_piezas = calculatedPieces;
+    }
+
+    await producto.update(otherFields, { transaction });
+    await transaction.commit();
+
+    // Fetch updated product with associations
+    const finalProduct = await Producto.findByPk(id, {
+      include: [{ model: ProductoVencimiento, as: 'vencimientosList' }]
+    });
 
     res.json({
       mensaje: 'Producto actualizado exitosamente',
-      producto
+      producto: finalProduct
     });
   } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
     console.error('Error al actualizar producto:', error);
     res.status(500).json({ error: 'Error al actualizar el producto' });
   }
@@ -481,5 +566,145 @@ exports.cargarStockExcel = async (req, res) => {
     }
     console.error('Error al cargar stock desde Excel:', error);
     res.status(500).json({ error: 'Error interno al procesar la carga de stock.' });
+  }
+};
+
+// Obtener todos los vencimientos ordenados de forma ascendente con detalles del producto
+exports.obtenerVencimientosCercanos = async (req, res) => {
+  try {
+    const vencimientos = await ProductoVencimiento.findAll({
+      include: [
+        {
+          model: Producto,
+          as: 'producto',
+          attributes: ['nombre', 'peso_x_pieza', 'kilos_block']
+        }
+      ],
+      order: [['vencimiento', 'ASC']]
+    });
+    res.json(vencimientos);
+  } catch (error) {
+    console.error('Error al obtener vencimientos cercanos:', error);
+    res.status(500).json({ error: 'Error al obtener los vencimientos' });
+  }
+};
+
+// Registrar ingreso de piezas desde proveedor con vencimiento (Persistido históricamente en ingreso_proveedores)
+exports.ingresarProveedor = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { codigo, piezas, vencimiento, proveedor } = req.body;
+
+    if (!codigo || piezas === undefined || piezas === null || !vencimiento) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El código del producto, la cantidad de piezas y la fecha de vencimiento son obligatorios.' });
+    }
+
+    const valorPiezas = parseInt(piezas, 10);
+    if (isNaN(valorPiezas) || valorPiezas <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'La cantidad de piezas debe ser un número entero mayor a cero.' });
+    }
+
+    // 1. Buscar el producto
+    const producto = await Producto.findByPk(codigo, { transaction });
+    if (!producto) {
+      await transaction.rollback();
+      return res.status(404).json({ error: `El producto con código ${codigo} no existe en el catálogo.` });
+    }
+
+    // Calcular el peso a sumar a kilos_block: piezas * peso_x_pieza
+    const pesoPieza = parseFloat(producto.peso_x_pieza) || 0;
+    const kilosBlockActual = parseFloat(producto.kilos_block) || 0;
+    const kilosASumar = valorPiezas * pesoPieza;
+
+    // 2. Crear la fila de auditoría persistente en la tabla ingreso_proveedores
+    const nuevoIngreso = await IngresoProveedor.create({
+      proveedor: proveedor || 'Proveedor Anónimo',
+      codigo_producto: codigo,
+      piezas: valorPiezas,
+      vencimiento: vencimiento,
+      peso_calculado: kilosASumar,
+      fecha: new Date()
+    }, { transaction });
+
+    // 3. Incrementar la cantidad total de piezas y el peso en block del producto
+    producto.cantidad_piezas = (parseInt(producto.cantidad_piezas, 10) || 0) + valorPiezas;
+    producto.kilos_block = kilosBlockActual + kilosASumar;
+    await producto.save({ transaction });
+
+    // 4. Buscar o crear el vencimiento en la tabla de producto_vencimientos
+    let prodVencimiento = await ProductoVencimiento.findOne({
+      where: {
+        codigo_producto: codigo,
+        vencimiento: vencimiento
+      },
+      transaction
+    });
+
+    if (prodVencimiento) {
+      prodVencimiento.piezas = (parseInt(prodVencimiento.piezas, 10) || 0) + valorPiezas;
+      await prodVencimiento.save({ transaction });
+    } else {
+      prodVencimiento = await ProductoVencimiento.create({
+        codigo_producto: codigo,
+        vencimiento: vencimiento,
+        piezas: valorPiezas
+      }, { transaction });
+    }
+
+    // 5. Crear un registro en la tabla de procesos como trazabilidad complementaria en el historial general
+    const { Proceso } = require('../models');
+    await Proceso.create({
+      colaborador: proveedor ? `Proveedor: ${proveedor}` : 'Proveedor Anónimo',
+      proceso: 'Ingreso Proveedor',
+      fecha: new Date(),
+      codigo: codigo,
+      piezas: valorPiezas,
+      peso_bruto: kilosASumar,
+      recorte: 0,
+      decomiso: 0,
+      kg_a_desc: 0,
+      kg_a_sumar: kilosASumar
+    }, { transaction });
+
+    await transaction.commit();
+
+    // Buscar el producto con sus vencimientos actualizados para retornar
+    const finalProduct = await Producto.findByPk(codigo, {
+      include: [{ model: ProductoVencimiento, as: 'vencimientosList' }]
+    });
+
+    res.status(201).json({
+      mensaje: 'Ingreso de proveedor procesado y persistido exitosamente',
+      ingreso: nuevoIngreso,
+      producto: finalProduct
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al ingresar piezas de proveedor:', error);
+    res.status(500).json({ error: 'Error interno al registrar el ingreso del proveedor' });
+  }
+};
+
+// Obtener todos los ingresos de proveedores para trazabilidad en el historial
+exports.obtenerIngresosProveedores = async (req, res) => {
+  try {
+    const ingresos = await IngresoProveedor.findAll({
+      include: [
+        {
+          model: Producto,
+          as: 'Producto',
+          attributes: ['nombre']
+        }
+      ],
+      order: [['fecha', 'DESC']]
+    });
+    res.json(ingresos);
+  } catch (error) {
+    console.error('Error al obtener ingresos de proveedores:', error);
+    res.status(500).json({ error: 'Error al obtener los ingresos de proveedores' });
   }
 };

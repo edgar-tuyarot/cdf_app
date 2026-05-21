@@ -98,7 +98,17 @@
               <td class="text-right">{{ p.kilos_block }}</td>
               <td class="text-right">{{ p.peso_x_pieza }}</td>
               <td class="text-center">{{ p.cantidad_piezas }}</td>
-              <td class="text-center">{{ p.vencimientos || '-' }}</td>
+              <td class="text-center">
+                <div v-if="p.vencimientosList && p.vencimientosList.length > 0" style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                  <span v-for="v in p.vencimientosList.slice(0, 2)" :key="v.id" class="badge" style="font-size: 0.75rem; padding: 2px 4px; font-family: monospace; background: var(--bg-primary); border: 1px solid var(--bevel-dark); color: var(--text-primary);">
+                    {{ v.vencimiento }} ({{ v.piezas }} pz)
+                  </span>
+                  <span v-if="p.vencimientosList.length > 2" style="font-size: 0.7rem; color: var(--text-muted); font-style: italic;">
+                    +{{ p.vencimientosList.length - 2 }} más
+                  </span>
+                </div>
+                <span v-else>-</span>
+              </td>
               <td class="text-right">{{ p.kg_x_bolsita }}</td>
               <td class="text-right">{{ p.kg_fraccionados }}</td>
               <td class="text-right">{{ p.kg_decomiso }}</td>
@@ -153,8 +163,8 @@
                 </div>
                 
                 <div class="form-group">
-                  <label class="form-label">Vencimientos</label>
-                  <input type="text" v-model="form.vencimientos" class="form-control" placeholder="Ej: 04/09" />
+                  <label class="form-label">Cant. Piezas (Auto)</label>
+                  <input type="number" :value="formTotalPieces" class="form-control" disabled />
                 </div>
 
                 <div class="form-group">
@@ -167,9 +177,46 @@
                   <input type="number" step="0.001" v-model="form.peso_x_pieza" class="form-control" />
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label">Cant. Piezas</label>
-                  <input type="number" v-model="form.cantidad_piezas" class="form-control" />
+                <!-- Tabla de Vencimientos -->
+                <div class="form-group" style="grid-column: span 2; border-top: 1px solid var(--bevel-dark); padding-top: 0.5rem; margin-top: 0.5rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <label class="form-label" style="margin-bottom: 0;">Lotes de Vencimiento y Piezas</label>
+                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.75rem;" @click="agregarVencimientoRow">
+                      <i class="ph ph-plus"></i> Agregar Vencimiento
+                    </button>
+                  </div>
+                  
+                  <div class="table-container" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--bevel-dark); margin-bottom: 0.5rem; background: var(--bg-window);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                      <thead>
+                        <tr style="background: var(--bg-secondary); position: sticky; top: 0; z-index: 10;">
+                          <th style="padding: 4px; text-align: left; border-bottom: 1px solid var(--bevel-dark);">Fecha de Vencimiento</th>
+                          <th style="padding: 4px; text-align: right; width: 100px; border-bottom: 1px solid var(--bevel-dark);">Piezas</th>
+                          <th style="padding: 4px; text-align: center; width: 60px; border-bottom: 1px solid var(--bevel-dark);">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(v, index) in form.vencimientosList" :key="index">
+                          <td style="padding: 2px;">
+                            <input type="date" v-model="v.vencimiento" class="form-control" style="padding: 2px 4px; font-size: 0.8rem; height: 26px;" required />
+                          </td>
+                          <td style="padding: 2px;">
+                            <input type="number" min="1" v-model.number="v.piezas" class="form-control text-right" style="padding: 2px 4px; font-size: 0.8rem; height: 26px;" required />
+                          </td>
+                          <td style="padding: 2px; text-align: center;">
+                            <button type="button" class="icon-btn" style="padding: 2px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;" @click="eliminarVencimientoRow(index)">
+                              <i class="ph ph-trash text-red" style="font-size: 0.9rem;"></i>
+                            </button>
+                          </td>
+                        </tr>
+                        <tr v-if="!form.vencimientosList || form.vencimientosList.length === 0">
+                          <td colspan="3" style="text-align: center; padding: 8px; color: var(--text-muted); font-style: italic;">
+                            Sin vencimientos registrados. Haga clic en Agregar Vencimiento.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <div class="form-group">
@@ -310,6 +357,7 @@ const defaultForm = {
   peso_x_pieza: 0,
   cantidad_piezas: 0,
   vencimientos: '',
+  vencimientosList: [],
   kg_x_bolsita: 0,
   kg_fraccionados: 0,
   kg_decomiso: 0,
@@ -317,6 +365,23 @@ const defaultForm = {
 }
 
 const form = ref({ ...defaultForm })
+
+// reactive sum of pieces in the modal list
+const formTotalPieces = computed(() => {
+  if (!form.value.vencimientosList || !Array.isArray(form.value.vencimientosList)) return 0
+  return form.value.vencimientosList.reduce((acc, curr) => acc + (parseInt(curr.piezas, 10) || 0), 0)
+})
+
+const agregarVencimientoRow = () => {
+  if (!form.value.vencimientosList) {
+    form.value.vencimientosList = []
+  }
+  form.value.vencimientosList.push({ vencimiento: '', piezas: 1 })
+}
+
+const eliminarVencimientoRow = (index) => {
+  form.value.vencimientosList.splice(index, 1)
+}
 
 const showAlert = (msg, type = 'success') => {
   alert.value = { show: true, message: msg, type }
@@ -343,21 +408,28 @@ const fetchProductos = async () => {
 const openModal = (producto = null) => {
   if (producto) {
     isEditing.value = true
-    form.value = { ...producto }
+    form.value = { 
+      ...producto,
+      vencimientosList: producto.vencimientosList ? [...producto.vencimientosList] : []
+    }
   } else {
     isEditing.value = false
-    form.value = { ...defaultForm }
+    form.value = { ...defaultForm, vencimientosList: [] }
   }
   showModal.value = true
 }
 
 const closeModal = () => {
   showModal.value = false
-  form.value = { ...defaultForm }
+  form.value = { ...defaultForm, vencimientosList: [] }
 }
 
 const saveProducto = async () => {
   saving.value = true
+  
+  // Set calculated pieces count
+  form.value.cantidad_piezas = formTotalPieces.value
+  
   const url = isEditing.value ? `/api/productos/${form.value.codigo}` : '/api/productos'
   const method = isEditing.value ? 'PUT' : 'POST'
   
@@ -373,7 +445,8 @@ const saveProducto = async () => {
       closeModal()
       fetchProductos()
     } else {
-      showAlert('Error al guardar producto', 'error')
+      const errData = await res.json().catch(() => ({}))
+      showAlert(errData.error || 'Error al guardar producto', 'error')
     }
   } catch (error) {
     console.error('Error saving:', error)

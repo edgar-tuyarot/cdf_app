@@ -182,6 +182,45 @@ const DescuentoStock = sequelize.define('DescuentoStock', {
   timestamps: false
 });
 
+const ProductoVencimiento = sequelize.define('ProductoVencimiento', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  codigo_producto: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'productos',
+      key: 'codigo'
+    },
+    onDelete: 'CASCADE'
+  },
+  vencimiento: { type: DataTypes.DATEONLY, allowNull: false },
+  piezas: { type: DataTypes.INTEGER, defaultValue: 0 }
+}, {
+  tableName: 'producto_vencimientos',
+  timestamps: false
+});
+
+const IngresoProveedor = sequelize.define('IngresoProveedor', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  proveedor: { type: DataTypes.STRING, allowNull: true },
+  codigo_producto: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'productos',
+      key: 'codigo'
+    },
+    onDelete: 'CASCADE'
+  },
+  piezas: { type: DataTypes.INTEGER, allowNull: false },
+  vencimiento: { type: DataTypes.DATEONLY, allowNull: false },
+  peso_calculado: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 }
+}, {
+  tableName: 'ingreso_proveedores',
+  timestamps: false
+});
+
 // Relaciones
 Producto.hasMany(Proceso, { foreignKey: 'codigo' });
 Proceso.belongsTo(Producto, { foreignKey: 'codigo' });
@@ -216,6 +255,12 @@ DescuentoStock.belongsTo(Pedido, { foreignKey: 'id_pedido', as: 'Pedido' });
 Producto.hasMany(DescuentoStock, { foreignKey: 'codigo_producto', as: 'DescuentosStock' });
 DescuentoStock.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'ProductoDesc' });
 
+Producto.hasMany(ProductoVencimiento, { foreignKey: 'codigo_producto', as: 'vencimientosList', onDelete: 'CASCADE' });
+ProductoVencimiento.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'producto' });
+
+Producto.hasMany(IngresoProveedor, { foreignKey: 'codigo_producto', as: 'IngresosProveedores', onDelete: 'CASCADE' });
+IngresoProveedor.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'Producto' });
+
 module.exports = {
   sequelize,
   Producto,
@@ -226,6 +271,8 @@ module.exports = {
   Fraccionado,
   Pedido,
   ProductoPedido,
-  DescuentoStock
+  DescuentoStock,
+  ProductoVencimiento,
+  IngresoProveedor
 };
 

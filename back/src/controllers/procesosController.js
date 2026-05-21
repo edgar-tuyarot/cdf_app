@@ -1,4 +1,4 @@
-const { Proceso, Producto, Fraccionado, Colaborador, sequelize } = require('../models');
+const { Proceso, Producto, Fraccionado, Colaborador, ProductoVencimiento, sequelize } = require('../models');
 
 // Obtener todos los procesos (con datos del producto asociado)
 exports.obtenerProcesos = async (req, res) => {
@@ -113,6 +113,29 @@ exports.crearProceso = async (req, res) => {
     // 3. Restar piezas de cantidad_piezas
     const piezasActual = parseInt(producto.cantidad_piezas, 10) || 0;
     producto.cantidad_piezas = Math.max(0, piezasActual - valPiezas);
+
+    // FIFO deduction on ProductoVencimiento
+    if (valPiezas > 0) {
+      const vencimientos = await ProductoVencimiento.findAll({
+        where: { codigo_producto: codigo },
+        order: [['vencimiento', 'ASC']],
+        transaction
+      });
+
+      let remainingToDeduct = valPiezas;
+      for (const v of vencimientos) {
+        if (remainingToDeduct <= 0) break;
+        const currentPiezas = parseInt(v.piezas, 10) || 0;
+        if (currentPiezas <= remainingToDeduct) {
+          remainingToDeduct -= currentPiezas;
+          await v.destroy({ transaction });
+        } else {
+          v.piezas = currentPiezas - remainingToDeduct;
+          remainingToDeduct = 0;
+          await v.save({ transaction });
+        }
+      }
+    }
 
     await producto.save({ transaction });
 
@@ -232,6 +255,34 @@ exports.eliminarProceso = async (req, res) => {
       // 3. Sumar piezas a cantidad_piezas
       const piezasActual = parseInt(producto.cantidad_piezas, 10) || 0;
       producto.cantidad_piezas = piezasActual + valPiezas;
+
+      // Restore pieces in ProductoVencimiento
+      if (valPiezas > 0) {
+        const oldestVencimiento = await ProductoVencimiento.findOne({
+          where: { codigo_producto: proceso.codigo },
+          order: [['vencimiento', 'ASC']],
+          transaction
+        });
+
+        if (oldestVencimiento) {
+          oldestVencimiento.piezas = (parseInt(oldestVencimiento.piezas, 10) || 0) + valPiezas;
+          await oldestVencimiento.save({ transaction });
+        } else {
+          // If no batch exists, create a default one expiring in 30 days
+          const defaultDate = new Date();
+          defaultDate.setDate(defaultDate.getDate() + 30);
+          const yyyy = defaultDate.getFullYear();
+          const mm = String(defaultDate.getMonth() + 1).padStart(2, '0');
+          const dd = String(defaultDate.getDate()).padStart(2, '0');
+          const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+          await ProductoVencimiento.create({
+            codigo_producto: proceso.codigo,
+            vencimiento: formattedDate,
+            piezas: valPiezas
+          }, { transaction });
+        }
+      }
 
       await producto.save({ transaction });
     }
