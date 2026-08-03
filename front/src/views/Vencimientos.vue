@@ -43,11 +43,21 @@
 
     <!-- Listado de Vencimientos -->
     <div class="card">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <span class="card-title">Cronograma de Vencimientos Activos</span>
-        <span class="badge-total" v-if="!loading">
-          {{ filteredVencimientos.length }} lotes encontrados
-        </span>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button 
+            v-if="!loading && filteredVencimientos.length > 0"
+            class="btn btn-secondary" 
+            style="height: 26px; font-size: 0.8rem; display: flex; align-items: center; gap: 0.25rem; padding: 0 0.5rem; background: #1f7244; color: white; border: 1px solid #165230;" 
+            @click="exportToExcel"
+          >
+            <i class="ph ph-file-xls" style="font-size: 1rem;"></i> Exportar a Excel
+          </button>
+          <span class="badge-total" v-if="!loading">
+            {{ filteredVencimientos.length }} lotes encontrados
+          </span>
+        </div>
       </div>
       
       <div class="table-container">
@@ -116,6 +126,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import * as XLSX from 'xlsx'
 
 const vencimientos = ref([])
 const loading = ref(true)
@@ -223,6 +234,40 @@ const filteredVencimientos = computed(() => {
 
   return result
 })
+
+const exportToExcel = () => {
+  if (filteredVencimientos.value.length === 0) return
+
+  // 1. Mapear y formatear columnas deseadas
+  const dataToExport = filteredVencimientos.value.map(v => ({
+    'Código Producto': v.codigo_producto,
+    'Nombre del Producto': v.producto?.nombre || 'Desconocido',
+    'Piezas': parseInt(v.piezas, 10) || 0,
+    'Fecha de Vencimiento': v.vencimiento,
+    'Kilos Est. Expira (kg)': parseFloat(calcularKilosEst(v)).toFixed(3),
+    'Estado': getDaysRemaining(v.vencimiento).label
+  }))
+
+  // 2. Crear libro y hoja Excel
+  const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Vencimientos')
+
+  // Ajustar anchos de columnas de forma inteligente para que sea legible
+  const maxCodeLen = Math.max(...dataToExport.map(d => String(d['Código Producto']).length), 16)
+  const maxNameLen = Math.max(...dataToExport.map(d => String(d['Nombre del Producto']).length), 26)
+  worksheet['!cols'] = [
+    { wch: maxCodeLen },
+    { wch: maxNameLen },
+    { wch: 10 }, // Piezas
+    { wch: 22 }, // Fecha de Vencimiento
+    { wch: 22 }, // Kilos Est. Expira (kg)
+    { wch: 12 }  // Estado
+  ]
+
+  // 3. Escribir y descargar el archivo
+  XLSX.writeFile(workbook, `Vencimientos_${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
 
 onMounted(() => {
   fetchVencimientos()

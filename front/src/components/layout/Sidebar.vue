@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 
@@ -13,29 +13,124 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
-const allMenuItems = [
-  { name: 'Productos', path: '/productos', icon: 'ph-package', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
-  { name: 'Vencimientos', path: '/vencimientos', icon: 'ph-calendar', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
-  { name: 'Procesos', path: '/procesos', icon: 'ph-arrows-clockwise', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
-  { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
-  { name: 'Pedidos', path: '/pedidos', icon: 'ph-shopping-cart', roles: ['Admin', 'Referente', 'Preparador'] },
-  { name: 'Top Productos', path: '/top-productos', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Preparador'] },
-  { name: 'Reporte Producción', path: '/reporte-produccion', icon: 'ph-chart-line', roles: ['Admin', 'Referente'] },
-  { name: 'Recortes', path: '/recortes', icon: 'ph-scissors', roles: ['Admin', 'Referente'] },
-  { name: 'Ingreso Recortes', path: '/ingreso-recortes', icon: 'ph-plus-circle', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
-  { name: 'Ingreso Proveedores', path: '/ingreso-proveedores', icon: 'ph-truck', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
-  { name: 'Decomisos', path: '/decomisos', icon: 'ph-trash', roles: ['Admin', 'Referente'] },
-  { name: 'Colaboradores', path: '/colaboradores', icon: 'ph-users', roles: ['Admin'] },
-  { name: 'Sucursales', path: '/sucursales', icon: 'ph-storefront', roles: ['Admin'] },
+// Agrupamiento por familias de acciones (Inventario, Producción, Comercial, Reportes y Configuración)
+const groups = [
+  {
+    name: 'Inventario',
+    icon: 'ph-package',
+    items: [
+      { name: 'Productos', path: '/productos', icon: 'ph-package', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+      { name: 'Ingreso Mercadería', path: '/ingresos', icon: 'ph-download-simple', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Historial de Stock', path: '/movimientos-stock', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente'] },
+      { name: 'Vencimientos', path: '/vencimientos', icon: 'ph-calendar', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Control de Piezas', path: '/control-piezas', icon: 'ph-barcode', roles: ['Admin', 'Referente'] },
+    ]
+  },
+  {
+    name: 'Producción',
+    icon: 'ph-arrows-clockwise',
+    items: [
+      { name: 'Procesos', path: '/procesos', icon: 'ph-arrows-clockwise', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
+      { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
+      { name: 'Ingreso Recortes', path: '/ingreso-recortes', icon: 'ph-plus-circle', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+      { name: 'Recortes', path: '/recortes', icon: 'ph-scissors', roles: ['Admin', 'Referente'] },
+      { name: 'Decomisos', path: '/decomisos', icon: 'ph-trash', roles: ['Admin', 'Referente'] },
+    ]
+  },
+  {
+    name: 'Pedidos',
+    icon: 'ph-shopping-cart',
+    items: [
+      { name: 'Preparar', path: '/preparar', icon: 'ph-hourglass', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
+      { name: 'Ver Todos', path: '/pedidos', icon: 'ph-shopping-cart', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
+      { name: 'Cargar Pedido', path: '/crear-pedido-sucursal', icon: 'ph-file-plus', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+      { name: 'Demanda Pendiente', path: '/demanda-pendiente', icon: 'ph-clipboard-text', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    ]
+  },
+  {
+    name: 'Configuración',
+    icon: 'ph-gear',
+    items: [
+      { name: 'Colaboradores', path: '/colaboradores', icon: 'ph-users', roles: ['Admin'] },
+      { name: 'Sucursales', path: '/sucursales', icon: 'ph-storefront', roles: ['Admin'] },
+      { name: 'Proveedores', path: '/proveedores', icon: 'ph-handshake', roles: ['Admin'] },
+      { name: 'Bultos', path: '/bultos', icon: 'ph-package', roles: ['Admin'] },
+      { name: 'Ubicaciones', path: '/ubicaciones', icon: 'ph-map-pin', roles: ['Admin'] },
+      { name: 'Usuarios', path: '/usuarios', icon: 'ph-user-gear', roles: ['Admin'] },
+      { name: 'Permisos de Roles', path: '/permisos', icon: 'ph-shield-check', roles: ['Admin'] },
+    ]
+  }
 ]
 
-const menuItems = computed(() => {
-  const userRole = authStore.user?.rol?.toLowerCase() || 'feteador'
-  if (userRole === 'admin') return allMenuItems
-  return allMenuItems.filter(item => {
-    const rolesLower = item.roles.map(r => r.toLowerCase())
-    return rolesLower.includes(userRole)
+// Determinar qué grupo debe estar abierto inicialmente basado en la ruta activa
+const getInitialOpenState = () => {
+  const state = {}
+  groups.forEach(g => {
+    state[g.name] = false
   })
+  
+  // Buscar qué grupo tiene la ruta activa
+  for (const group of groups) {
+    const hasActiveItem = group.items.some(item => {
+      if (item.path === '/') return route.path === '/'
+      return route.path === item.path || (route.path.startsWith(item.path + '/') && item.path !== '/')
+    })
+    if (hasActiveItem) {
+      state[group.name] = true
+      return state
+    }
+  }
+  
+  // Por defecto, si no coincide ninguno (ej: dashboard), abrimos el primero
+  if (groups.length > 0) {
+    state[groups[0].name] = true
+  }
+  return state
+}
+
+// Estado abierto/cerrado de cada submenú (acordeón dinámico)
+const openGroups = ref(getInitialOpenState())
+
+const toggleGroup = (groupName) => {
+  const isCurrentlyOpen = openGroups.value[groupName]
+  // Colapsar todos los grupos
+  Object.keys(openGroups.value).forEach(key => {
+    openGroups.value[key] = false
+  })
+  // Si el grupo no estaba abierto, lo abrimos
+  if (!isCurrentlyOpen) {
+    openGroups.value[groupName] = true
+  }
+}
+
+// Mantener sincronizado el acordeón si la ruta cambia de forma externa
+watch(() => route.path, (newPath) => {
+  for (const group of groups) {
+    const hasActiveItem = group.items.some(item => {
+      if (item.path === '/') return newPath === '/'
+      return newPath === item.path || (newPath.startsWith(item.path + '/') && item.path !== '/')
+    })
+    if (hasActiveItem) {
+      Object.keys(openGroups.value).forEach(key => {
+        openGroups.value[key] = false
+      })
+      openGroups.value[group.name] = true
+      break
+    }
+  }
+})
+
+// Filtrar dinámicamente los grupos y sus sub-ítems según los permisos del rol del usuario
+const menuGroups = computed(() => {
+  return groups.map(group => {
+    const filteredItems = group.items.filter(item => {
+      return authStore.hasPermission(item.path, item.roles)
+    })
+    return {
+      ...group,
+      items: filteredItems
+    }
+  }).filter(group => group.items.length > 0) // Omitir el grupo si no contiene ítems visibles
 })
 
 const handleLogout = () => {
@@ -45,7 +140,6 @@ const handleLogout = () => {
 
 const isActive = (path) => {
   if (path === '/') return route.path === '/'
-  // Si la ruta es exacta o si es una sub-ruta pero no coincide parcialmente con otra (ej: /feteado vs /feteado-externo)
   return route.path === path || (route.path.startsWith(path + '/') && path !== '/')
 }
 </script>
@@ -54,47 +148,49 @@ const isActive = (path) => {
   <aside class="sidebar no-print" :class="{ 'is-open': isOpen }">
     <div class="sidebar-header">
       <div class="logo-container">
-        <i class="ph ph-fill ph-cheese logo-icon"></i>
-        <h1 class="logo-text">CDF <span class="text-gradient">Gestion</span></h1>
-      </div>
-      <button class="close-btn" @click="emit('close')" aria-label="Cerrar menú">
-        <i class="ph ph-x"></i>
-      </button>
-    </div>
-
-    <div class="user-profile" v-if="authStore.user">
-      <div class="avatar">
-        {{ authStore.user.usuario ? authStore.user.usuario.toString().charAt(0).toUpperCase() : '?' }}
-      </div>
-      <div class="user-info">
-        <span class="user-name">{{ authStore.user.usuario }}</span>
-        <span class="user-role">{{ authStore.user.rol }}</span>
+        <h1 class="logo-text">CDF Gestion</h1>
       </div>
     </div>
 
     <nav class="sidebar-nav">
-      <ul>
-        <li v-for="item in menuItems" :key="item.path">
-          <router-link 
-            :to="item.path" 
-            class="nav-link" 
-            :class="{ active: isActive(item.path) }"
-            @click="emit('close')"
+      <div class="menu-groups">
+        <div v-for="group in menuGroups" :key="group.name" class="menu-group">
+          <!-- Encabezado de Grupo (Botonera colapsable Windows) -->
+          <button 
+            @click="toggleGroup(group.name)" 
+            class="group-header"
+            :aria-expanded="openGroups[group.name]"
           >
-            <i class="ph nav-icon" :class="item.icon"></i>
-            <span class="nav-text">{{ item.name }}</span>
-          </router-link>
-        </li>
-      </ul>
+            <div class="group-title-content">
+              <i class="ph group-icon" :class="group.icon"></i>
+              <span class="group-name">{{ group.name }}</span>
+            </div>
+            <i class="ph caret-icon" :class="openGroups[group.name] ? 'ph-caret-down' : 'ph-caret-right'"></i>
+          </button>
+          
+          <!-- Lista de Sub-ítems (Estilo Árbol de Carpetas Windows 98) -->
+          <ul v-show="openGroups[group.name]" class="group-items">
+            <li v-for="item in group.items" :key="item.path">
+              <router-link 
+                :to="item.path" 
+                class="nav-link" 
+                :class="{ active: isActive(item.path) }"
+                @click="emit('close')"
+              >
+                <i class="ph nav-icon" :class="item.icon"></i>
+                <span class="nav-text">{{ item.name }}</span>
+              </router-link>
+            </li>
+          </ul>
+        </div>
+      </div>
     </nav>
     
     <div class="sidebar-footer">
-      <!-- 
       <button @click="handleLogout" class="logout-btn">
         <i class="ph ph-sign-out"></i>
         <span>Cerrar Sesión</span>
       </button>
-      -->
     </div>
   </aside>
 </template>
@@ -229,29 +325,93 @@ const isActive = (path) => {
 /* Navegación */
 .sidebar-nav {
   flex: 1;
-  padding: 0.5rem 0.4rem;
+  padding: 0.4rem 0.5rem;
   overflow-y: auto;
 }
 
-.sidebar-nav ul {
+.menu-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Cabecera del Grupo */
+.group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.6rem;
+  background-color: var(--bg-window);
+  border: 1px solid var(--bevel-light);
+  box-shadow: var(--raised-shadow);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  margin-bottom: 0.2rem;
+  text-align: left;
+}
+
+.group-header:active {
+  box-shadow: var(--inset-shadow);
+}
+
+.group-title-content {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.group-icon {
+  font-size: 0.95rem;
+  color: var(--accent-primary);
+}
+
+.caret-icon {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Lista de Sub-ítems (Estilo Árbol Clásico Windows) */
+.group-items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0 0.5rem;
+  border-left: 1px dashed #808080;
+  padding-left: 0.4rem;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
+/* Enlace del Sub-ítem */
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.35rem 0.6rem;
   color: var(--text-primary);
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-decoration: none;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   transition: none;
   border: 1px solid transparent;
+  position: relative;
+}
+
+/* Línea de conector horizontal */
+.nav-link::before {
+  content: "";
+  position: absolute;
+  left: -0.45rem;
+  top: 50%;
+  width: 0.45rem;
+  border-top: 1px dashed #808080;
 }
 
 .nav-link:hover {
@@ -268,7 +428,7 @@ const isActive = (path) => {
 }
 
 .nav-icon {
-  font-size: 1rem;
+  font-size: 0.9rem;
   flex-shrink: 0;
 }
 

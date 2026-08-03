@@ -1,10 +1,20 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
+const router = useRouter()
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.user?.rol?.toLowerCase() === 'admin')
+const isColaborador = computed(() => authStore.user?.rol?.toLowerCase() === 'colaborador')
+const isSucursal = computed(() => authStore.user?.rol?.toLowerCase() === 'sucursal')
+const isUsuario = computed(() => authStore.user?.rol?.toLowerCase() === 'usuario')
 const isLoading = ref(false)
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
+}
 
 // ─── ESTADO OPERARIO ─────────────────────────────────────────────
 const historial = ref([])
@@ -72,20 +82,64 @@ const adminTotalPicadas  = computed(() =>
 // ─── SEMANAL ─────────────────────────────────────────
 const DIAS = ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado']
 
+const actividadReciente = ref({ resumenHoy: {}, feed: [] })
+const activeActivityTab = ref('Todos')
+
+const formatRecentDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const today = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(today.getDate() - 1)
+
+  const isToday = date.toDateString() === today.toDateString()
+  const isYesterday = date.toDateString() === yesterday.toDateString()
+
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  if (isToday) return `Hoy, ${timeStr}`
+  if (isYesterday) return `Ayer, ${timeStr}`
+
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${day}/${month}, ${timeStr}`
+}
+
+const getActivityIcon = (evt) => {
+  if (evt.tipo === 'ingreso') return 'ph-arrow-circle-down'
+  if (evt.tipo === 'egreso') return 'ph-arrow-circle-up'
+  if (evt.tipo === 'proceso') return 'ph-package'
+  if (evt.tipo === 'conversion') return 'ph-arrows-left-right'
+  if (evt.tipo === 'ajuste') return 'ph-wrench'
+  return 'ph-info'
+}
+
+const filteredActivityFeed = computed(() => {
+  const feed = actividadReciente.value.feed || []
+  if (activeActivityTab.value === 'Todos') return feed
+  if (activeActivityTab.value === 'Ingresos') return feed.filter(x => x.tipo === 'ingreso')
+  if (activeActivityTab.value === 'Egresos') return feed.filter(x => x.tipo === 'egreso')
+  if (activeActivityTab.value === 'Procesos') return feed.filter(x => x.tipo === 'proceso')
+  if (activeActivityTab.value === 'Ajustes') return feed.filter(x => ['ajuste', 'conversion'].includes(x.tipo))
+  return feed
+})
+
 // ─── CARGA DE DATOS ──────────────────────────────────────────────
 const cargarDatosAdmin = async () => {
-  const [resDia, resOp, resMermas, resSemanal, resStock] = await Promise.all([
+  const [resDia, resOp, resMermas, resSemanal, resStock, resAct] = await Promise.all([
     fetch('/api/dashboard/produccion-dia'),
     fetch('/api/dashboard/produccion-operador'),
     fetch('/api/dashboard/mermas-stock'),
     fetch('/api/dashboard/produccion-semanal'),
-    fetch('/api/feteado/stock-a-fetear')
+    fetch('/api/feteado/stock-a-fetear'),
+    fetch('/api/dashboard/actividad-reciente')
   ])
   if (resDia.ok)     produccionDia.value     = await resDia.json()
   if (resOp.ok)      produccionOperador.value = await resOp.json()
   if (resMermas.ok)  mermasStock.value        = await resMermas.json()
   if (resSemanal.ok) produccionSemanal.value  = await resSemanal.json()
   if (resStock.ok)   stockAFetear.value       = await resStock.json()
+  if (resAct.ok)     actividadReciente.value = await resAct.json()
 }
 
 const cargarDatosOperario = async () => {
@@ -106,29 +160,131 @@ const cargarDatos = async () => {
   }
 }
 
+// Listado de todos los posibles enlaces del menú para la vista simplificada de Colaboradores
+const allMenuItems = [
+  { path: '/productos', title: 'Productos', desc: 'Ver catálogo y stock de productos', icon: 'ph-package', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+  { path: '/ingresos', title: 'Ingreso Mercadería', desc: 'Registrar entrada de mercadería', icon: 'ph-download-simple', color: 'var(--accent-info)', bg: 'rgba(6, 182, 212, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+  { path: '/movimientos-stock', title: 'Historial de Stock', desc: 'Ver log de movimientos de stock', icon: 'ph-clock-counter-clockwise', color: 'var(--accent-primary)', bg: 'rgba(99, 102, 241, 0.1)', roles: ['Admin', 'Referente'] },
+  { path: '/vencimientos', title: 'Vencimientos', desc: 'Ver productos próximos a vencer', icon: 'ph-calendar', color: 'var(--accent-warning)', bg: 'rgba(245, 158, 11, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+  { path: '/control-piezas', title: 'Control de Piezas', desc: 'Iniciar auditoría de vencimientos y piezas', icon: 'ph-barcode', color: 'var(--accent-orange)', bg: 'rgba(249, 115, 22, 0.1)', roles: ['Admin', 'Referente'] },
+  { path: '/procesos', title: 'Gestión de Procesos', desc: 'Registrar fraccionamiento, envasado y mermas', icon: 'ph-arrows-clockwise', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
+  { path: '/conversiones', title: 'Conversiones', desc: 'Convertir recortes y registrar cambios', icon: 'ph-arrows-left-right', color: 'var(--accent-orange)', bg: 'rgba(249, 115, 22, 0.1)', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
+  { path: '/ingreso-recortes', title: 'Ingresar Recortes', desc: 'Registrar recortes de producción', icon: 'ph-plus-circle', color: 'var(--accent-info)', bg: 'rgba(6, 182, 212, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+  { path: '/recortes', title: 'Stock de Recortes', desc: 'Ver stock y planillas de recortes', icon: 'ph-scissors', color: 'var(--accent-danger)', bg: 'rgba(239, 68, 68, 0.1)', roles: ['Admin', 'Referente'] },
+  { path: '/decomisos', title: 'Decomisos', desc: 'Ver descarte y mermas por mal estado', icon: 'ph-trash', color: 'var(--accent-danger)', bg: 'rgba(239, 68, 68, 0.1)', roles: ['Admin', 'Referente'] },
+  { path: '/preparar', title: 'Preparar Pedidos', desc: 'Ver pedidos entrantes y armar bultos', icon: 'ph-shopping-cart', color: 'var(--accent-success)', bg: 'rgba(16, 185, 129, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
+  { path: '/pedidos', title: 'Ver Pedidos', desc: 'Buscar y ver planillas de pedidos', icon: 'ph-shopping-cart-simple', color: 'var(--accent-success)', bg: 'rgba(16, 185, 129, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
+  { path: '/crear-pedido-sucursal', title: 'Cargar Pedido', desc: 'Cargar pedido manual o sucursales', icon: 'ph-file-plus', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+  { path: '/demanda-pendiente', title: 'Demanda Pendiente', desc: 'Ver stock y pedidos solicitados', icon: 'ph-chart-line', color: 'var(--accent-info)', bg: 'rgba(139, 92, 246, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+  { path: '/colaboradores', title: 'Colaboradores', desc: 'Administrar personal y operarios', icon: 'ph-users', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
+  { path: '/sucursales', title: 'Sucursales', desc: 'Administrar sucursales asociadas', icon: 'ph-storefront', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
+  { path: '/proveedores', title: 'Proveedores', desc: 'Administrar proveedores de planta', icon: 'ph-handshake', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
+  { path: '/bultos', title: 'Bultos', desc: 'Configuración de cajas y pesos', icon: 'ph-package', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
+  { path: '/ubicaciones', title: 'Ubicaciones', desc: 'Configuración de depósitos y sucursales', icon: 'ph-map-pin', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
+  { path: '/usuarios', title: 'Usuarios', desc: 'Administrar credenciales y accesos', icon: 'ph-user-gear', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
+  { path: '/permisos', title: 'Permisos de Roles', desc: 'Matriz de permisos por rol', icon: 'ph-shield-check', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] }
+]
+
+const enabledMenuItems = computed(() => {
+  return allMenuItems.filter(item => authStore.hasPermission(item.path, item.roles))
+})
+
 onMounted(cargarDatos)
 </script>
 
 <template>
   <div class="page-container animate-fade">
 
-    <!-- Encabezado -->
-    <div class="welcome-section">
-      <div class="welcome-text">
-        <h1 class="welcome-title">
-          {{ isAdmin ? 'Panel de Control' : `¡Hola, ${authStore.user?.usuario}!` }}
-        </h1>
-        <p class="welcome-subtitle">
-          {{ isAdmin ? 'Resumen de producción del día y la semana.' : 'Tu resumen de producción acumulada.' }}
-        </p>
-      </div>
-      <button class="icon-btn" @click="cargarDatos" :disabled="isLoading" title="Actualizar">
-        <i class="ph ph-arrows-clockwise" :class="{ spinner: isLoading }"></i>
-      </button>
-    </div>
+    <!-- ══════════════ VISTA COLABORADOR (MENÚ PRINCIPAL MÓVIL) ══════════════ -->
+    <template v-if="isColaborador">
+      <div class="mobile-menu-container mt-2">
+        <div class="card">
+          <div class="card-body mobile-menu-grid">
+            <!-- Enlaces dinámicos habilitados según configuración -->
+            <router-link 
+              v-for="item in enabledMenuItems" 
+              :key="item.path" 
+              :to="item.path" 
+              class="menu-item-btn"
+            >
+              <div class="menu-item-icon" :style="{ backgroundColor: item.bg, color: item.color }">
+                <i :class="['ph', item.icon]"></i>
+              </div>
+              <div class="menu-item-text">
+                <span class="title">{{ item.title }}</span>
+                <span class="desc">{{ item.desc }}</span>
+              </div>
+              <i class="ph ph-caret-right chevron"></i>
+            </router-link>
 
-    <!-- ══════════════ VISTA ADMIN ══════════════ -->
-    <template v-if="isAdmin">
+            <!-- Botón de Cerrar Sesión -->
+            <button @click="handleLogout" class="menu-item-btn logout-item-btn">
+              <div class="menu-item-icon logout-icon">
+                <i class="ph ph-sign-out"></i>
+              </div>
+              <div class="menu-item-text">
+                <span class="title">Cerrar Sesión</span>
+                <span class="desc">Salir de tu cuenta de colaborador</span>
+              </div>
+              <i class="ph ph-caret-right chevron"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ══════════════ VISTA GENERAL (README) ══════════════ -->
+    <template v-else>
+      <div class="welcome-section mt-2">
+        <div class="welcome-text">
+          <h1 class="welcome-title">Bienvenido a la Planta de Producción CDF</h1>
+          <p class="welcome-subtitle">Sistema de Distribución & Gestión de Stock</p>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header" style="background-color: var(--bg-tertiary); color: white; border-bottom: 2px solid var(--bevel-dark);">
+          <span class="card-title" style="color: white; font-weight: bold;">
+            Información de Usuario (README)
+          </span>
+        </div>
+        <div class="card-body" style="padding: 1.5rem; line-height: 1.6; color: var(--text-primary); background: var(--bg-secondary);">
+          <h3 style="margin-bottom: 0.5rem; font-weight: bold; color: var(--accent-primary);">¡Hola, {{ authStore.user?.usuario }}!</h3>
+          <p style="margin-bottom: 1rem;">
+            Has ingresado al panel de control de CDF. Desde el menú lateral izquierdo puedes navegar por las herramientas e informes que tienes asignados en el sistema.
+          </p>
+
+          <h4 style="margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: bold;">Módulos del Sistema:</h4>
+          <ul style="margin-left: 1.5rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            <li><strong>Pedidos:</strong> Carga de pedidos de mercadería y seguimiento de solicitudes históricas.</li>
+            <li><strong>Producción y Procesos:</strong> Registro de fraccionamientos, envasado y mermas en planta.</li>
+            <li><strong>Inventario:</strong> Consulta de productos, stock en block, recortes y vencimientos.</li>
+            <li><strong>Reportes:</strong> Análisis de rendimiento y evolución histórica de stock.</li>
+          </ul>
+
+          <div style="background-color: var(--bg-window); border-left: 4px solid var(--accent-info); padding: 0.75rem 1rem; border-radius: 4px; border-top: 1px solid var(--bevel-dark); border-right: 1px solid var(--bevel-dark); border-bottom: 1px solid var(--bevel-dark);">
+            <strong>Soporte Técnico:</strong> Si requieres acceso a un nuevo módulo o tienes consultas operativas, ponte en contacto con el administrador del sistema.
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ══════════════ VISTA ADMIN / REFERENTES (Métricas completas) ══════════════ -->
+    <template v-if="false">
+      <!-- Encabezado -->
+      <div class="welcome-section">
+        <div class="welcome-text">
+          <h1 class="welcome-title">
+            Panel de Control
+          </h1>
+          <p class="welcome-subtitle">
+            Resumen de producción del día y la semana.
+          </p>
+        </div>
+        <button class="icon-btn" @click="cargarDatos" :disabled="isLoading" title="Actualizar">
+          <i class="ph ph-arrows-clockwise" :class="{ spinner: isLoading }"></i>
+        </button>
+      </div>
 
       <!-- KPIs -->
       <div class="kpi-grid mt-4">
@@ -159,6 +315,112 @@ onMounted(cargarDatos)
             <span class="kpi-label">Picadas (stock)</span>
             <span class="kpi-value">{{ adminTotalPicadas.toFixed(2) }} <small>Kg</small></span>
           </div>
+        </div>
+      </div>
+
+      <!-- Resumen Operativo de Hoy -->
+      <div class="card mt-4">
+        <div class="card-header pb-2 mb-2 border-bottom">
+          <h3 class="card-title"><i class="ph ph-activity text-accent mr-1"></i>Resumen Operativo de Hoy</h3>
+        </div>
+        <div class="stats-grid" style="margin-top: 0.5rem; gap: 0.75rem;">
+          <div class="card stat-card" style="border-left-color: #16a34a; background: #f0fdf4;">
+            <span class="stat-label" style="color: #15803d;">Ingresos de Hoy</span>
+            <span class="stat-value" style="font-size: 1.4rem;">
+              {{ (actividadReciente.resumenHoy?.ingresosKilos || 0).toFixed(2) }} <small style="font-size:0.6em; color:var(--text-muted);">Kg</small>
+            </span>
+            <span class="stat-unit" style="color: #16a34a; font-weight: bold;">
+              {{ actividadReciente.resumenHoy?.ingresosPiezas || 0 }} piezas
+            </span>
+          </div>
+
+          <div class="card stat-card" style="border-left-color: #dc2626; background: #fef2f2;">
+            <span class="stat-label" style="color: #b91c1c;">Egresos de Hoy</span>
+            <span class="stat-value" style="font-size: 1.4rem;">
+              {{ (actividadReciente.resumenHoy?.egresosKilos || 0).toFixed(2) }} <small style="font-size:0.6em; color:var(--text-muted);">Kg</small>
+            </span>
+            <span class="stat-unit" style="color: #dc2626; font-weight: bold;">
+              {{ actividadReciente.resumenHoy?.egresosPiezas || 0 }} piezas
+            </span>
+          </div>
+
+          <div class="card stat-card" style="border-left-color: #2563eb; background: #eff6ff;">
+            <span class="stat-label" style="color: #1d4ed8;">Procesos de Hoy</span>
+            <span class="stat-value" style="font-size: 1.4rem;">
+              {{ (actividadReciente.resumenHoy?.procesosKilos || 0).toFixed(2) }} <small style="font-size:0.6em; color:var(--text-muted);">Kg</small>
+            </span>
+            <span class="stat-unit" style="color: #2563eb; font-weight: bold;">
+              Feteado / Envasado
+            </span>
+          </div>
+
+          <div class="card stat-card" style="border-left-color: #d97706; background: #fffbeb;">
+            <span class="stat-label" style="color: #a16207;">Ajustes y Conversiones</span>
+            <span class="stat-value" style="font-size: 1.4rem;">
+              {{ ((actividadReciente.resumenHoy?.ajustesKilos || 0) + (actividadReciente.resumenHoy?.conversionesKilos || 0)).toFixed(2) }} <small style="font-size:0.6em; color:var(--text-muted);">Kg</small>
+            </span>
+            <span class="stat-unit" style="color: #d97706; font-weight: bold;">
+              Modificaciones
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registro de Actividad Reciente (Hoy y Ayer) -->
+      <div class="card mt-4">
+        <div class="card-header border-bottom pb-2 mb-2" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <h3 class="card-title"><i class="ph ph-clock-counter-clockwise text-accent mr-1"></i>Actividad Reciente (Hoy y Ayer)</h3>
+          
+          <!-- Botones de pestañas al estilo clásico Windows 98 -->
+          <div class="win-tabs" style="display: flex; gap: 2px;">
+            <button 
+              v-for="tab in ['Todos', 'Ingresos', 'Egresos', 'Procesos', 'Ajustes']" 
+              :key="tab"
+              :class="['win-tab-btn', activeActivityTab === tab ? 'active' : '']"
+              @click="activeActivityTab = tab"
+            >
+              {{ tab }}
+            </button>
+          </div>
+        </div>
+
+        <div class="activity-feed-container" style="max-height: 400px; overflow-y: auto; padding: 0.5rem 0;">
+          <div v-if="isLoading" class="mini-loading"><i class="ph ph-spinner spinner"></i></div>
+          <div v-else-if="filteredActivityFeed.length" class="activity-timeline">
+            <div 
+              v-for="evt in filteredActivityFeed" 
+              :key="evt.id" 
+              class="activity-item"
+              :class="`activity-type-${evt.tipo}`"
+            >
+              <!-- Icono y color del tipo -->
+              <div class="activity-icon-wrapper">
+                <i :class="['ph', getActivityIcon(evt)]"></i>
+              </div>
+
+              <!-- Contenido principal -->
+              <div class="activity-details">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                  <span class="activity-title">
+                    <strong>{{ evt.producto_codigo }}</strong> - {{ evt.producto_nombre }}
+                  </span>
+                  <span class="activity-time">{{ formatRecentDate(evt.fecha) }}</span>
+                </div>
+                <p class="activity-concept">{{ evt.concepto }}</p>
+                <div class="activity-meta">
+                  <span class="meta-tag badge-gray"><i class="ph ph-user"></i> {{ evt.usuario }}</span>
+                  <span v-if="evt.pendiente" class="badge" style="background-color: var(--accent-orange); color: white; font-size: 0.65rem;">PENDIENTE ENVASADO</span>
+                  <span v-if="evt.kilos" class="meta-tag" :class="evt.tipo === 'ingreso' ? 'badge-green' : (evt.tipo === 'egreso' ? 'badge-red' : 'badge-blue')">
+                    {{ evt.kilos.toFixed(2) }} Kg
+                  </span>
+                  <span v-if="evt.piezas" class="meta-tag badge-accent">
+                    {{ evt.piezas }} pzs
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-mini text-center" style="padding: 1.5rem; text-align: center; color: var(--text-muted);">No hay actividad registrada en la pestaña seleccionada para las últimas 48 horas.</div>
         </div>
       </div>
 
@@ -381,7 +643,7 @@ onMounted(cargarDatos)
     </template>
 
     <!-- ══════════════ VISTA OPERARIO ══════════════ -->
-    <template v-else>
+    <template v-if="false">
       <div class="stats-grid mt-4">
         <div class="card stat-card">
           <span class="stat-label">Total Producido</span>
@@ -620,5 +882,172 @@ onMounted(cargarDatos)
   .d-none-mobile { display: table-cell; }
   .d-only-mobile { display: none !important; }
   .responsive-table tr { cursor: default; }
+}
+
+/* ─── Registro de Actividad Reciente (Estilo Win98) ─── */
+.win-tabs {
+  background: var(--bg-window);
+  border: 1px solid var(--bevel-dark);
+  padding: 2px;
+  display: flex;
+}
+.win-tab-btn {
+  background: #d4d0c8;
+  border: 1px solid #fff;
+  border-right-color: #808080;
+  border-bottom-color: #808080;
+  color: #000;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.win-tab-btn:active, .win-tab-btn.active {
+  background: #e4e0d8;
+  border: 1px solid #808080;
+  border-right-color: #fff;
+  border-bottom-color: #fff;
+  box-shadow: inset 1px 1px 0px #000;
+}
+
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+}
+.activity-item {
+  display: flex;
+  gap: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--bevel-dark);
+  padding: 0.6rem 0.75rem;
+  border-radius: 4px;
+}
+.activity-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+  box-shadow: var(--inset-shadow);
+  background: var(--bg-window);
+}
+.activity-type-ingreso .activity-icon-wrapper { background: #dcfce7; color: #16a34a; }
+.activity-type-egreso .activity-icon-wrapper { background: #fee2e2; color: #dc2626; }
+.activity-type-proceso .activity-icon-wrapper { background: #dbeafe; color: #2563eb; }
+.activity-type-conversion .activity-icon-wrapper { background: #fef3c7; color: #d97706; }
+.activity-type-ajuste .activity-icon-wrapper { background: #f3f4f6; color: #4b5563; }
+
+.activity-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.activity-title { font-size: 0.82rem; color: var(--text-primary); }
+.activity-time { font-size: 0.72rem; color: var(--text-muted); }
+.activity-concept { font-size: 0.78rem; margin: 0; color: var(--text-secondary); font-style: italic; }
+
+.activity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.badge-gray { background: #e5e7eb; color: #374151; }
+.badge-green { background: #dcfce7; color: #16a34a; }
+.badge-red { background: #fee2e2; color: #dc2626; }
+.badge-blue { background: #dbeafe; color: #2563eb; }
+.badge-accent { background: var(--accent-primary-light); color: var(--accent-primary); }
+
+/* Estilos para Menú Colaborador */
+.mobile-menu-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.menu-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  background-color: var(--bg-window);
+  border: 2px solid var(--bevel-dark);
+  border-radius: var(--border-radius-md);
+  color: var(--text-primary);
+  text-decoration: none;
+  text-align: left;
+  transition: all 0.12s ease;
+  cursor: pointer;
+  width: 100%;
+}
+
+.menu-item-btn:active {
+  transform: scale(0.97);
+  background-color: #e2e8f0;
+}
+
+.menu-item-icon {
+  width: 42px;
+  height: 42px;
+  background-color: var(--accent-primary-light);
+  color: var(--accent-primary);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.logout-icon {
+  background-color: #fee2e2;
+  color: var(--accent-danger);
+}
+
+.menu-item-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-item-text .title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.menu-item-text .desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.chevron {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.logout-item-btn {
+  border-color: #fee2e2;
+}
+.logout-item-btn:active {
+  background-color: #fef2f2;
 }
 </style>

@@ -1,10 +1,12 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute, RouterView } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 import Sidebar from './Sidebar.vue'
 import Header from './Header.vue'
 
 const route = useRoute()
+const authStore = useAuthStore()
 const isSidebarOpen = ref(false)
 
 const toggleSidebar = () => {
@@ -22,7 +24,11 @@ watch(() => route?.path, () => {
 </script>
 
 <template>
-  <div class="layout-wrapper">
+  <div v-if="route.meta.plainLayout" class="plain-layout-wrapper">
+    <RouterView />
+  </div>
+
+  <div v-else class="layout-wrapper">
     <!-- Overlay para móvil -->
     <div 
       v-if="isSidebarOpen" 
@@ -30,8 +36,8 @@ watch(() => route?.path, () => {
       @click="closeSidebar"
     ></div>
 
-    <!-- Sidebar con prop de estado -->
-    <Sidebar :isOpen="isSidebarOpen" @close="closeSidebar" />
+    <!-- Sidebar con prop de estado (oculta para colaboradores) -->
+    <Sidebar v-if="authStore.user?.rol?.toLowerCase() !== 'colaborador'" :isOpen="isSidebarOpen" @close="closeSidebar" />
 
     <div class="main-content">
       <!-- Header con disparador de menú -->
@@ -45,6 +51,15 @@ watch(() => route?.path, () => {
 </template>
 
 <style scoped>
+.plain-layout-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
 .layout-wrapper {
   display: flex;
   height: 100vh;

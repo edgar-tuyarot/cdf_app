@@ -11,6 +11,40 @@ const password = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 
+const loginMode = ref('select') // 'select', 'personal', 'sucursal'
+const sucursales = ref([])
+const selectedSucursalId = ref('')
+const loadingSucursales = ref(false)
+
+const switchToSucursalMode = async () => {
+  loginMode.value = 'sucursal'
+  errorMsg.value = ''
+  selectedSucursalId.value = ''
+  if (sucursales.value.length === 0) {
+    loadingSucursales.value = true
+    try {
+      const res = await fetch('/api/sucursales')
+      if (res.ok) {
+        sucursales.value = await res.json()
+      } else {
+        errorMsg.value = 'Error al cargar sucursales'
+      }
+    } catch (e) {
+      console.error(e)
+      errorMsg.value = 'Error de conexión'
+    } finally {
+      loadingSucursales.value = false
+    }
+  }
+}
+
+const switchToPersonalMode = () => {
+  loginMode.value = 'personal'
+  errorMsg.value = ''
+  usuario.value = ''
+  password.value = ''
+}
+
 const handleLogin = async () => {
   if (!usuario.value || !password.value) return
   
@@ -27,287 +61,239 @@ const handleLogin = async () => {
   
   loading.value = false
 }
+
+const handleSucursalLogin = async () => {
+  if (!selectedSucursalId.value) return
+  const s = sucursales.value.find(x => x.id === selectedSucursalId.value)
+  if (!s) return
+
+  loading.value = true
+  const result = await authStore.loginComoSucursal(s)
+  if (result.success) {
+    router.push('/')
+  } else {
+    errorMsg.value = 'Error al iniciar sesión como sucursal'
+  }
+  loading.value = false
+}
+
+const handleFormSubmit = () => {
+  if (loginMode.value === 'sucursal') {
+    handleSucursalLogin()
+  } else if (loginMode.value === 'personal') {
+    handleLogin()
+  }
+}
 </script>
 
 <template>
-  <div class="login-wrapper">
+  <div class="login-page">
+    <div class="login-container animate-fade">
+      
+      <!-- Logo y título principal -->
+      <header class="login-header">
+        <h1 class="logo">CDF</h1>
+      </header>
 
-    <!-- Ventana de Login estilo Windows clásico -->
-    <div class="login-window animate-fade">
-
-      <!-- Barra de título -->
-      <div class="window-titlebar">
-        <div class="titlebar-left">
-          <i class="ph ph-fill ph-cheese titlebar-icon"></i>
-          <span>CRM Delicatessen - Acceso al Sistema</span>
+      <!-- Tarjeta de Login -->
+      <div class="card">
+        <div class="card-header" style="justify-content: center; background-color: var(--bg-tertiary); color: white; border-bottom: 2px solid var(--bevel-dark);">
+          <span class="card-title" style="color: white; font-weight: bold; font-size: 0.9rem;">
+            <span v-if="loginMode === 'select'">Acceso al Sistema</span>
+            <span v-else-if="loginMode === 'personal'">Acceso de Personal</span>
+            <span v-else-if="loginMode === 'sucursal'">Acceso de Sucursales</span>
+          </span>
         </div>
-        <div class="titlebar-controls">
-          <span class="ctrl-btn">_</span>
-          <span class="ctrl-btn">□</span>
-          <span class="ctrl-btn ctrl-close">✕</span>
+
+        <div class="card-body" style="padding: 1.5rem; background: var(--bg-secondary);">
+          <form @submit.prevent="handleFormSubmit" class="login-form">
+
+            <!-- Modo de Selección Inicial -->
+            <template v-if="loginMode === 'select'">
+              <div style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold; margin-bottom: 0.25rem;">
+                  Selecciona tu perfil de acceso:
+                </p>
+                
+                <div style="display: flex; justify-content: center; gap: 1.25rem; width: 100%;">
+                  <!-- Botón Personal -->
+                  <button 
+                    type="button" 
+                    class="btn btn-primary profile-btn" 
+                    style="width: 125px; height: 125px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; border-radius: 12px;"
+                    @click="switchToPersonalMode"
+                  >
+                    <i class="ph ph-user" style="font-size: 2.2rem;"></i>
+                    <span style="font-size: 0.85rem; font-weight: bold; line-height: 1.1;">Acceso Personal</span>
+                  </button>
+                  
+                  <!-- Botón Sucursal -->
+                  <button 
+                    type="button" 
+                    class="btn btn-secondary profile-btn" 
+                    style="width: 125px; height: 125px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; border-radius: 12px; border: 2px solid var(--bevel-dark);" 
+                    @click="switchToSucursalMode"
+                  >
+                    <i class="ph ph-storefront" style="font-size: 2.2rem; color: var(--accent-primary);"></i>
+                    <span style="font-size: 0.85rem; font-weight: bold; line-height: 1.1;">Acceso Sucursales</span>
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <!-- Modo Personal (Usuario / Contraseña) -->
+            <template v-if="loginMode === 'personal'">
+              <div class="form-group" style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem;">
+                <label class="form-label" style="font-weight: bold; font-size: 0.8rem; color: var(--text-primary);">Usuario</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  v-model="usuario"
+                  placeholder="Nombre de usuario"
+                  autocomplete="username"
+                  required
+                  style="width: 100%; height: 36px; padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: var(--border-radius-md); font-size: 0.85rem;"
+                >
+              </div>
+
+              <div class="form-group" style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem;">
+                <label class="form-label" style="font-weight: bold; font-size: 0.8rem; color: var(--text-primary);">Contraseña</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  v-model="password"
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  required
+                  style="width: 100%; height: 36px; padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: var(--border-radius-md); font-size: 0.85rem;"
+                >
+              </div>
+
+              <div v-if="errorMsg" class="error-box animate-shake" style="margin-bottom: 1rem;">
+                {{ errorMsg }}
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1.25rem;">
+                <button type="submit" class="btn btn-primary" style="height: 38px; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" :disabled="loading">
+                  <span v-if="!loading">Iniciar Sesión</span>
+                  <span v-else><i class="ph ph-spinner spinner"></i> Conectando...</span>
+                </button>
+                <button type="button" class="btn btn-secondary" style="height: 36px; width: 100%; font-weight: bold;" @click="loginMode = 'select'" :disabled="loading">
+                  Volver
+                </button>
+              </div>
+            </template>
+
+            <!-- Modo Sucursal (Selección de Sucursal) -->
+            <template v-if="loginMode === 'sucursal'">
+              <div class="form-group" style="margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.3rem;">
+                <label class="form-label" style="font-weight: bold; font-size: 0.8rem; color: var(--text-primary);">Seleccione la Sucursal</label>
+                <select
+                  class="form-control"
+                  v-model="selectedSucursalId"
+                  required
+                  style="width: 100%; height: 36px; padding: 0 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: var(--border-radius-md); font-size: 0.85rem; cursor: pointer;"
+                >
+                  <option value="" disabled>Seleccione su sucursal...</option>
+                  <option v-for="s in sucursales" :key="s.id" :value="s.id">
+                    {{ s.sucursal }} {{ s.numero ? '#' + s.numero : '' }}
+                  </option>
+                </select>
+              </div>
+
+              <div v-if="errorMsg" class="error-box animate-shake" style="margin-bottom: 1rem;">
+                {{ errorMsg }}
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1.25rem;">
+                <button type="submit" class="btn btn-primary" style="height: 38px; font-weight: bold; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem;" :disabled="loading || loadingSucursales">
+                  <span v-if="!loading && !loadingSucursales">Ingresar como Sucursal</span>
+                  <span v-else><i class="ph ph-spinner spinner"></i> Conectando...</span>
+                </button>
+                <button type="button" class="btn btn-secondary" style="height: 36px; width: 100%; font-weight: bold;" @click="loginMode = 'select'" :disabled="loading">
+                  Volver
+                </button>
+              </div>
+            </template>
+          </form>
         </div>
       </div>
 
-      <!-- Cuerpo de la ventana -->
-      <div class="window-body">
-
-        <!-- Logo y título -->
-        <div class="login-header">
-          <div class="logo-area">
-            <i class="ph ph-fill ph-cheese logo-icon"></i>
-            <div class="logo-text">
-              <strong>GESTIÓN DE PRODUCCIÓN</strong>
-              <span>Planta de Producción — CDF</span>
-            </div>
-          </div>
-          <hr class="divider">
-        </div>
-
-        <!-- Formulario -->
-        <form @submit.prevent="handleLogin" class="login-form">
-
-          <div class="form-row-login">
-            <label class="login-label" for="login-usuario">Usuario:</label>
-            <input
-              id="login-usuario"
-              type="text"
-              class="form-control login-input"
-              v-model="usuario"
-              placeholder=""
-              autocomplete="username"
-              required
-            >
-          </div>
-
-          <div class="form-row-login">
-            <label class="login-label" for="login-password">Contraseña:</label>
-            <input
-              id="login-password"
-              type="password"
-              class="form-control login-input"
-              v-model="password"
-              placeholder=""
-              autocomplete="current-password"
-              required
-            >
-          </div>
-
-          <div v-if="errorMsg" class="error-box">
-            ⚠ {{ errorMsg }}
-          </div>
-
-          <div class="btn-row">
-            <button type="submit" class="btn btn-primary login-btn" :disabled="loading">
-              <span v-if="!loading">Iniciar Sesión</span>
-              <span v-else>Conectando...</span>
-            </button>
-            <button type="button" class="btn btn-secondary login-btn" @click="usuario = ''; password = ''" :disabled="loading">
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Barra de estado -->
-      <div class="status-bar">
-        <span>© 2026 Planta de Producción</span>
-        <span>v1.0</span>
-      </div>
+      <footer class="login-footer">
+        <p>&copy; 2026 Planta de Producción CDF — Sistema de Gestión v1.0</p>
+      </footer>
     </div>
-
   </div>
 </template>
 
 <style scoped>
-/* Fondo gris del sistema */
-.login-wrapper {
-  height: 100vh;
+.login-page {
+  min-height: 100vh;
   width: 100vw;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-primary);
-  font-family: 'Noto Sans', 'Segoe UI', Tahoma, sans-serif;
+  background-color: var(--bg-primary);
+  padding: 1.5rem;
+  font-family: 'Inter', sans-serif;
 }
 
-/* Ventana estilo Windows clásico */
-.login-window {
+.login-container {
   width: 100%;
   max-width: 400px;
-  background: var(--bg-secondary);
-  border: none;
-  box-shadow: var(--raised-shadow), 4px 4px 16px rgba(0,0,0,0.35);
-  display: flex;
-  flex-direction: column;
-  margin: 1rem;
 }
 
-/* Barra de título */
-.window-titlebar {
-  height: 28px;
-  background: linear-gradient(to right, #0b5394, #1e6ec8);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0.4rem 0 0.6rem;
-  color: white;
-  font-size: 0.78rem;
-  font-weight: 700;
-  user-select: none;
-  flex-shrink: 0;
+.login-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
 }
 
-.titlebar-left {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.titlebar-icon {
-  font-size: 0.9rem;
-  color: #fffacd;
-}
-
-.titlebar-controls {
-  display: flex;
-  gap: 2px;
-}
-
-.ctrl-btn {
-  width: 18px;
-  height: 16px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 0.65rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--raised-shadow);
-  cursor: default;
-  font-weight: 700;
+.login-header .logo {
+  color: var(--accent-primary);
+  font-size: 3.5rem;
+  font-weight: 850;
+  letter-spacing: -2px;
+  margin: 0;
   line-height: 1;
 }
 
-.ctrl-close {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
-/* Cuerpo */
-.window-body {
-  padding: 1.25rem 1.5rem 1rem;
-}
-
-/* Encabezado con logo */
-.login-header {
-  margin-bottom: 1rem;
-}
-
-.logo-area {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.logo-icon {
-  font-size: 2.5rem;
-  color: var(--accent-primary);
-}
-
-.logo-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.logo-text strong {
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  letter-spacing: 0.04em;
-}
-
-.logo-text span {
-  font-size: 0.72rem;
+.subtitle {
   color: var(--text-muted);
-}
-
-.divider {
-  border: none;
-  border-top: 1px solid var(--bevel-dark);
-  border-bottom: 1px solid var(--bevel-light);
-}
-
-/* Formulario */
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.form-row-login {
-  display: grid;
-  grid-template-columns: 90px 1fr;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.login-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-align: right;
-}
-
-.login-input {
-  height: 32px;
-  font-size: 0.9rem;
-}
-
-/* Error */
-.error-box {
-  grid-column: 1 / -1;
-  background: #f8d7da;
-  color: var(--accent-danger);
-  border: 1px solid var(--accent-danger);
-  border-left: 3px solid var(--accent-danger);
-  padding: 0.4rem 0.6rem;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
   margin-top: 0.25rem;
 }
 
-/* Botones */
-.btn-row {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--bg-tertiary);
+.error-box {
+  background-color: #fee2e2;
+  color: var(--accent-danger);
+  padding: 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--accent-danger);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
 }
 
-.login-btn {
-  min-width: 120px;
-  height: 32px;
-  font-size: 0.82rem;
-}
-
-/* Barra de estado */
-.status-bar {
-  height: 22px;
-  background: var(--bg-primary);
-  border-top: 1px solid var(--bevel-dark);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0.5rem;
-  font-size: 0.68rem;
+.login-footer {
+  text-align: center;
+  margin-top: 1.5rem;
   color: var(--text-muted);
-  box-shadow: inset 0 1px 0 var(--bevel-light);
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
-/* Spinner */
+/* Animaciones */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
 .spinner {
   animation: spin 1s linear infinite;
 }
@@ -315,5 +301,13 @@ const handleLogin = async () => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.profile-btn {
+  transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+.profile-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 </style>

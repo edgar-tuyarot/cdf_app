@@ -70,6 +70,7 @@
                   <div style="position: relative; display: flex; align-items: center;">
                     <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
                     <input 
+                      ref="productInput"
                       type="text" 
                       v-model="productSearchInput" 
                       list="catalog-products-list" 
@@ -363,7 +364,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import * as XLSX from 'xlsx'
 
 // Estado del formulario manual
@@ -375,6 +376,7 @@ const form = ref({
 })
 
 const productSearchInput = ref('')
+const productInput = ref(null)
 const selectedProduct = ref(null)
 
 // Catálogos e Historiales
@@ -472,6 +474,10 @@ const addItemToList = () => {
   form.value.codigo = ''
   productSearchInput.value = ''
   selectedProduct.value = null
+
+  nextTick(() => {
+    productInput.value?.focus()
+  })
 
   showAlert('Registro agregado al lote preparado.', 'info')
 }

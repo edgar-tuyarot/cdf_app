@@ -3,6 +3,8 @@ const router = express.Router();
 const fraccionadosController = require('../controllers/fraccionadosController');
 
 router.get('/', fraccionadosController.obtenerFraccionados);
+router.get('/logs', fraccionadosController.obtenerLogsConversiones);
+router.post('/procesar-lote', fraccionadosController.procesarFraccionamientoLote);
 router.get('/:id', fraccionadosController.obtenerFraccionadoPorId);
 router.post('/', fraccionadosController.crearFraccionado);
 router.put('/:id', fraccionadosController.actualizarFraccionado);

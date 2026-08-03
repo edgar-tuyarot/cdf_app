@@ -1,9 +1,11 @@
-const { IngresoRecorte, Producto, Sucursal, Proceso, sequelize } = require('../models');
+const { IngresoRecorte, Producto, Sucursal, Proceso, Generador, sequelize } = require('../models');
 
 // Obtener todos los ingresos de recortes (historial)
 exports.obtenerIngresosRecortes = async (req, res) => {
   try {
+    const id_ubicacion = req.ubicacionId;
     const ingresos = await IngresoRecorte.findAll({
+      where: { id_ubicacion },
       include: [
         {
           model: Sucursal,
@@ -30,6 +32,7 @@ exports.crearIngresosRecortesMasivo = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const items = req.body; // Se espera un array de ingresos
+    const id_ubicacion = req.ubicacionId;
 
     if (!Array.isArray(items)) {
       await transaction.rollback();
@@ -69,19 +72,37 @@ exports.crearIngresosRecortesMasivo = async (req, res) => {
 
       // 1. Crear el registro en ingreso_recortes
       const nuevoIngreso = await IngresoRecorte.create({
+        id_ubicacion,
         id_sucursal,
         id_producto,
         peso_recorte: valorPeso,
         fecha: fecha || new Date()
       }, { transaction });
 
-      // 2. Incrementar el stock del recorte en Producto
-      producto.kg_recorte = (parseFloat(producto.kg_recorte) || 0) + valorPeso;
-      await producto.save({ transaction });
+      // 2. Incrementar el stock del recorte en ProductoStock de la ubicación
+      const [prodStock, created] = await ProductoStock.findOrCreate({
+        where: { codigo_producto: id_producto, id_ubicacion },
+        defaults: { stock: 0.0000, recorte: 0.000, decomiso: 0.000, kg_fraccionados: 0.000 },
+        transaction
+      });
+      prodStock.recorte = (parseFloat(prodStock.recorte) || 0) + valorPeso;
+      await prodStock.save({ 
+        transaction,
+        tipo_movimiento: 'INGRESO_RECORTE',
+        referencia_id: nuevoIngreso.id,
+        concepto: `Ingreso masivo de recortes desde sucursal ${sucursal.sucursal || 'N/A'}`
+      });
 
-      // 3. Crear trazabilidad histórica en la tabla procesos
+      // Buscar Generador de la sucursal
+      const gen = await Generador.findOne({
+        where: { tipo: 'sucursal', id_asociado: id_sucursal },
+        transaction
+      });
+
+      // 3. Crear trazabilidad histórica en la tabla procesos con el generador polimórfico
       await Proceso.create({
-        colaborador: `Sucursal: ${sucursal.sucursal}`,
+        id_ubicacion,
+        generador_id: gen ? gen.id : null,
         proceso: 'Ingreso de Recorte',
         fecha: fecha || new Date(),
         codigo: id_producto,

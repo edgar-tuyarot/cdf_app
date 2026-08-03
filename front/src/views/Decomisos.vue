@@ -5,7 +5,15 @@
         <h2 class="page-title">Gestión de Decomisos</h2>
         <p class="page-description">Visualiza y descarta mermas permanentes de productos (decomisos).</p>
       </div>
-      <div class="header-actions mt-2">
+      <div class="header-actions mt-2" style="display: flex; gap: 0.5rem;">
+        <button 
+          v-if="selectedItems.length > 0" 
+          class="btn btn-primary animate-fade" 
+          style="background-color: var(--accent-danger);" 
+          @click="openBulkDiscountModal"
+        >
+          <i class="ph ph-trash"></i> Descontar Lote ({{ selectedItems.length }})
+        </button>
         <button class="btn btn-secondary" @click="fetchDecomisos" :disabled="loading">
           <i class="ph ph-spinner spinner" v-if="loading"></i>
           <i class="ph ph-arrows-clockwise" v-else></i> Actualizar Datos
@@ -57,6 +65,13 @@
         <table v-if="!loading && filteredAndSortedProductos.length > 0">
           <thead>
             <tr>
+              <th style="width: 40px; text-align: center;">
+                <input 
+                  type="checkbox" 
+                  v-model="selectAll" 
+                  @change="toggleSelectAll" 
+                />
+              </th>
               <th @click="sortBy('codigo')" class="sortable">
                 Código 
                 <i v-if="sortKey === 'codigo'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
@@ -64,6 +79,10 @@
               <th @click="sortBy('nombre')" class="sortable">
                 Nombre del Producto 
                 <i v-if="sortKey === 'nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              </th>
+              <th @click="sortBy('stock')" class="sortable text-right">
+                Stock
+                <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
               <th @click="sortBy('kilos')" class="sortable text-right">
                 Kilos Decomiso 
@@ -73,9 +92,18 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in filteredAndSortedProductos" :key="p.codigo">
+            <tr v-for="p in filteredAndSortedProductos" :key="p.codigo" :class="{ 'selected-row': selectedItems.includes(p.codigo) }">
+              <td style="text-align: center;">
+                <input 
+                  type="checkbox" 
+                  :value="p.codigo" 
+                  v-model="selectedItems" 
+                  @change="updateSelectAllState" 
+                />
+              </td>
               <td><strong>{{ p.codigo }}</strong></td>
               <td>{{ p.nombre }}</td>
+              <td class="text-right fw-bold">{{ p.stock !== undefined ? (p.pesable !== false ? p.stock.toFixed(3) + ' kg' : p.stock.toFixed(0) + ' ud') : '0.000 kg' }}</td>
               <td class="text-right fw-bold text-red">{{ p.kilos.toFixed(3) }} kg</td>
               <td>
                 <div style="display: flex; gap: 0.25rem; justify-content: center;">
@@ -105,41 +133,85 @@
     <!-- Modal Descontar Decomiso -->
     <Teleport to="body">
       <div v-if="showDiscountModal" class="modal-overlay" @mousedown.self="closeDiscountModal">
-        <div class="modal-card" style="max-width: 380px;">
+        <div class="modal-card" style="max-width: 400px;">
           <div class="modal-header" style="background: var(--accent-danger);">
-            <h3 class="modal-title">Descontar Decomiso</h3>
+            <h3 class="modal-title">
+              {{ itemsToDiscount.length > 1 ? 'Descontar Lote de Decomisos' : 'Descontar Decomiso' }}
+            </h3>
             <button class="icon-btn" @click="closeDiscountModal"><i class="ph ph-x"></i></button>
           </div>
           <form @submit.prevent="handleDiscount">
             <div class="modal-body">
               <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                 <div class="alert-box error" style="border-left-width: 4px; padding: 0.4rem; font-size: 0.75rem;">
-                  <strong>Advertencia:</strong> Esta acción restará la cantidad especificada de decomiso permanentemente. Este stock no se sumará a ningún otro producto.
+                  <strong>Advertencia:</strong> Esta acción restará permanentemente la cantidad especificada de decomiso del stock. Este stock no se sumará a ningún otro producto.
                 </div>
                 
-                <div class="form-group">
-                  <label class="form-label" style="font-size: 0.7rem;">Producto</label>
-                  <input type="text" :value="`[${selectedProduct.codigo}] ${selectedProduct.nombre}`" class="form-control" disabled />
+                <!-- Si es un solo producto -->
+                <div v-if="itemsToDiscount.length === 1">
+                  <div class="form-group">
+                    <label class="form-label" style="font-size: 0.7rem;">Producto</label>
+                    <input type="text" :value="`[${itemsToDiscount[0].codigo}] ${itemsToDiscount[0].nombre}`" class="form-control" disabled />
+                  </div>
+
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="form-group">
+                      <label class="form-label" style="font-size: 0.7rem;">Stock Decomiso</label>
+                      <input type="text" :value="`${itemsToDiscount[0].kilos.toFixed(3)} kg`" class="form-control" disabled />
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label" style="font-size: 0.7rem;">Kilos a descartar *</label>
+                      <input 
+                        type="number" 
+                        step="0.001" 
+                        min="0.001" 
+                        :max="itemsToDiscount[0].kilos" 
+                        v-model="discountForm.kilos" 
+                        class="form-control fw-bold" 
+                        required 
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                  <div class="form-group">
-                    <label class="form-label" style="font-size: 0.7rem;">Stock Decomiso</label>
-                    <input type="text" :value="`${selectedProduct.kilos.toFixed(3)} kg`" class="form-control" disabled />
+                <!-- Si son varios productos (Lote) -->
+                <div v-else>
+                  <label class="form-label" style="font-size: 0.7rem;">Lote de productos a dar de baja ({{ itemsToDiscount.length }})</label>
+                  <div style="max-height: 160px; overflow-y: auto; border: 1px solid var(--bevel-dark); border-radius: var(--border-radius-sm); margin-bottom: 0.5rem; background: var(--bg-window); box-shadow: var(--inset-shadow);">
+                    <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
+                      <thead>
+                        <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--bevel-dark); position: sticky; top: 0; z-index: 1;">
+                          <th style="padding: 4px; text-align: left;">Código</th>
+                          <th style="padding: 4px; text-align: left;">Nombre</th>
+                          <th style="padding: 4px; text-align: right;">Kilos</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="item in itemsToDiscount" :key="item.codigo" style="border-bottom: 1px solid var(--bg-secondary);">
+                          <td style="padding: 4px; font-weight: bold;">{{ item.codigo }}</td>
+                          <td style="padding: 4px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.nombre }}</td>
+                          <td style="padding: 4px; text-align: right; color: var(--accent-danger); font-weight: bold;">{{ item.kilos.toFixed(3) }} kg</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
+                  <div class="form-group">
+                    <label class="form-label" style="font-size: 0.7rem;">Total Kilos del Lote a Descartar</label>
+                    <input type="text" :value="`${totalKilosToDiscount.toFixed(3)} kg`" class="form-control fw-bold text-red" disabled />
+                  </div>
+                </div>
 
-                  <div class="form-group">
-                    <label class="form-label" style="font-size: 0.7rem;">Kilos a descartar *</label>
-                    <input 
-                      type="number" 
-                      step="0.001" 
-                      min="0.001" 
-                      :max="selectedProduct.kilos" 
-                      v-model="discountForm.kilos" 
-                      class="form-control fw-bold" 
-                      required 
-                    />
-                  </div>
+                <!-- Número de Comprobante obligatorio -->
+                <div class="form-group">
+                  <label class="form-label font-bold" style="font-size: 0.75rem;">Número de Comprobante *</label>
+                  <input 
+                    type="text" 
+                    v-model="discountForm.comprobante" 
+                    placeholder="Ej: D-0001-2345" 
+                    class="form-control" 
+                    required 
+                  />
                 </div>
               </div>
             </div>
@@ -147,10 +219,10 @@
               <button type="button" class="btn btn-secondary" @click="closeDiscountModal">
                 <i class="ph ph-x"></i> Cancelar
               </button>
-              <button type="submit" class="btn btn-primary" style="background-color: var(--accent-danger);" :disabled="savingDiscount">
+              <button type="submit" class="btn btn-primary" style="background-color: var(--accent-danger);" :disabled="savingDiscount || !discountForm.comprobante.trim()">
                 <i class="ph ph-spinner spinner" v-if="savingDiscount"></i>
                 <i class="ph ph-trash" v-else></i>
-                {{ savingDiscount ? 'Descontando...' : 'Descartar Decomiso' }}
+                {{ savingDiscount ? 'Descontando...' : (itemsToDiscount.length > 1 ? 'Confirmar Baja de Lote' : 'Descartar Decomiso') }}
               </button>
             </div>
           </form>
@@ -162,16 +234,23 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
 
 const data = ref({ Kilos_Totales: '0 kg', productos_con_decomisos: [] })
 const loading = ref(true)
 const alert = ref({ show: false, message: '', type: 'success' })
 
+// Selección por Lote
+const selectedItems = ref([])
+const selectAll = ref(false)
+
 // Estado Modal Descuento
 const showDiscountModal = ref(false)
 const savingDiscount = ref(false)
-const selectedProduct = ref(null)
-const discountForm = ref({ kilos: 0 })
+const itemsToDiscount = ref([])
+const discountForm = ref({ kilos: 0, comprobante: '' })
 
 const searchQuery = ref('')
 const sortKey = ref('kilos')
@@ -179,11 +258,13 @@ const sortOrder = ref(-1) // Mayor a menor decomiso
 
 const showAlert = (msg, type = 'success') => {
   alert.value = { show: true, message: msg, type }
-  setTimeout(() => { alert.value.show = false }, 3000)
+  setTimeout(() => { alert.value.show = false }, 3500)
 }
 
 const fetchDecomisos = async () => {
   loading.value = true
+  selectedItems.value = []
+  selectAll.value = false
   try {
     const res = await fetch('/api/productos/decomisos')
     if (res.ok) {
@@ -199,39 +280,102 @@ const fetchDecomisos = async () => {
   }
 }
 
+// Métodos de Selección
+const toggleSelectAll = () => {
+  if (selectAll.value) {
+    selectedItems.value = filteredAndSortedProductos.value.map(p => p.codigo)
+  } else {
+    selectedItems.value = []
+  }
+}
+
+const updateSelectAllState = () => {
+  const visibleCodes = filteredAndSortedProductos.value.map(p => p.codigo)
+  if (visibleCodes.length === 0) {
+    selectAll.value = false
+    return
+  }
+  selectAll.value = visibleCodes.every(code => selectedItems.value.includes(code))
+}
+
 // Métodos de Descuento
 const openDiscountModal = (producto) => {
-  selectedProduct.value = producto
+  itemsToDiscount.value = [{
+    codigo: producto.codigo,
+    nombre: producto.nombre,
+    kilos: producto.kilos
+  }]
   discountForm.value.kilos = producto.kilos // Pre-cargar todo el decomiso disponible
+  discountForm.value.comprobante = ''
+  showDiscountModal.value = true
+}
+
+const openBulkDiscountModal = () => {
+  if (selectedItems.value.length === 0) return
+  itemsToDiscount.value = filteredAndSortedProductos.value
+    .filter(p => selectedItems.value.includes(p.codigo))
+    .map(p => ({
+      codigo: p.codigo,
+      nombre: p.nombre,
+      kilos: p.kilos
+    }))
+  discountForm.value.kilos = 0 // No se usa en lote
+  discountForm.value.comprobante = ''
   showDiscountModal.value = true
 }
 
 const closeDiscountModal = () => {
   showDiscountModal.value = false
-  selectedProduct.value = null
+  itemsToDiscount.value = []
   discountForm.value.kilos = 0
+  discountForm.value.comprobante = ''
 }
 
+const totalKilosToDiscount = computed(() => {
+  return itemsToDiscount.value.reduce((sum, item) => sum + (parseFloat(item.kilos) || 0), 0)
+})
+
 const handleDiscount = async () => {
-  if (!selectedProduct.value || discountForm.value.kilos <= 0) return
+  if (itemsToDiscount.value.length === 0) return
+  if (!discountForm.value.comprobante.trim()) {
+    showAlert('El número de comprobante es obligatorio', 'error')
+    return
+  }
 
   savingDiscount.value = true
   try {
+    let payloadItems = []
+    if (itemsToDiscount.value.length === 1) {
+      payloadItems = [{
+        codigo: itemsToDiscount.value[0].codigo,
+        kilos: parseFloat(discountForm.value.kilos)
+      }]
+    } else {
+      payloadItems = itemsToDiscount.value.map(item => ({
+        codigo: item.codigo,
+        kilos: parseFloat(item.kilos)
+      }))
+    }
+
     const res = await fetch('/api/productos/descontar-decomiso', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        codigo: selectedProduct.value.codigo,
-        kilos: parseFloat(discountForm.value.kilos)
+        items: payloadItems,
+        comprobante: discountForm.value.comprobante.trim(),
+        usuario: authStore.user?.nombre || 'Sistema'
       })
     })
 
     const result = await res.json()
 
     if (res.ok) {
-      showAlert(`Descarte exitoso: se restaron ${parseFloat(discountForm.value.kilos).toFixed(3)} kg de decomiso`)
+      const msg = itemsToDiscount.value.length === 1 
+        ? `Descarte exitoso: se restaron ${parseFloat(discountForm.value.kilos).toFixed(3)} kg de decomiso`
+        : `Descarte de lote exitoso: se procesaron ${itemsToDiscount.value.length} productos`
+      showAlert(msg)
       closeDiscountModal()
       fetchDecomisos()
     } else {
@@ -330,7 +474,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 2rem;
-  border-radius: 0;
+  border-radius: var(--border-radius-md);
 }
 
 .summary-details {
@@ -366,5 +510,8 @@ th i {
   margin-left: 0.25rem;
   font-size: 0.8rem;
   vertical-align: middle;
+}
+tr.selected-row {
+  background-color: rgba(220, 38, 38, 0.08); /* Soft red for selected decomisos */
 }
 </style>

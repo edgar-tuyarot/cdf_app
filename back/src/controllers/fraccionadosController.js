@@ -1,9 +1,11 @@
-const { Fraccionado, Producto, sequelize } = require('../models');
+const { Fraccionado, Producto, LogConversion, ProductoStock, Ubicacion, sequelize } = require('../models');
 
 // Obtener todos los fraccionados con los nombres de sus productos asociados
 exports.obtenerFraccionados = async (req, res) => {
   try {
+    const id_ubicacion = req.ubicacionId;
     const fraccionados = await Fraccionado.findAll({
+      where: { id_ubicacion },
       include: [
         { model: Producto, as: 'ProductoOriginal', attributes: ['nombre'] },
         { model: Producto, as: 'ProductoFraccionado', attributes: ['nombre'] }
@@ -20,14 +22,16 @@ exports.obtenerFraccionados = async (req, res) => {
 exports.obtenerFraccionadoPorId = async (req, res) => {
   try {
     const { id } = req.params;
-    const fraccionado = await Fraccionado.findByPk(id, {
+    const id_ubicacion = req.ubicacionId;
+    const fraccionado = await Fraccionado.findOne({
+      where: { id, id_ubicacion },
       include: [
         { model: Producto, as: 'ProductoOriginal', attributes: ['nombre'] },
         { model: Producto, as: 'ProductoFraccionado', attributes: ['nombre'] }
       ]
     });
     if (!fraccionado) {
-      return res.status(404).json({ error: 'Registro fraccionado no encontrado' });
+      return res.status(404).json({ error: 'Registro fraccionado no encontrado o no pertenece a su ubicacion' });
     }
     res.json(fraccionado);
   } catch (error) {
@@ -40,6 +44,7 @@ exports.obtenerFraccionadoPorId = async (req, res) => {
 exports.crearFraccionado = async (req, res) => {
   try {
     const { codigo_producto_original, peso_a_fraccionar, codigo_fraccionado } = req.body;
+    const id_ubicacion = req.ubicacionId;
 
     if (!codigo_producto_original || !codigo_fraccionado) {
       return res.status(400).json({ error: 'Los campos "codigo_producto_original" y "codigo_fraccionado" son obligatorios.' });
@@ -60,7 +65,8 @@ exports.crearFraccionado = async (req, res) => {
     const nuevoFraccionado = await Fraccionado.create({
       codigo_producto_original,
       peso_a_fraccionar: peso_a_fraccionar || 0,
-      codigo_fraccionado
+      codigo_fraccionado,
+      id_ubicacion
     });
 
     res.status(201).json({
@@ -77,9 +83,10 @@ exports.crearFraccionado = async (req, res) => {
 exports.actualizarFraccionado = async (req, res) => {
   try {
     const { id } = req.params;
-    const fraccionado = await Fraccionado.findByPk(id);
+    const id_ubicacion = req.ubicacionId;
+    const fraccionado = await Fraccionado.findOne({ where: { id, id_ubicacion } });
     if (!fraccionado) {
-      return res.status(404).json({ error: 'Registro fraccionado no encontrado' });
+      return res.status(404).json({ error: 'Registro fraccionado no encontrado o no pertenece a su ubicacion' });
     }
 
     if (req.body.codigo_producto_original) {
@@ -112,9 +119,10 @@ exports.actualizarFraccionado = async (req, res) => {
 exports.eliminarFraccionado = async (req, res) => {
   try {
     const { id } = req.params;
-    const fraccionado = await Fraccionado.findByPk(id);
+    const id_ubicacion = req.ubicacionId;
+    const fraccionado = await Fraccionado.findOne({ where: { id, id_ubicacion } });
     if (!fraccionado) {
-      return res.status(404).json({ error: 'Registro fraccionado no encontrado' });
+      return res.status(404).json({ error: 'Registro fraccionado no encontrado o no pertenece a su ubicacion' });
     }
 
     await fraccionado.destroy();
@@ -125,20 +133,28 @@ exports.eliminarFraccionado = async (req, res) => {
   }
 };
 
-// Procesar fraccionamiento (acumular peso en kg_fraccionados del producto final y limpiar el registro fraccionado)
+// Procesar fraccionamiento (acumular en el destino, registrar log y limpiar pesos en la plantilla, sin descontar de origen)
 exports.procesarFraccionamiento = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
+    const { comprobante, usuario } = req.body;
+    const id_ubicacion = req.ubicacionId;
+
+    if (!comprobante) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El número de comprobante es obligatorio para registrar la conversión.' });
+    }
     
     // 1. Buscar registro fraccionado
-    const fraccionado = await Fraccionado.findByPk(id, { transaction });
+    const fraccionado = await Fraccionado.findOne({ where: { id, id_ubicacion }, transaction });
     if (!fraccionado) {
       await transaction.rollback();
-      return res.status(404).json({ error: 'Registro fraccionado no encontrado.' });
+      return res.status(404).json({ error: 'Registro fraccionado no encontrado o no pertenece a su ubicacion.' });
     }
 
     const valPesoAFraccionar = parseFloat(fraccionado.peso_a_fraccionar) || 0;
+    const valPesoADescontar = parseFloat(fraccionado.peso_a_descontar) || 0;
     const codigoDestino = fraccionado.codigo_fraccionado;
 
     if (valPesoAFraccionar <= 0) {
@@ -153,12 +169,33 @@ exports.procesarFraccionamiento = async (req, res) => {
       return res.status(400).json({ error: `El producto fraccionado de destino con código ${codigoDestino} no existe.` });
     }
 
-    // 3. Sumar peso_a_fraccionar a kilos_block del producto final
-    const kilosBlockActual = parseFloat(productoDestino.kilos_block) || 0;
-    productoDestino.kilos_block = kilosBlockActual + valPesoAFraccionar;
-    await productoDestino.save({ transaction });
+    // 3. Sumar peso_a_fraccionar a stock del ProductoStock
+    const [pStockRecord, created] = await ProductoStock.findOrCreate({
+      where: { codigo_producto: codigoDestino, id_ubicacion },
+      defaults: { stock: 0.0000 },
+      transaction
+    });
+    const kilosCalculadoActual = parseFloat(pStockRecord.stock) || 0;
+    pStockRecord.stock = kilosCalculadoActual + valPesoAFraccionar;
+    await pStockRecord.save({ 
+      transaction,
+      tipo_movimiento: 'CONVERSION',
+      concepto: `Ingreso de stock por fraccionamiento de ${valPesoAFraccionar.toFixed(3)} kg del producto original ${fraccionado.codigo_producto_original} (Comprobante: ${comprobante})`
+    });
 
-    // 4. Limpiar los pesos del registro fraccionado (poner a 0)
+    // 4. Crear el registro en el log de conversiones
+    await LogConversion.create({
+      id_ubicacion,
+      codigo_producto_original: fraccionado.codigo_producto_original,
+      peso_descontado: valPesoADescontar,
+      codigo_fraccionado: fraccionado.codigo_fraccionado,
+      peso_fraccionado: valPesoAFraccionar,
+      comprobante,
+      usuario: usuario || 'Sistema',
+      fecha: new Date()
+    }, { transaction });
+
+    // 5. Limpiar los pesos del registro fraccionado (poner a 0)
     fraccionado.peso_a_fraccionar = 0;
     fraccionado.peso_a_descontar = 0;
     await fraccionado.save({ transaction });
@@ -170,7 +207,8 @@ exports.procesarFraccionamiento = async (req, res) => {
       productoDestinoActualizado: {
         codigo: productoDestino.codigo,
         nombre: productoDestino.nombre,
-        kilos_block_nuevo: productoDestino.kilos_block
+        stock_nuevo: parseFloat(pStockRecord.stock),
+        kilos_calculado_nuevo: parseFloat(pStockRecord.stock)
       },
       fraccionadoLimpio: fraccionado
     });
@@ -180,6 +218,122 @@ exports.procesarFraccionamiento = async (req, res) => {
     }
     console.error('Error al procesar fraccionamiento:', error);
     res.status(500).json({ error: 'Error al procesar el fraccionamiento' });
+  }
+};
+
+// Procesar lote de fraccionamientos (agrupados y por lotes transaccionales, sin descontar del origen)
+exports.procesarFraccionamientoLote = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { ids, comprobante, usuario } = req.body;
+    const id_ubicacion = req.ubicacionId;
+
+    if (!comprobante) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El número de comprobante es obligatorio para registrar las conversiones.' });
+    }
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Debe enviar un array "ids" con los identificadores de conversiones a procesar.' });
+    }
+
+    const detalles = [];
+
+    for (const id of ids) {
+      const fraccionado = await Fraccionado.findOne({ where: { id, id_ubicacion }, transaction });
+      if (!fraccionado) {
+        await transaction.rollback();
+        return res.status(404).json({ error: `Registro de conversión ID ${id} no encontrado o no pertenece a su ubicacion.` });
+      }
+
+      const valPesoAFraccionar = parseFloat(fraccionado.peso_a_fraccionar) || 0;
+      const valPesoADescontar = parseFloat(fraccionado.peso_a_descontar) || 0;
+      const codigoDestino = fraccionado.codigo_fraccionado;
+
+      if (valPesoAFraccionar <= 0) {
+        await transaction.rollback();
+        return res.status(400).json({ error: `La conversión ID ${id} no tiene peso a fraccionar (el peso es 0).` });
+      }
+
+      // 1. Buscar producto fraccionado (destino)
+      const productoDestino = await Producto.findByPk(codigoDestino, { transaction });
+      if (!productoDestino) {
+        await transaction.rollback();
+        return res.status(400).json({ error: `El producto fraccionado de destino con código ${codigoDestino} para la conversión ID ${id} no existe.` });
+      }
+
+      // 2. Sumar al stock de la ubicación activa en ProductoStock
+      const [pStockRecord, created] = await ProductoStock.findOrCreate({
+        where: { codigo_producto: codigoDestino, id_ubicacion },
+        defaults: { stock: 0.0000 },
+        transaction
+      });
+      const kilosCalculadoActual = parseFloat(pStockRecord.stock) || 0;
+      pStockRecord.stock = kilosCalculadoActual + valPesoAFraccionar;
+      await pStockRecord.save({ 
+        transaction,
+        tipo_movimiento: 'CONVERSION',
+        concepto: `Ingreso de stock por fraccionamiento de ${valPesoAFraccionar.toFixed(3)} kg del producto original ${fraccionado.codigo_producto_original} (Comprobante: ${comprobante})`
+      });
+
+      // 3. Crear log de conversión
+      await LogConversion.create({
+        id_ubicacion,
+        codigo_producto_original: fraccionado.codigo_producto_original,
+        peso_descontado: valPesoADescontar,
+        codigo_fraccionado: fraccionado.codigo_fraccionado,
+        peso_fraccionado: valPesoAFraccionar,
+        comprobante,
+        usuario: usuario || 'Sistema',
+        fecha: new Date()
+      }, { transaction });
+
+      // 4. Limpiar pesos de la plantilla
+      fraccionado.peso_a_fraccionar = 0;
+      fraccionado.peso_a_descontar = 0;
+      await fraccionado.save({ transaction });
+
+      detalles.push({
+        id,
+        codigo_original: fraccionado.codigo_producto_original,
+        codigo_fraccionado: fraccionado.codigo_fraccionado,
+        nombre_fraccionado: productoDestino.nombre,
+        peso_fraccionado: valPesoAFraccionar
+      });
+    }
+
+    await transaction.commit();
+
+    res.json({
+      mensaje: `Lote de ${ids.length} conversiones procesado exitosamente`,
+      detalles
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al procesar lote de fraccionamiento:', error);
+    res.status(500).json({ error: 'Error al procesar el lote de fraccionamiento' });
+  }
+};
+
+// Obtener historial del log de conversiones
+exports.obtenerLogsConversiones = async (req, res) => {
+  try {
+    const id_ubicacion = req.ubicacionId;
+    const logs = await LogConversion.findAll({
+      where: { id_ubicacion },
+      include: [
+        { model: Producto, as: 'ProductoOriginal', attributes: ['nombre'] },
+        { model: Producto, as: 'ProductoFraccionado', attributes: ['nombre'] }
+      ],
+      order: [['fecha', 'DESC'], ['id', 'DESC']]
+    });
+    res.json(logs);
+  } catch (error) {
+    console.error('Error al obtener logs de conversiones:', error);
+    res.status(500).json({ error: 'Error al obtener logs de conversiones' });
   }
 };
 

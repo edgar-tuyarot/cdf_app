@@ -20,7 +20,8 @@ export default defineConfig({
     host: true,        // Escucha en 0.0.0.0 → accesible desde la red local
     port: 5174,
     allowedHosts: [
-      'app.envioslibres.lat'
+      'app.envioslibres.lat',
+      'cdf.envioslibres.lat'
     ],
     proxy: {
       '/api': {
