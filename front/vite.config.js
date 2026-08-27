@@ -21,13 +21,17 @@ export default defineConfig({
     port: 5174,
     allowedHosts: [
       'app.envioslibres.lat',
-      'cdf.envioslibres.lat'
+      'cdf.envioslibres.lat',
+      'emt.envioslibres.lat',
+      '.envioslibres.lat'
     ],
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        timeout: 60000,
+        proxyTimeout: 60000
       }
     }
   }

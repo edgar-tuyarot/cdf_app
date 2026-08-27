@@ -161,7 +161,7 @@
         
         <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; width: 100%;">
           <!-- Buscador de productos en el modal -->
-          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.4rem 0.6rem; box-shadow: var(--inset-shadow); border-radius: 4px; border: 1px solid var(--border-color); flex: 1;">
+          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.4rem 0.6rem; box-shadow: var(--inset-shadow); border-radius: 0; border: 1px solid var(--border-color); flex: 1;">
             <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
             <input 
               type="text" 
@@ -217,6 +217,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useWinDialog } from '../composables/useWinDialog'
+
+const { winConfirm } = useWinDialog()
 
 const sucursales = ref([])
 const ubicaciones = ref([])
@@ -315,7 +318,7 @@ const saveSucursal = async () => {
 }
 
 const deleteSucursal = async (id) => {
-  if (!confirm('¿Estás seguro de eliminar esta sucursal?')) return
+  if (!await winConfirm('¿Estás seguro de eliminar esta sucursal?', 'Eliminar Sucursal')) return
 
   try {
     const res = await fetch(`/api/sucursales/${id}`, { method: 'DELETE' })
@@ -429,7 +432,7 @@ onMounted(() => {
 }
 .modal-content {
   background-color: var(--bg-window);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 1.5rem;
   width: 90%;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);

@@ -168,14 +168,13 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label">Piezas en la Caja *</label>
+                <label class="form-label">Piezas en la Caja (Opcional - Est. por Peso/Pieza)</label>
                 <input 
                   type="number" 
                   v-model.number="form.cantidad_piezas" 
                   class="form-control" 
-                  placeholder="4" 
-                  min="1"
-                  required 
+                  placeholder="Se calcula automáticamente si se deja vacío" 
+                  min="0" 
                 />
               </div>
 

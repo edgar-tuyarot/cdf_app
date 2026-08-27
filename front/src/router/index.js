@@ -31,9 +31,7 @@ const router = createRouter({
     },
     {
       path: '/control-piezas',
-      name: 'control-piezas',
-      component: () => import('../views/ControlPiezas.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
+      redirect: '/vencimientos',
     },
     {
       path: '/procesos',
@@ -70,16 +68,28 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
     },
     {
-      path: '/ingreso-recortes',
-      name: 'ingreso-recortes',
-      component: () => import('../views/RecepcionRecortes.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
+      path: '/ordenes-compra',
+      name: 'ordenes-compra',
+      component: () => import('../views/OrdenesCompra.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
     },
     {
       path: '/ingresos',
       name: 'ingresos',
       component: () => import('../views/Ingresos.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+    },
+    {
+      path: '/ingresos-historial',
+      name: 'ingresos-historial',
+      component: () => import('../views/IngresosHistorial.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+    },
+    {
+      path: '/registros',
+      name: 'registros',
+      component: () => import('../views/Registros.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario', 'Colaborador'] },
     },
     {
       path: '/decomisos',
@@ -152,7 +162,43 @@ const router = createRouter({
       component: () => import('../views/CrearPedidoSucursal.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/reportes-pedidos',
+      name: 'reportes-pedidos',
+      component: () => import('../views/ReportesPedidos.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/reportes-produccion',
+      name: 'reportes-produccion',
+      component: () => import('../views/ReportesProduccion.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
+    },
+    {
+      path: '/reporte-trazabilidad',
+      name: 'reporte-trazabilidad',
+      component: () => import('../views/ReportesTrazabilidad.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/stock-debug',
+      name: 'stock-debug',
+      component: () => import('../views/StockDebug.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/block-config',
+      name: 'block-config',
+      component: () => import('../views/BlockConfig.vue'),
+      meta: { requiresAuth: true, roles: ['Admin'] },
+    },
 
+    {
+      path: '/wms-stock-ubicaciones',
+      name: 'wms-stock-ubicaciones',
+      component: () => import('../views/WmsConsultaStockUbicacion.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    },
   ],
 })
 
@@ -165,6 +211,11 @@ router.beforeEach(async (to) => {
 
   if (to.name === 'login' && authStore.isAuthenticated) {
     return { name: 'dashboard' }
+  }
+
+  // Garantizar que los permisos de la base de datos estén cargados antes de validar el acceso a la ruta
+  if (authStore.isAuthenticated && authStore.permissions.length === 0) {
+    await authStore.loadPermissions()
   }
 
   // Verificar accesos dinámicos basados en permisos cargados desde el servidor

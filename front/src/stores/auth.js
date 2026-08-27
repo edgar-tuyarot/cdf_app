@@ -20,24 +20,42 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Cargar permisos automáticamente al iniciar el store si ya hay sesión guardada
+  if (isAuthenticated.value) {
+    loadPermissions()
+  }
+
   const hasPermission = (viewPath, allowedRoles = []) => {
     const userRole = user.value?.rol?.toLowerCase() || ''
-    if (userRole === 'admin') return true // Admin has full access
+    if (!userRole) return false
+    if (userRole === 'admin') return true // Admin siempre tiene acceso total
 
-    // Normalizar la vista (remover barra inicial y manejar nombres alternativos si es necesario)
-    const viewName = viewPath.replace(/^\//, '')
+    // Normalizar ruta (remover barra inicial y pasar a minúsculas)
+    const viewName = viewPath.replace(/^\//, '').toLowerCase()
+
+    // Buscar el permiso configurado explícitamente en la base de datos
     const perm = permissions.value.find(
-      p => p.rol.toLowerCase() === userRole && p.vista.replace(/^\//, '') === viewName
+      p => p.rol.toLowerCase() === userRole && p.vista.replace(/^\//, '').toLowerCase() === viewName
     )
+
     if (perm !== undefined) {
       return !!perm.permitido
     }
-    // Fallback a los roles definidos estáticamente
+
+    // Si existen permisos configurados en BBDD para este ROL pero esta vista no está registrada,
+    // se DENEGA el acceso (Principio de seguridad: denegación implícita por defecto)
+    const roleHasDbConfig = permissions.value.some(p => p.rol.toLowerCase() === userRole)
+    if (roleHasDbConfig) {
+      return false
+    }
+
+    // Fallback a roles estáticos únicamente si la base de datos no tiene ningún registro para este rol
     if (Array.isArray(allowedRoles) && allowedRoles.length > 0) {
       const allowedRolesLower = allowedRoles.map(r => r.toLowerCase())
       return allowedRolesLower.includes(userRole)
     }
-    return false // Bloquear por defecto si no está explícitamente configurado
+
+    return false // Bloquear por defecto
   }
 
   const login = async (usuario, password) => {

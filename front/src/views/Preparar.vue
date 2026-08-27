@@ -30,10 +30,10 @@
       >
         <div class="card-header" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem 1rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-            <span class="card-title" style="margin: 0; font-weight: bold;">Pedidos Pendientes ({{ pendingPedidos.length }})</span>
+            <span class="card-title" style="margin: 0; font-weight: bold;">Pedidos por Preparar ({{ pendingPedidos.length }})</span>
           </div>
           <!-- Buscador de pedidos -->
-          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.25rem 0.5rem; box-shadow: var(--inset-shadow); border-radius: 4px; border: 1px solid var(--bevel-light); width: 100%;">
+          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.25rem 0.5rem; box-shadow: var(--inset-shadow); border-radius: 0; border: 1px solid var(--bevel-light); width: 100%;">
             <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.85rem;"></i>
             <input 
               type="text" 
@@ -55,7 +55,7 @@
           </div>
           <div v-else-if="filteredPendingPedidos.length === 0" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.85rem;">
             <i class="ph ph-shopping-cart" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.5;"></i>
-            <span>No hay pedidos pendientes que coincidan con la búsqueda.</span>
+            <span>No hay pedidos pendientes o en preparación.</span>
           </div>
           <div v-else style="display: flex; flex-direction: column; gap: 0.5rem;">
             <div 
@@ -64,11 +64,11 @@
               class="pedido-item"
               :class="{ 'selected': selectedPedido?.id === p.id }"
               @click="selectPedido(p)"
-              style="padding: 0.75rem; border-radius: 6px; border: 1px solid var(--bevel-dark); background: var(--bg-secondary); cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; gap: 0.35rem;"
+              style="padding: 0.75rem; border-radius: 0; border: 1px solid var(--bevel-dark); background: var(--bg-secondary); cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; gap: 0.35rem;"
             >
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <strong style="font-size: 0.9rem; color: var(--text-primary);">{{ p.codigo }}</strong>
-                <span class="badge badge-warning" style="font-size: 0.68rem; padding: 2px 6px; border-radius: 3px;">{{ p.estado }}</span>
+                <span class="badge" :class="p.estado === 'Preparando' ? 'badge-primary' : 'badge-warning'" style="font-size: 0.68rem; padding: 2px 6px; border-radius: 0;">{{ p.estado }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-secondary);">
                 <span>Sucursal: <strong style="color: var(--text-primary);">{{ p.sucursal || '-' }}</strong></span>
@@ -85,13 +85,13 @@
                       {{ getPedidoProgreso(p) }}%
                     </span>
                   </div>
-                  <div style="width: 100%; height: 5px; background-color: var(--bevel-dark); border-radius: 3px; overflow: hidden; border: 1px solid var(--bevel-light);">
+                  <div style="width: 100%; height: 5px; background-color: var(--bevel-dark); border-radius: 0; overflow: hidden; border: 1px solid var(--bevel-light);">
                     <div 
                       :style="{ 
                         width: getPedidoProgreso(p) + '%', 
                         backgroundColor: getPedidoProgreso(p) === 100 ? 'var(--accent-success)' : 'var(--accent-primary)' 
                       }" 
-                      style="height: 100%; transition: width 0.3s ease; border-radius: 3px;"
+                      style="height: 100%; transition: width 0.3s ease; border-radius: 0;"
                     ></div>
                   </div>
                 </div>
@@ -176,16 +176,16 @@
                     <td style="padding: 0.5rem; text-align: right; font-weight: bold; color: var(--text-primary);">
                       {{ item.pieza > 0 ? item.pieza : '-' }}
                     </td>
-                    <!-- Fracc Pedida (kg) -->
+                    <!-- Fracc Pedida -->
                     <td style="padding: 0.5rem; text-align: right; font-weight: bold; color: var(--text-primary);">
-                      {{ parseFloat(item.fraccion || 0) > 0 ? parseFloat(item.fraccion).toFixed(3) : '-' }}
+                      {{ parseFloat(item.fraccion || 0) > 0 ? Math.round(parseFloat(item.fraccion)) : '-' }}
                     </td>
                   </tr>
 
                   <!-- Fila Colapsable / Mini Card de Carga de Envío -->
                   <tr v-if="selectedItemCode === item.codigo_producto" :key="'edit-' + item.codigo_producto">
                     <td colspan="4" style="padding: 0.5rem; background-color: var(--bg-secondary);" @click.stop>
-                      <div class="item-prep-dropdown" style="padding: 0.75rem; border: 1px solid var(--bevel-dark); border-radius: 4px; background: var(--bg-window); display: flex; flex-direction: column; gap: 0.75rem;">
+                      <div class="item-prep-dropdown" style="padding: 0.75rem; border: 1px solid var(--bevel-dark); border-radius: 0; background: var(--bg-window); display: flex; flex-direction: column; gap: 0.75rem;">
                                          <!-- Título (Solo el nombre del producto) -->
                         <div style="border-bottom: 1px solid var(--bevel-light); padding-bottom: 0.4rem; margin-bottom: 0.3rem;">
                           <h4 style="font-size: 0.92rem; font-weight: bold; color: var(--text-primary); margin: 0; line-height: 1.35;">
@@ -208,8 +208,13 @@
                           </div>
 
                           <!-- Kg a enviar -->
-                          <div class="form-group" style="margin-bottom: 0; width: 140px;">
-                            <label style="font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 0.25rem; color: var(--text-muted);">Kg a enviar</label>
+                          <div class="form-group" style="margin-bottom: 0; width: 175px;">
+                            <label style="font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 0.25rem; color: var(--text-muted);">
+                              Kg a enviar
+                              <span v-if="parseFloat(item.fraccion || 0) > 0" style="font-weight: normal; color: var(--accent-primary);">
+                                ({{ Math.round(parseFloat(item.fraccion)) }} fracc. pedidas)
+                              </span>
+                            </label>
                             <!-- Si es un item fraccionado, vinculamos a fraccion -->
                             <input 
                               v-if="parseFloat(item.fraccion || 0) > 0"
@@ -343,6 +348,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useWinDialog } from '../composables/useWinDialog'
+
+const { winConfirm } = useWinDialog()
 
 const pedidos = ref([])
 const loading = ref(false)
@@ -402,10 +410,10 @@ const fetchPedidos = async () => {
     const res = await fetch('/api/pedidos')
     if (res.ok) {
       pedidos.value = await res.json()
-      // Si el pedido seleccionado ya no está pendiente, deseleccionarlo
+      // Si el pedido seleccionado ya no está en preparación (pasó a Listo, Enviado, etc.), deseleccionarlo
       if (selectedPedido.value) {
         const found = pedidos.value.find(p => p.id === selectedPedido.value.id)
-        if (!found || found.estado !== 'Pendiente') {
+        if (!found || !['Pendiente', 'Preparando', 'Procesando', 'Armando'].includes(found.estado)) {
           selectedPedido.value = null
           showMobileDetail.value = false
           armadoItems.value = []
@@ -456,9 +464,9 @@ const fetchPedidoDetalle = async (id) => {
   }
 }
 
-// Filtrar pedidos en estado "Pendiente"
+// Filtrar pedidos en estado "Pendiente" y "Preparando"
 const pendingPedidos = computed(() => {
-  return pedidos.value.filter(p => p.estado === 'Pendiente')
+  return pedidos.value.filter(p => ['Pendiente', 'Preparando', 'Procesando', 'Armando'].includes(p.estado))
 })
 
 // Filtrar por campo de búsqueda
@@ -556,7 +564,7 @@ const toggleEditItem = (item) => {
     itemForm.value = {
       piezas: item.pieza || 0,
       peso: 0,
-      fraccion: parseFloat(item.fraccion || 0) > 0 ? parseFloat(item.fraccion) : 0,
+      fraccion: 0,
       sin_stock: false,
       no_envia: false
     }
@@ -567,11 +575,12 @@ const toggleEditItem = (item) => {
 const grabarItem = async (item) => {
   savingItem.value = true
   try {
+    const isSpecial = itemForm.value.no_envia || itemForm.value.sin_stock
     const body = {
       codigo_producto: item.codigo_producto,
-      piezas: itemForm.value.piezas,
-      peso: itemForm.value.peso,
-      fraccion: itemForm.value.fraccion,
+      piezas: isSpecial ? 0 : itemForm.value.piezas,
+      peso: isSpecial ? 0 : itemForm.value.peso,
+      fraccion: isSpecial ? 0 : itemForm.value.fraccion,
       no_envia: itemForm.value.no_envia,
       sin_stock: itemForm.value.sin_stock
     }
@@ -671,11 +680,11 @@ const confirmarPedido = async () => {
   })
 
   if (itemsSinPreparar.length > 0) {
-    if (!confirm(`Hay ${itemsSinPreparar.length} productos sin preparar en la lista. Si deseas continuar, estos se marcarán como "No Envía". ¿Confirmar?`)) {
+    if (!await winConfirm(`Hay ${itemsSinPreparar.length} productos sin preparar en la lista. Si deseas continuar, estos se marcarán como "No Envía". ¿Confirmar?`, 'Productos Sin Preparar')) {
       return
     }
   } else {
-    if (!confirm('¿Estás seguro de confirmar este pedido? Se descontarán las piezas y pesos del stock siguiendo la regla FIFO.')) {
+    if (!await winConfirm('¿Estás seguro de confirmar este pedido? Se guardarán los datos y el pedido pasará a estado "Listo".', 'Confirmar Pedido')) {
       return
     }
   }
@@ -684,13 +693,16 @@ const confirmarPedido = async () => {
   try {
     const itemsPayload = selectedPedido.value.items.map(item => {
       const arm = armadoItems.value.find(a => a.codigo_producto === item.codigo_producto)
+      const hasValues = arm && ((parseInt(arm.piezas) || 0) > 0 || (parseFloat(arm.peso) || 0) > 0 || (parseFloat(arm.fraccion) || 0) > 0)
       const isSpecial = arm && (arm.sin_stock || arm.no_envia)
+      const isNoEnvia = arm ? !!arm.no_envia : (!hasValues && !isSpecial)
       return {
         codigo: item.codigo_producto,
         peso: (arm && !isSpecial) ? parseFloat(arm.peso || 0) : 0,
         piezas: (arm && !isSpecial) ? parseInt(arm.piezas || 0, 10) : 0,
         fraccion: (arm && !isSpecial) ? parseFloat(arm.fraccion || 0) : 0,
-        sinStock: arm ? !!arm.sin_stock : false
+        sinStock: arm ? !!arm.sin_stock : false,
+        noEnvia: isNoEnvia
       }
     })
 
@@ -717,7 +729,7 @@ const confirmarPedido = async () => {
 
     const data = await res.json()
     if (res.ok) {
-      showAlert('Pedido confirmado y stock descontado exitosamente (FIFO).')
+      showAlert('Pedido guardado exitosamente en estado "Listo".')
       selectedPedido.value = null
       showMobileDetail.value = false
       fetchPedidos()
@@ -810,7 +822,7 @@ onMounted(() => {
   height: 38px !important;
   font-size: 0.95rem !important;
   padding: 6px 10px !important;
-  border-radius: 6px !important;
+  border-radius: 0 !important;
   border: 1.5px solid var(--bevel-dark) !important;
 }
 
@@ -823,7 +835,7 @@ onMounted(() => {
   padding: 6px 10px;
   background-color: var(--bg-secondary);
   border: 1px solid var(--bevel-light);
-  border-radius: 6px;
+  border-radius: 0;
   user-select: none;
   margin: 0 !important;
 }
@@ -837,7 +849,7 @@ onMounted(() => {
   height: 38px !important;
   font-size: 0.85rem !important;
   padding: 0 1.25rem !important;
-  border-radius: 6px !important;
+  border-radius: 0 !important;
 }
 </style>
 

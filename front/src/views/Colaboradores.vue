@@ -97,6 +97,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useWinDialog } from '../composables/useWinDialog'
+
+const { winConfirm } = useWinDialog()
 
 const colaboradores = ref([])
 const loading = ref(true)
@@ -127,10 +130,10 @@ const fetchColaboradores = async () => {
   }
 }
 
-const openModal = (col = null) => {
-  if (col) {
+const openModal = (colaborador = null) => {
+  if (colaborador) {
     isEditing.value = true
-    currentColaborador.value = { ...col }
+    currentColaborador.value = { ...colaborador }
   } else {
     isEditing.value = false
     currentColaborador.value = { id: null, nombre: '' }
@@ -140,7 +143,6 @@ const openModal = (col = null) => {
 
 const closeModal = () => {
   showModal.value = false
-  currentColaborador.value = { id: null, nombre: '' }
 }
 
 const saveColaborador = async () => {
@@ -177,7 +179,7 @@ const saveColaborador = async () => {
 }
 
 const deleteColaborador = async (id) => {
-  if (!confirm('¿Estás seguro de eliminar este colaborador?')) return
+  if (!await winConfirm('¿Estás seguro de eliminar este colaborador?', 'Eliminar Colaborador')) return
 
   try {
     const res = await fetch(`/api/colaboradores/${id}`, { method: 'DELETE' })
@@ -211,7 +213,7 @@ onMounted(() => {
 }
 .modal-content {
   background-color: var(--bg-window);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 1.5rem;
   width: 90%;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);

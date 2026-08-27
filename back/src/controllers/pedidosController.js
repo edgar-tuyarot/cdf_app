@@ -1,6 +1,28 @@
 const { Pedido, ProductoPedido, Producto, Fraccionado, DescuentoStock, ProductoVencimiento, Sucursal, PedidoSinStock, PedidoArmadoItem, ProductoStock, Ubicacion, sequelize } = require('../models');
 const { enviarMailConfirmacion } = require('../utils/email');
 
+// Función auxiliar para determinar el estado automático de un pedido según la carga de peso de sus ítems
+const determinarEstadoPedido = (items) => {
+  if (!Array.isArray(items) || items.length === 0) return 'Pendiente';
+
+  let itemsResueltosOPesados = 0;
+
+  for (const item of items) {
+    const pesoEnv = parseFloat(item.peso_enviado || 0);
+    const pzasEnv = parseInt(item.cantidad_enviada || 0, 10);
+    const fracEnv = parseFloat(item.fraccion_enviada || 0);
+    const esEspecial = !!(item.no_envia || item.sin_stock || item.noEnvia || item.sinStock);
+
+    if (pesoEnv > 0 || pzasEnv > 0 || fracEnv > 0 || esEspecial) {
+      itemsResueltosOPesados++;
+    }
+  }
+
+  if (itemsResueltosOPesados === 0) return 'Pendiente';
+  if (itemsResueltosOPesados >= items.length) return 'Listo';
+  return 'Preparando';
+};
+
 // Obtener todos los pedidos con sus productos asociados
 exports.obtenerPedidos = async (req, res) => {
   try {
@@ -20,7 +42,7 @@ exports.obtenerPedidos = async (req, res) => {
           include: [{
             model: Producto,
             as: 'Producto',
-            attributes: ['nombre', 'permite_piezas', 'permite_fracciones'],
+            attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
             include: [{
               model: ProductoStock,
               as: 'Stocks',
@@ -72,7 +94,7 @@ exports.obtenerPedidoPorId = async (req, res) => {
           include: [{
             model: Producto,
             as: 'Producto',
-            attributes: ['nombre', 'permite_piezas', 'permite_fracciones'],
+            attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
             include: [{
               model: ProductoStock,
               as: 'Stocks',
@@ -212,7 +234,7 @@ exports.crearPedido = async (req, res) => {
         include: [{
           model: Producto,
           as: 'Producto',
-          attributes: ['nombre', 'permite_piezas', 'permite_fracciones'],
+          attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
           include: [{
             model: ProductoStock,
             as: 'Stocks',
@@ -324,16 +346,24 @@ exports.actualizarPedido = async (req, res) => {
       }
     }
 
+    const prevEstado = pedido.estado;
+    const nextEstado = estado !== undefined ? estado : pedido.estado;
+
     // 1. Actualizar los datos básicos del pedido
     await pedido.update({
       codigo: codigo !== undefined ? codigo : pedido.codigo,
       sucursal: sucursal !== undefined ? sucursal : pedido.sucursal,
       fecha: fecha !== undefined ? fecha : pedido.fecha,
-      estado: estado !== undefined ? estado : pedido.estado,
+      estado: nextEstado,
       id_ubicacion: sucursalUbicacionId || pedido.id_ubicacion
     }, { transaction });
 
-    // 2. Si se suministra la lista de items, la actualizamos
+    // 2. Si el pedido pasa a "Enviado", ejecutar deducción real de stock y lotes
+    if (nextEstado === 'Enviado' && prevEstado !== 'Enviado') {
+      await procesarDescuentoStockEnviado(pedido, transaction, sucursalUbicacionId || pedido.id_ubicacion, req.body.usuario || 'Sistema');
+    }
+
+    // 3. Si se suministra la lista de items, la actualizamos
     if (items !== undefined) {
 
       // Validar e insertar ítems
@@ -389,6 +419,15 @@ exports.actualizarPedido = async (req, res) => {
       }
     }
 
+    // Recalcular estado dinámico (Pendiente / Preparando / Listo) si el pedido no está Enviado o Completado
+    if (pedido.estado !== 'Enviado' && pedido.estado !== 'Completado') {
+      const itemsActuales = await ProductoPedido.findAll({ where: { id_pedido: id }, transaction });
+      const estadoCalculado = determinarEstadoPedido(itemsActuales);
+      if (pedido.estado !== estadoCalculado) {
+        await pedido.update({ estado: estadoCalculado }, { transaction });
+      }
+    }
+
     await transaction.commit();
 
     // Devolver el pedido actualizado con todas sus relaciones cargadas
@@ -400,7 +439,7 @@ exports.actualizarPedido = async (req, res) => {
         include: [{
           model: Producto,
           as: 'Producto',
-          attributes: ['nombre', 'permite_piezas', 'permite_fracciones'],
+          attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
           include: [{
             model: ProductoStock,
             as: 'Stocks',
@@ -431,7 +470,7 @@ exports.actualizarPedido = async (req, res) => {
       await transaction.rollback();
     }
     console.error('Error al actualizar pedido:', error);
-    res.status(500).json({ error: 'Error al actualizar el pedido' });
+    res.status(400).json({ error: error.message || 'Error al actualizar el pedido' });
   }
 };
 
@@ -851,127 +890,84 @@ exports.obtenerPromedioFraccionPorSucursal = async (req, res) => {
 // POST /api/pedidos/:id/confirmar
 // Body: { items: [{ codigo, peso, piezas }, ...] }
 // Función auxiliar interna para procesar la confirmación física y deducción de stock
-const confirmarPedidoCore = async (pedido, items, usuario, transaction, omitirValidacionStock = false, id_ubicacion = 1) => {
-  // 1. Validar items
-  if (!Array.isArray(items) || items.length === 0) {
-    throw new Error('Debe enviar un array "items" con al menos un elemento.');
-  }
+// Función auxiliar para procesar la deducción real de stock cuando un pedido pasa a "Enviado"
+const procesarDescuentoStockEnviado = async (pedido, transaction, id_ubicacion = 1, usuario = 'Sistema') => {
+  const items = await ProductoPedido.findAll({
+    where: { id_pedido: pedido.id, no_envia: false },
+    include: [{ model: Producto, as: 'Producto' }],
+    transaction
+  });
 
   const operaciones = [];
 
   for (const item of items) {
-    const { codigo, peso, piezas, fraccion, sinStock } = item;
+    const valPeso = parseFloat(item.peso_enviado) || 0;
+    let valPiezas = parseInt(item.cantidad_enviada, 10) || 0;
+    const valFraccion = parseFloat(item.fraccion_enviada) || 0;
+    const prod = item.Producto;
+    const codigo = item.codigo_producto;
 
-    if (!codigo) {
-      throw new Error('Cada item debe tener un "codigo" de producto válido.');
-    }
+    if (valPeso === 0 && valPiezas === 0 && valFraccion === 0) continue;
 
-    const valorPeso = sinStock ? 0 : (parseFloat(peso) || 0);
-    const valorPiezas = sinStock ? 0 : (parseInt(piezas, 10) || 0);
-    const valorFraccion = sinStock ? 0 : (parseFloat(fraccion) || 0);
+    const fuePedidoPorPiezas = (parseInt(item.pieza, 10) || 0) > 0;
 
-    if (valorPeso < 0 || valorPiezas < 0 || valorFraccion < 0) {
-      throw new Error(`El peso, las piezas y la fracción del producto ${codigo} deben ser números no negativos.`);
-    }
-
-    if (valorPeso === 0 && valorPiezas === 0 && valorFraccion === 0) {
-      // Si no se envía nada de este producto, actualizar su relación a 0 en producto_pedidos sin validar ni descontar stock
-      const productoPedido = await ProductoPedido.findOne({
-        where: { id_pedido: pedido.id, codigo_producto: codigo },
-        transaction
-      });
-      if (productoPedido) {
-        productoPedido.peso_enviado = 0;
-        productoPedido.cantidad_enviada = 0;
-        productoPedido.fraccion_enviada = 0;
-        productoPedido.confirmado = true;
-        productoPedido.no_envia = !sinStock;
-        await productoPedido.save({ transaction });
+    // Si fue pedido por piezas, y piezas = 0 pero hay peso > 0, autocalcular piezas con peso_x_pieza
+    if (fuePedidoPorPiezas && valPiezas === 0 && valPeso > 0 && prod) {
+      const pUnit = parseFloat(prod.peso_x_pieza) || 0;
+      valPiezas = pUnit > 0 ? Math.max(1, Math.round(valPeso / pUnit)) : 1;
+      item.cantidad_enviada = valPiezas;
+      await item.save({ transaction });
+    } else if (!fuePedidoPorPiezas) {
+      // Si el producto fue pedido por fracción / kg (NO por piezas), se fuerza piezas a 0
+      valPiezas = 0;
+      if (item.cantidad_enviada !== 0) {
+        item.cantidad_enviada = 0;
+        await item.save({ transaction });
       }
-
-      if (sinStock) {
-        await PedidoSinStock.create({
-          id_pedido: pedido.id,
-          codigo_producto: codigo,
-          fecha: new Date()
-        }, { transaction });
-      }
-
-      continue;
-    }
-
-    const producto = await Producto.findByPk(codigo, { transaction });
-    if (!producto) {
-      throw new Error(`El producto con código ${codigo} no existe.`);
     }
 
     operaciones.push({
-      producto,
-      valorPeso,
-      valorPiezas,
-      valorFraccion,
-      codigo
+      item,
+      producto: prod,
+      codigo,
+      valPeso,
+      valPiezas,
+      valFraccion,
+      fuePedidoPorPiezas
     });
   }
 
+  // 2. Ejecutar deducción real de stock (kilos y piezas, permitiendo stock negativo si no hay suficiente)
   const descuentosRealizados = [];
 
   for (const op of operaciones) {
-    const [pStockRecord, created] = await ProductoStock.findOrCreate({
+    const [pStockRecord] = await ProductoStock.findOrCreate({
       where: { codigo_producto: op.codigo, id_ubicacion },
       defaults: { stock: 0.0000, piezas: 0 },
       transaction
     });
+
     const stockKilosActual = parseFloat(pStockRecord.stock) || 0;
-    const stockCalculadoActual = stockKilosActual;
-    const stockPiezasActual = await ProductoVencimiento.sum('piezas', {
-      where: { codigo_producto: op.codigo, id_ubicacion },
-      transaction
-    }) || 0;
-    const stockFracActual = parseFloat(pStockRecord.kg_fraccionados) || 0;
+    const kilosEnviadosTotal = op.valPeso > 0 ? op.valPeso : op.valFraccion;
+    pStockRecord.stock = stockKilosActual - kilosEnviadosTotal;
 
-    // Validar que el stock no quede negativo (solo para piezas)
-    if (!omitirValidacionStock) {
-      if (op.valorPiezas > 0 && stockPiezasActual < op.valorPiezas) {
-        throw new Error(`Stock de piezas insuficiente para el producto ${op.codigo} (${op.producto.nombre}). Disponible: ${stockPiezasActual}, Requerido: ${op.valorPiezas}.`);
-      }
-    }
-
-    // Descuento en stock central (stock)
-    let stockADescuentar = 0;
-    if (parseFloat(op.valorPeso) > 0) {
-      stockADescuentar = parseFloat(op.valorPeso);
-    } else if (parseFloat(op.valorFraccion) > 0) {
-      stockADescuentar = parseFloat(op.valorFraccion);
-    } else if (parseInt(op.valorPiezas, 10) > 0) {
-      stockADescuentar = parseInt(op.valorPiezas, 10);
-    }
-
-    pStockRecord.stock = stockKilosActual - stockADescuentar;
-
-    // Determinar si el producto está configurado para pedirse por pieza y se enviaron piezas
-    const esPorPieza = (op.producto.permite_piezas === true) && (op.valorPiezas > 0);
-
-    // Si y solo si se pide por pieza, descontamos en piezas y en vencimientos FIFO
-    // Si y solo si se pide por pieza, descontamos en piezas y en vencimientos FIFO
-    // Note: Pieces in ProductoStock/Producto are not cached under consensued design.
     await pStockRecord.save({
       transaction,
       tipo_movimiento: 'PEDIDO_ENVIADO',
       referencia_id: pedido.id,
-      concepto: `Envío de pedido Nro ${pedido.codigo} a sucursal ${pedido.sucursal || 'Desconocida'} (${op.valorPiezas} pz, ${op.valorPeso.toFixed(3)} kg, ${op.valorFraccion.toFixed(3)} kg frac)`,
-      usuario: usuario || 'Sistema'
+      concepto: `Envío de pedido Nro ${pedido.codigo} a sucursal ${pedido.sucursal || 'Desconocida'} (${op.fuePedidoPorPiezas ? op.valPiezas + ' pz' : op.valFraccion + ' fracc'}, ${kilosEnviadosTotal.toFixed(3)} kg)`,
+      cantidad_piezas: (op.fuePedidoPorPiezas && op.valPiezas > 0) ? -op.valPiezas : 0,
+      usuario
     });
 
-    if (esPorPieza) {
-      // Deducción FIFO en ProductoVencimiento (lotes de vencimiento)
+    if (op.fuePedidoPorPiezas && op.valPiezas > 0) {
       const vencimientos = await ProductoVencimiento.findAll({
         where: { codigo_producto: op.codigo, id_ubicacion },
         order: [['vencimiento', 'ASC']],
         transaction
       });
 
-      let remainingToDeduct = op.valorPiezas;
+      let remainingToDeduct = op.valPiezas;
       for (const v of vencimientos) {
         if (remainingToDeduct <= 0) break;
         const currentPiezas = parseInt(v.piezas, 10) || 0;
@@ -986,66 +982,97 @@ const confirmarPedidoCore = async (pedido, items, usuario, transaction, omitirVa
       }
     }
 
-    // Guardar el producto modificado si es necesario (no has global stock fields to save)
-
-    // Registrar en producto_pedidos
-    const productoPedido = await ProductoPedido.findOne({
-      where: {
-        id_pedido: pedido.id,
-        codigo_producto: op.codigo
-      },
-      transaction
-    });
-    if (productoPedido) {
-      productoPedido.peso_enviado = op.valorPeso;
-      productoPedido.cantidad_enviada = op.valorPiezas;
-      productoPedido.fraccion_enviada = op.valorFraccion;
-      productoPedido.confirmado = true;
-      productoPedido.no_envia = false;
-      await productoPedido.save({ transaction });
-    }
-
-    // Trazabilidad DescuentoStock
-    if (op.valorPeso > 0) {
+    if (kilosEnviadosTotal > 0) {
       await DescuentoStock.create({
         id_pedido: pedido.id,
         codigo_producto: op.codigo,
-        peso_descontado: op.valorPeso,
-        campo_descontado: 'kilos_calculado',
-        fecha: new Date()
-      }, { transaction });
-    }
-
-    if (op.valorFraccion > 0) {
-      await DescuentoStock.create({
-        id_pedido: pedido.id,
-        codigo_producto: op.codigo,
-        peso_descontado: op.valorFraccion,
-        campo_descontado: 'kg_fraccionados',
+        peso_descontado: kilosEnviadosTotal,
+        campo_descontado: op.valFraccion > 0 ? 'kg_fraccionados' : 'kilos_calculado',
         fecha: new Date()
       }, { transaction });
     }
 
     descuentosRealizados.push({
       codigo: op.codigo,
-      nombre: op.producto.nombre,
-      peso_descontado: op.valorPeso,
-      piezas_descontadas: op.valorPiezas,
-      fraccion_descontada: op.valorFraccion,
-      stock_kilos_restante: parseFloat(pStockRecord.stock) || 0,
-      stock_kilos_calculado_restante: parseFloat(pStockRecord.stock) || 0,
-      stock_piezas_restante: Math.max(0, stockPiezasActual - op.valorPiezas),
-      stock_fraccionados_restante: parseFloat(pStockRecord.kg_fraccionados) || 0
+      nombre: op.producto ? op.producto.nombre : op.codigo,
+      peso_descontado: kilosEnviadosTotal,
+      piezas_descontadas: op.fuePedidoPorPiezas ? op.valPiezas : 0,
+      stock_kilos_restante: parseFloat(pStockRecord.stock) || 0
     });
   }
 
-  // Cambiar estado a "Listo"
+  return descuentosRealizados;
+};
+
+// Función auxiliar interna para procesar la preparación del pedido y pasar a "Listo" (NO descuenta stock)
+const confirmarPedidoCore = async (pedido, items, usuario, transaction, omitirValidacionStock = false, id_ubicacion = 1) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('Debe enviar un array "items" con al menos un elemento.');
+  }
+
+  for (const item of items) {
+    const { codigo, peso, piezas, fraccion, sinStock, noEnvia, no_envia } = item;
+
+    if (!codigo) {
+      throw new Error('Cada item debe tener un "codigo" de producto válido.');
+    }
+
+    const isNoEnvia = !!(noEnvia || no_envia);
+    const isSinStock = !!sinStock;
+    const isSpecial = isSinStock || isNoEnvia;
+
+    const valorPeso = isSpecial ? 0 : (parseFloat(peso) || 0);
+    let valorPiezas = isSpecial ? 0 : (parseInt(piezas, 10) || 0);
+    const valorFraccion = isSpecial ? 0 : (parseFloat(fraccion) || 0);
+
+    if (!isSpecial) {
+      // REGLA: La cantidad de kilos a enviar es obligatoria (aplica a valorPeso o valorFraccion)
+      const totalKgEnviar = valorPeso + valorFraccion;
+      if (totalKgEnviar <= 0) {
+        const prodObj = await Producto.findByPk(codigo, { transaction });
+        throw new Error(`La cantidad de kilos a enviar para el producto ${codigo} (${prodObj ? prodObj.nombre : ''}) es obligatoria y debe ser mayor a 0.`);
+      }
+
+      // REGLA: Si piezas = 0 y valorPeso > 0, autocalcular con peso_x_pieza
+      if (valorPiezas === 0 && valorPeso > 0) {
+        const prodObj = await Producto.findByPk(codigo, { transaction });
+        const pUnit = parseFloat(prodObj?.peso_x_pieza) || 0;
+        if (pUnit > 0) {
+          valorPiezas = Math.max(1, Math.round(valorPeso / pUnit));
+        }
+      }
+    }
+
+    const productoPedido = await ProductoPedido.findOne({
+      where: { id_pedido: pedido.id, codigo_producto: codigo },
+      transaction
+    });
+
+    if (productoPedido) {
+      const totalPesoCalculado = isSpecial ? 0 : (valorPeso + valorFraccion);
+      productoPedido.peso_enviado = totalPesoCalculado;
+      productoPedido.cantidad_enviada = valorPiezas;
+      productoPedido.fraccion_enviada = valorFraccion;
+      productoPedido.confirmado = true;
+      productoPedido.sin_stock = isSinStock;
+      productoPedido.no_envia = isNoEnvia || (!isSinStock && totalPesoCalculado === 0 && valorPiezas === 0);
+      await productoPedido.save({ transaction });
+    }
+
+    if (isSinStock) {
+      await PedidoSinStock.findOrCreate({
+        where: { id_pedido: pedido.id, codigo_producto: codigo },
+        defaults: { fecha: new Date() },
+        transaction
+      });
+    }
+  }
+
+  // REGLA CLAVE: Cambiar estado a "Listo" (Listo NO descuenta stock)
   pedido.estado = 'Listo';
   await pedido.save({ transaction });
 
-  // PedidoEnviado creation is removed under simplified architecture
-
-  return descuentosRealizados;
+  return [];
 };
 
 // Confirmar pedido (remoto/manual): descontar stock y cambiar estado a "Enviado"
@@ -1061,12 +1088,17 @@ exports.confirmarPedido = async (req, res) => {
       return res.status(404).json({ error: 'Pedido no encontrado.' });
     }
 
-    if (pedido.estado === 'Completado' || pedido.estado === 'Enviado' || pedido.estado === 'Listo') {
+    if (pedido.estado === 'Completado' || pedido.estado === 'Enviado') {
       await transaction.rollback();
-      return res.status(400).json({ error: 'Este pedido ya fue completado, enviado o listo. No se puede volver a confirmar.' });
+      return res.status(400).json({ error: 'Este pedido ya fue completado o enviado.' });
     }
 
     const descuentos = await confirmarPedidoCore(pedido, items, usuario || 'Sistema', transaction, false, req.ubicacionId);
+
+    // Ejecutar deducción real de stock y cambiar estado a Enviado
+    await procesarDescuentoStockEnviado(pedido, transaction, req.ubicacionId || 1, usuario || 'Sistema');
+    pedido.estado = 'Enviado';
+    await pedido.save({ transaction });
 
     await transaction.commit();
 
@@ -1183,11 +1215,11 @@ exports.confirmarPedidosDesdeExcel = async (req, res) => {
         return res.status(400).json({ error: `La sucursal con número "${sucNum}" no está registrada en el sistema.` });
       }
 
-      // Buscar si tiene un pedido abierto (Pendiente o Armando)
+      // Buscar si tiene un pedido abierto (Pendiente, Preparando, Armando o Procesando)
       let pedido = await Pedido.findOne({
         where: {
           sucursal: sucursal.sucursal,
-          estado: ['Pendiente', 'Armando']
+          estado: ['Pendiente', 'Preparando', 'Armando', 'Procesando']
         },
         transaction
       });
@@ -1261,27 +1293,13 @@ exports.confirmarPedidosDesdeExcel = async (req, res) => {
           prodPed.peso_enviado = 0;
           prodPed.fraccion_enviada = 0;
         } else {
-          // Pesable -> Se envía peso en kilos
+          // Pesable -> Se envía peso en kilos siempre en peso_enviado
+          prodPed.peso_enviado = qty;
+          prodPed.fraccion_enviada = prodPed.fraccion > 0 ? qty : 0;
           if (prodPed.pieza > 0) {
-            prodPed.peso_enviado = qty;
             prodPed.cantidad_enviada = prodPed.pieza; // por defecto, asume que envió las piezas pedidas
-            prodPed.fraccion_enviada = 0;
-          } else if (prodPed.fraccion > 0) {
-            prodPed.fraccion_enviada = qty;
-            prodPed.peso_enviado = 0;
-            prodPed.cantidad_enviada = 0;
           } else {
-            // Producto agregado que no estaba en el pedido original
-            if (prod.permite_piezas !== false) {
-              const pesoXPieza = parseFloat(prod.peso_x_pieza) || 0;
-              prodPed.peso_enviado = qty;
-              prodPed.cantidad_enviada = Math.round(qty / (pesoXPieza || 1)) || 1;
-              prodPed.fraccion_enviada = 0;
-            } else {
-              prodPed.fraccion_enviada = qty;
-              prodPed.peso_enviado = 0;
-              prodPed.cantidad_enviada = 0;
-            }
+            prodPed.cantidad_enviada = 0;
           }
         }
 
@@ -1347,21 +1365,28 @@ exports.confirmarPedidosDesdeExcel = async (req, res) => {
 // Obtener la demanda consolidada de todos los pedidos pendientes (Suma de todos los pedidos pendientes)
 exports.obtenerDemandaUltimoPedido = async (req, res) => {
   try {
+    const id_ubicacion = req.ubicacionId || 1;
     const query = `
       SELECT 
           pp.codigo_producto,
           prod.nombre AS producto_nombre,
+          COALESCE(prod.peso_x_pieza, 0) AS peso_x_pieza,
+          COALESCE(prod.kg_x_bolsita, 0) AS kg_x_bolsita,
           SUM(COALESCE(pp.pieza, 0)) AS total_piezas_pedidas,
-          SUM(COALESCE(pp.fraccion, 0)) AS total_fracciones_pedidas
+          SUM(COALESCE(pp.fraccion, 0)) AS total_fracciones_pedidas,
+          COALESCE(MAX(ps.stock), 0) AS stock
       FROM producto_pedidos pp
       INNER JOIN pedidos ped ON pp.id_pedido = ped.id
       LEFT JOIN productos prod ON pp.codigo_producto = prod.codigo
+      LEFT JOIN productos_stock ps ON pp.codigo_producto = ps.codigo_producto AND ps.id_ubicacion = :id_ubicacion
       WHERE ped.estado = 'Pendiente'
-      GROUP BY pp.codigo_producto, prod.nombre
+      GROUP BY pp.codigo_producto, prod.nombre, prod.peso_x_pieza, prod.kg_x_bolsita
       HAVING total_piezas_pedidas > 0 OR total_fracciones_pedidas > 0
       ORDER BY pp.codigo_producto;
     `;
-    const [resultados] = await sequelize.query(query);
+    const [resultados] = await sequelize.query(query, {
+      replacements: { id_ubicacion }
+    });
     res.json(resultados);
   } catch (error) {
     console.error('Error al obtener demanda de pedidos pendientes:', error);
@@ -1493,6 +1518,16 @@ exports.actualizarItemPedido = async (req, res) => {
       });
     }
 
+    // 4. Recalcular estado automático del pedido (Pendiente / Preparando / Listo)
+    const pedidoObj = await Pedido.findByPk(parseInt(id, 10), { transaction });
+    if (pedidoObj && pedidoObj.estado !== 'Enviado' && pedidoObj.estado !== 'Completado') {
+      const itemsActuales = await ProductoPedido.findAll({ where: { id_pedido: parseInt(id, 10) }, transaction });
+      const estadoCalculado = determinarEstadoPedido(itemsActuales);
+      if (pedidoObj.estado !== estadoCalculado) {
+        await pedidoObj.update({ estado: estadoCalculado }, { transaction });
+      }
+    }
+
     await transaction.commit();
     res.json({ mensaje: 'Item del pedido actualizado exitosamente.', item });
   } catch (error) {
@@ -1519,7 +1554,7 @@ exports.obtenerArmadoItems = async (req, res) => {
       include: [{
         model: Producto,
         as: 'Producto',
-        attributes: ['nombre', 'permite_piezas', 'permite_fracciones'],
+        attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
         include: [{
           model: ProductoStock,
           as: 'Stocks',
@@ -1566,11 +1601,13 @@ exports.upsertArmadoItem = async (req, res) => {
       return res.status(404).json({ error: 'Pedido no encontrado.' });
     }
 
-    const valPiezas = parseInt(piezas, 10) || 0;
-    const valPeso = parseFloat(peso) || 0;
-    const valFraccion = parseFloat(fraccion) || 0;
     const isNoEnvia = !!no_envia;
     const isSinStock = !!sin_stock;
+    const isSpecial = isNoEnvia || isSinStock;
+
+    const valPiezas = isSpecial ? 0 : (parseInt(piezas, 10) || 0);
+    const valPeso = isSpecial ? 0 : (parseFloat(peso) || 0);
+    const valFraccion = isSpecial ? 0 : (parseFloat(fraccion) || 0);
 
     // Si todo es 0 y no hay estados especiales, eliminamos el item del armado (liberado)
     if (valPiezas === 0 && valPeso === 0 && valFraccion === 0 && !isNoEnvia && !isSinStock) {
@@ -1595,13 +1632,26 @@ exports.upsertArmadoItem = async (req, res) => {
 
     if (!created) {
       // Actualizar registro existente
-      item.piezas = parseInt(piezas, 10) || 0;
-      item.peso = parseFloat(peso) || 0;
-      item.fraccion = parseFloat(fraccion) || 0;
-      item.no_envia = !!no_envia;
-      item.sin_stock = !!sin_stock;
+      item.piezas = valPiezas;
+      item.peso = valPeso;
+      item.fraccion = valFraccion;
+      item.no_envia = isNoEnvia;
+      item.sin_stock = isSinStock;
       item.fecha = new Date();
       await item.save();
+    }
+
+    // Sincronizar también en ProductoPedido para estandarización
+    const totalPesoCalculado = isSpecial ? 0 : (valPeso + valFraccion);
+    const prodPedido = await ProductoPedido.findOne({ where: { id_pedido, codigo_producto } });
+    if (prodPedido) {
+      prodPedido.peso_enviado = totalPesoCalculado;
+      prodPedido.cantidad_enviada = valPiezas;
+      prodPedido.fraccion_enviada = valFraccion;
+      prodPedido.sin_stock = isSinStock;
+      prodPedido.no_envia = isNoEnvia;
+      prodPedido.confirmado = true;
+      await prodPedido.save();
     }
 
     res.json({ mensaje: created ? 'Item de armado creado.' : 'Item de armado actualizado.', item });

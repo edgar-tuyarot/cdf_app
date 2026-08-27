@@ -178,7 +178,7 @@
                 <!-- Si son varios productos (Lote) -->
                 <div v-else>
                   <label class="form-label" style="font-size: 0.7rem;">Lote de productos a dar de baja ({{ itemsToDiscount.length }})</label>
-                  <div style="max-height: 160px; overflow-y: auto; border: 1px solid var(--bevel-dark); border-radius: var(--border-radius-sm); margin-bottom: 0.5rem; background: var(--bg-window); box-shadow: var(--inset-shadow);">
+                  <div style="max-height: 160px; overflow-y: auto; border: 1px solid var(--bevel-dark); border-radius: 0; margin-bottom: 0.5rem; background: var(--bg-window); box-shadow: var(--inset-shadow);">
                     <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
                       <thead>
                         <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--bevel-dark); position: sticky; top: 0; z-index: 1;">
@@ -216,7 +216,7 @@
               </div>
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="closeDiscountModal">
+              <button type="button" class="btn btn-secondary" @click="closeDiscountModal" :disabled="savingDiscount">
                 <i class="ph ph-x"></i> Cancelar
               </button>
               <button type="submit" class="btn btn-primary" style="background-color: var(--accent-danger);" :disabled="savingDiscount || !discountForm.comprobante.trim()">
@@ -336,6 +336,7 @@ const totalKilosToDiscount = computed(() => {
 })
 
 const handleDiscount = async () => {
+  if (savingDiscount.value) return
   if (itemsToDiscount.value.length === 0) return
   if (!discountForm.value.comprobante.trim()) {
     showAlert('El número de comprobante es obligatorio', 'error')
@@ -474,7 +475,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 2rem;
-  border-radius: var(--border-radius-md);
+  border-radius: 0;
 }
 
 .summary-details {

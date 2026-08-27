@@ -1,4 +1,5 @@
 const { Fraccionado, Producto, LogConversion, ProductoStock, Ubicacion, sequelize } = require('../models');
+const wmsService = require('../services/wmsService');
 
 // Obtener todos los fraccionados con los nombres de sus productos asociados
 exports.obtenerFraccionados = async (req, res) => {
@@ -133,7 +134,7 @@ exports.eliminarFraccionado = async (req, res) => {
   }
 };
 
-// Procesar fraccionamiento (acumular en el destino, registrar log y limpiar pesos en la plantilla, sin descontar de origen)
+// Procesar fraccionamiento (acumular en el destino, registrar log y limpiar pesos en la plantilla)
 exports.procesarFraccionamiento = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
@@ -145,7 +146,7 @@ exports.procesarFraccionamiento = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({ error: 'El número de comprobante es obligatorio para registrar la conversión.' });
     }
-    
+
     // 1. Buscar registro fraccionado
     const fraccionado = await Fraccionado.findOne({ where: { id, id_ubicacion }, transaction });
     if (!fraccionado) {
@@ -202,6 +203,47 @@ exports.procesarFraccionamiento = async (req, res) => {
 
     await transaction.commit();
 
+    // 6. Emitir Orden de Ajuste en BlockWMS (Baja ID 57 y Alta ID 28)
+    try {
+      const wmsItems = [];
+      if (valPesoADescontar > 0) {
+        wmsItems.push({
+          codigoProducto: fraccionado.codigo_producto_original,
+          cantidad: valPesoADescontar,
+          operador: 'resta',
+          idMotivo: '57' // 57 = Baja Fiam p/ Envasado al vacío
+        });
+      }
+      if (valPesoAFraccionar > 0) {
+        wmsItems.push({
+          codigoProducto: fraccionado.codigo_fraccionado,
+          cantidad: valPesoAFraccionar,
+          operador: 'suma',
+          idMotivo: '28' // 28 = Elaboración del Sector
+        });
+      }
+
+      if (wmsItems.length > 0) {
+        const wmsCreds = {
+          sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
+          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
+          host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
+        };
+
+        wmsService.ejecutarAjusteMultipleWMS({
+          items: wmsItems,
+          observaciones: `Conversión Fraccionados (Comprobante: ${comprobante})`,
+          ...wmsCreds
+        }).then(resWms => {
+          console.log(`[WMS-Conversión] Orden de ajuste #${resWms.idOrdenes} generada en BlockWMS.`);
+        }).catch(errWms => {
+          console.warn('[WMS-Conversión] Advertencia al emitir orden en BlockWMS:', errWms.message);
+        });
+      }
+    } catch (errWms) {
+      console.warn('[WMS-Conversión] Error WMS:', errWms.message);
+    }
+
     res.json({
       mensaje: 'Fraccionamiento procesado exitosamente',
       productoDestinoActualizado: {
@@ -221,7 +263,7 @@ exports.procesarFraccionamiento = async (req, res) => {
   }
 };
 
-// Procesar lote de fraccionamientos (agrupados y por lotes transaccionales, sin descontar del origen)
+// Procesar lote de fraccionamientos (agrupados y por lotes transaccionales)
 exports.procesarFraccionamientoLote = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
@@ -239,6 +281,7 @@ exports.procesarFraccionamientoLote = async (req, res) => {
     }
 
     const detalles = [];
+    const wmsItemsCache = [];
 
     for (const id of ids) {
       const fraccionado = await Fraccionado.findOne({ where: { id, id_ubicacion }, transaction });
@@ -256,14 +299,14 @@ exports.procesarFraccionamientoLote = async (req, res) => {
         return res.status(400).json({ error: `La conversión ID ${id} no tiene peso a fraccionar (el peso es 0).` });
       }
 
-      // 1. Buscar producto fraccionado (destino)
+      // Buscar producto fraccionado (destino)
       const productoDestino = await Producto.findByPk(codigoDestino, { transaction });
       if (!productoDestino) {
         await transaction.rollback();
         return res.status(400).json({ error: `El producto fraccionado de destino con código ${codigoDestino} para la conversión ID ${id} no existe.` });
       }
 
-      // 2. Sumar al stock de la ubicación activa en ProductoStock
+      // Sumar al stock de la ubicación activa en ProductoStock
       const [pStockRecord, created] = await ProductoStock.findOrCreate({
         where: { codigo_producto: codigoDestino, id_ubicacion },
         defaults: { stock: 0.0000 },
@@ -277,7 +320,7 @@ exports.procesarFraccionamientoLote = async (req, res) => {
         concepto: `Ingreso de stock por fraccionamiento de ${valPesoAFraccionar.toFixed(3)} kg del producto original ${fraccionado.codigo_producto_original} (Comprobante: ${comprobante})`
       });
 
-      // 3. Crear log de conversión
+      // Crear log de conversión
       await LogConversion.create({
         id_ubicacion,
         codigo_producto_original: fraccionado.codigo_producto_original,
@@ -289,7 +332,25 @@ exports.procesarFraccionamientoLote = async (req, res) => {
         fecha: new Date()
       }, { transaction });
 
-      // 4. Limpiar pesos de la plantilla
+      // Guardar ítems para la orden de WMS
+      if (valPesoADescontar > 0) {
+        wmsItemsCache.push({
+          codigoProducto: fraccionado.codigo_producto_original,
+          cantidad: valPesoADescontar,
+          operador: 'resta',
+          idMotivo: '57' // 57 = Baja Fiam p/ Envasado al vacío
+        });
+      }
+      if (valPesoAFraccionar > 0) {
+        wmsItemsCache.push({
+          codigoProducto: fraccionado.codigo_fraccionado,
+          cantidad: valPesoAFraccionar,
+          operador: 'suma',
+          idMotivo: '28' // 28 = Elaboración del Sector
+        });
+      }
+
+      // Limpiar pesos de la plantilla
       fraccionado.peso_a_fraccionar = 0;
       fraccionado.peso_a_descontar = 0;
       await fraccionado.save({ transaction });
@@ -304,6 +365,29 @@ exports.procesarFraccionamientoLote = async (req, res) => {
     }
 
     await transaction.commit();
+
+    // Emitir Orden de Ajuste en Lote para BlockWMS
+    if (wmsItemsCache.length > 0) {
+      try {
+        const wmsCreds = {
+          sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
+          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
+          host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
+        };
+
+        wmsService.ejecutarAjusteMultipleWMS({
+          items: wmsItemsCache,
+          observaciones: `Conversión Lote Fraccionados (Comprobante: ${comprobante})`,
+          ...wmsCreds
+        }).then(resWms => {
+          console.log(`[WMS-Conversión Lote] Orden de ajuste #${resWms.idOrdenes} generada en BlockWMS con ${resWms.totalRenglones} renglones.`);
+        }).catch(errWms => {
+          console.warn('[WMS-Conversión Lote] Advertencia al emitir orden Lote en BlockWMS:', errWms.message);
+        });
+      } catch (errWms) {
+        console.warn('[WMS-Conversión Lote] Error WMS:', errWms.message);
+      }
+    }
 
     res.json({
       mensaje: `Lote de ${ids.length} conversiones procesado exitosamente`,
@@ -336,4 +420,3 @@ exports.obtenerLogsConversiones = async (req, res) => {
     res.status(500).json({ error: 'Error al obtener logs de conversiones' });
   }
 };
-

@@ -114,6 +114,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useWinDialog } from '../composables/useWinDialog'
+
+const { winConfirm } = useWinDialog()
 
 const ubicaciones = ref([])
 const loading = ref(false)
@@ -214,7 +217,7 @@ const saveUbicacion = async () => {
 }
 
 const deleteUbicacion = async (ubicacion) => {
-  if (confirm(`¿Estás seguro de que deseas eliminar la ubicación "${ubicacion.nombre}"?`)) {
+  if (await winConfirm(`¿Estás seguro de que deseas eliminar la ubicación "${ubicacion.nombre}"?`, 'Eliminar Ubicación')) {
     try {
       const res = await fetch(`/api/ubicaciones/${ubicacion.id}`, {
         method: 'DELETE'

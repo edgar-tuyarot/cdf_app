@@ -2,8 +2,8 @@
   <div class="page-container animate-fade">
     <div class="page-header">
       <div class="header-content">
-        <h2 class="page-title">Configuración de Permisos</h2>
-        <p class="page-description">Define las vistas y módulos a los que tiene acceso cada rol en la plataforma.</p>
+        <h2 class="page-title">Configuración de Permisos y Roles</h2>
+        <p class="page-description">Administra el acceso a los módulos y vistas disponibles para cada rol en la plataforma.</p>
       </div>
       <div class="header-actions" style="margin-top: 0.5rem;">
         <button class="btn btn-primary" @click="savePermisos" :disabled="saving">
@@ -26,7 +26,7 @@
         :key="role.value"
         :class="['btn', activeRole === role.value ? 'btn-primary' : 'btn-secondary']" 
         @click="activeRole = role.value"
-        style="border-radius: 4px 4px 0 0; padding: 0.5rem 1.25rem; border-bottom: none; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;"
+        style="border-radius: 0; padding: 0.5rem 1.25rem; border-bottom: none; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;"
       >
         <i :class="['ph', role.icon]"></i>
         {{ role.label }}
@@ -35,10 +35,28 @@
 
     <!-- PANEL DE PERMISOS PARA EL ROL SELECCIONADO -->
     <div class="card">
-      <div class="card-header" style="background: var(--bevel-dark); border-bottom: 2px solid var(--bevel-dark);">
+      <div class="card-header" style="background: var(--bevel-dark); border-bottom: 2px solid var(--bevel-dark); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <span class="card-title" style="color: white; font-weight: bold;">
           Vistas habilitadas para el rol: {{ rolesList.find(r => r.value === activeRole)?.label }}
         </span>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button 
+            type="button" 
+            class="btn btn-sm" 
+            style="background: #16a34a; color: white; border: none; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;"
+            @click="enableAllForActiveRole"
+          >
+            <i class="ph ph-check-square"></i> Habilitar Todas
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-sm" 
+            style="background: #dc2626; color: white; border: none; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;"
+            @click="disableAllForActiveRole"
+          >
+            <i class="ph ph-x-square"></i> Bloquear Todas
+          </button>
+        </div>
       </div>
 
       <div class="card-body" style="padding: 1.5rem;">
@@ -46,22 +64,22 @@
           <div 
             v-for="group in permissionGroups" 
             :key="group.name" 
-            style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: var(--border-radius-md); padding: 1rem; box-shadow: var(--inset-shadow);"
+            style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: 0; padding: 1rem; box-shadow: var(--inset-shadow);"
           >
             <h4 style="margin: 0 0 1rem 0; font-weight: bold; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.25rem;">
               <i :class="['ph', group.icon]" style="color: var(--accent-primary);"></i>
-              {{ group.name }}
+              {{ group.name }} ({{ group.items.length }})
             </h4>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
               <div 
                 v-for="item in group.items" 
                 :key="item.path"
-                style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: var(--bg-window); border: 1px solid var(--bevel-dark); border-radius: 4px;"
+                style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: var(--bg-window); border: 1px solid var(--bevel-dark); border-radius: 0;"
               >
                 <div style="display: flex; flex-direction: column; gap: 0.15rem;">
                   <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-primary);">{{ item.name }}</span>
-                  <span style="font-size: 0.7rem; color: var(--text-muted);">{{ item.path }}</span>
+                  <span style="font-size: 0.7rem; color: var(--text-muted);">/{{ item.path }}</span>
                 </div>
 
                 <label class="switch-container" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none;">
@@ -106,7 +124,7 @@ const showAlert = (message, type = 'success') => {
   }, 4000)
 }
 
-// Lista de roles definidos
+// Lista de roles definidos en la plataforma
 const rolesList = [
   { value: 'Referente', label: 'Referentes', icon: 'ph-user-gear' },
   { value: 'Preparador', label: 'Preparadores', icon: 'ph-package' },
@@ -117,17 +135,25 @@ const rolesList = [
   { value: 'Sucursal', label: 'Sucursales (Clientes)', icon: 'ph-storefront' }
 ]
 
-// Lista de rutas organizadas por grupos
+// Catálogo completo de vistas del sistema organizadas por grupos
 const permissionGroups = [
   {
     name: 'Inventario',
     icon: 'ph-package',
     items: [
       { name: 'Productos', path: 'productos' },
-      { name: 'Ingreso Mercadería', path: 'ingresos' },
+      { name: 'Stock por Ubicación WMS', path: 'wms-stock-ubicaciones' },
       { name: 'Historial de Stock', path: 'movimientos-stock' },
-      { name: 'Vencimientos', path: 'vencimientos' },
-      { name: 'Control de Piezas', path: 'control-piezas' }
+      { name: 'Vencimientos', path: 'vencimientos' }
+    ]
+  },
+  {
+    name: 'Ingresos',
+    icon: 'ph-download-simple',
+    items: [
+      { name: 'Ingreso Mercadería', path: 'ingresos' },
+      { name: 'Historia Ingresos', path: 'ingresos-historial' },
+      { name: 'Órdenes de Compra', path: 'ordenes-compra' }
     ]
   },
   {
@@ -136,7 +162,6 @@ const permissionGroups = [
     items: [
       { name: 'Procesos', path: 'procesos' },
       { name: 'Conversiones', path: 'conversiones' },
-      { name: 'Ingreso Recortes', path: 'ingreso-recortes' },
       { name: 'Recortes', path: 'recortes' },
       { name: 'Decomisos', path: 'decomisos' }
     ]
@@ -145,14 +170,23 @@ const permissionGroups = [
     name: 'Pedidos',
     icon: 'ph-shopping-cart',
     items: [
-      { name: 'Preparar', path: 'preparar' },
+      { name: 'Preparar Pedidos', path: 'preparar' },
       { name: 'Pedidos (Ver Todos)', path: 'pedidos' },
-      { name: 'Cargar Pedido', path: 'crear-pedido-sucursal' },
+      { name: 'Cargar Pedido Sucursal', path: 'crear-pedido-sucursal' },
       { name: 'Demanda Pendiente', path: 'demanda-pendiente' }
     ]
   },
   {
-    name: 'Configuración',
+    name: 'Reportes',
+    icon: 'ph-chart-bar',
+    items: [
+      { name: 'Reportes de Pedidos', path: 'reportes-pedidos' },
+      { name: 'Top Fraccionados', path: 'reportes-produccion' },
+      { name: 'Trazabilidad de Producto', path: 'reporte-trazabilidad' }
+    ]
+  },
+  {
+    name: 'Configuración y Sistema',
     icon: 'ph-gear',
     items: [
       { name: 'Colaboradores', path: 'colaboradores' },
@@ -160,7 +194,11 @@ const permissionGroups = [
       { name: 'Proveedores', path: 'proveedores' },
       { name: 'Bultos', path: 'bultos' },
       { name: 'Ubicaciones', path: 'ubicaciones' },
-      { name: 'Usuarios', path: 'usuarios' }
+      { name: 'Usuarios', path: 'usuarios' },
+      { name: 'Permisos de Roles', path: 'permisos' },
+      { name: 'Registros y Bitácora', path: 'registros' },
+      { name: 'Configuración Block WMS', path: 'block-config' },
+      { name: 'Debug Stock PHP', path: 'stock-debug' }
     ]
   }
 ]
@@ -210,10 +248,59 @@ const togglePermission = (role, path) => {
   }
 }
 
+// Helpers de acciones masivas
+const setAllRolePermissions = (role, state) => {
+  permissionGroups.forEach(group => {
+    group.items.forEach(item => {
+      const idx = dbPermisos.value.findIndex(
+        p => p.rol.toLowerCase() === role.toLowerCase() && p.vista.replace(/^\//, '') === item.path.replace(/^\//, '')
+      )
+      if (idx !== -1) {
+        dbPermisos.value[idx].permitido = state
+      } else {
+        dbPermisos.value.push({
+          rol: role,
+          vista: item.path,
+          permitido: state
+        })
+      }
+    })
+  })
+}
+
+const enableAllForActiveRole = () => {
+  setAllRolePermissions(activeRole.value, true)
+  showAlert(`Se habilitaron todas las vistas para el rol ${activeRole.value}`)
+}
+
+const disableAllForActiveRole = () => {
+  setAllRolePermissions(activeRole.value, false)
+  showAlert(`Se bloquearon todas las vistas para el rol ${activeRole.value}`, 'info')
+}
+
 // Guardar al servidor
 const savePermisos = async () => {
   saving.value = true
   try {
+    // Garantizar que todos los pares (rol, vista) estén explícitamente registrados en dbPermisos
+    rolesList.forEach(roleObj => {
+      const roleName = roleObj.value
+      permissionGroups.forEach(group => {
+        group.items.forEach(item => {
+          const idx = dbPermisos.value.findIndex(
+            p => p.rol.toLowerCase() === roleName.toLowerCase() && p.vista.replace(/^\//, '').toLowerCase() === item.path.toLowerCase()
+          )
+          if (idx === -1) {
+            dbPermisos.value.push({
+              rol: roleName,
+              vista: item.path,
+              permitido: false
+            })
+          }
+        })
+      })
+    })
+
     const res = await fetch('/api/permisos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

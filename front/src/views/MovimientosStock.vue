@@ -19,84 +19,37 @@
       </div>
     </div>
 
-    <!-- Tarjetas de Resumen de Auditoría (Estilo Windows 98) -->
-    <div class="summary-cards mb-4 no-print">
-      <!-- Tarjeta 1: Total Movimientos -->
-      <div class="card summary-card">
-        <div class="card-header summary-header-blue">
-          <i class="ph ph-list-numbers"></i> Movimientos
-        </div>
-        <div class="summary-body">
-          <div class="summary-value">{{ filteredLogs.length }}</div>
-          <div class="summary-label">Registros Filtrados</div>
-        </div>
-      </div>
-
-      <!-- Tarjeta 2: Piezas Ingresadas -->
-      <div class="card summary-card">
-        <div class="card-header summary-header-green">
-          <i class="ph ph-plus-circle"></i> Piezas Sumadas
-        </div>
-        <div class="summary-body">
-          <div class="summary-value text-success">+{{ stats.addedPieces }}</div>
-          <div class="summary-label">Total Piezas Ingresadas</div>
-        </div>
-      </div>
-
-      <!-- Tarjeta 3: Kilos Block Sumados -->
-      <div class="card summary-card">
-        <div class="card-header summary-header-green">
-          <i class="ph ph-scales"></i> Kilos Block Sumados
-        </div>
-        <div class="summary-body">
-          <div class="summary-value text-success">+{{ stats.addedKilosBlock.toFixed(2).replace('.', ',') }} kg</div>
-          <div class="summary-label">Total Kilos Block Sumados</div>
-        </div>
-      </div>
-
-      <!-- Tarjeta 4: Decomisos/Mermas registradas -->
-      <div class="card summary-card">
-        <div class="card-header summary-header-red">
-          <i class="ph ph-trash"></i> Kilos Decomisados
-        </div>
-        <div class="summary-body">
-          <div class="summary-value text-danger">{{ stats.totalDecomiso.toFixed(2).replace('.', ',') }} kg</div>
-          <div class="summary-label">Total Mermas / Decomisos</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Panel de Control y Filtros (Panel Relieve) -->
-    <div class="card mb-4 no-print">
-      <div class="card-header" style="background-color: var(--accent-primary); color: white;">
-        <span class="card-title">Panel de Control y Búsqueda</span>
-      </div>
-      <div class="p-4 filters-grid">
-        <!-- Buscador -->
-        <div class="form-group search-group">
-          <label class="form-label">Buscar por Producto</label>
-          <div class="input-with-icon">
-            <i class="ph ph-magnifying-glass"></i>
-            <input 
-              type="text" 
-              v-model="searchQuery" 
-              placeholder="Buscar por código o nombre..." 
-              class="form-control"
-            />
-            <button v-if="searchQuery" @click="searchQuery = ''" class="clear-btn" title="Limpiar búsqueda">
-              <i class="ph ph-x-circle"></i>
-            </button>
-          </div>
+    <!-- Búsqueda Fija y Filtro Simplificado -->
+    <div class="card mb-4 no-print" style="padding: 0.85rem 1rem; background: var(--bg-window); border-radius: 0; border: 1px solid var(--bevel-light);">
+      <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: space-between;">
+        <!-- Buscador de Producto -->
+        <div style="position: relative; flex: 1; min-width: 260px;">
+          <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 1.1rem; pointer-events: none;"></i>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            class="form-control" 
+            placeholder="Buscar por código o nombre de producto..." 
+            style="padding-left: 2.3rem; height: 36px; font-weight: 600;"
+          />
+          <button 
+            v-if="searchQuery" 
+            @click="searchQuery = ''" 
+            style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted);"
+          >
+            <i class="ph ph-x-circle"></i>
+          </button>
         </div>
 
-        <!-- Selector de Origen / Tipo de Movimiento -->
-        <div class="form-group">
-          <label class="form-label">Tipo de Movimiento</label>
-          <select v-model="filterType" class="form-control" style="height: 32px; padding: 0 0.5rem; background-color: white;">
+        <!-- Selector de Tipo de Movimiento -->
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="text-xs fw-bold text-muted">Tipo:</span>
+          <select v-model="filterType" class="form-control" style="height: 36px; padding: 0 0.75rem; font-weight: 600; background-color: white; border-radius: 0;">
             <option value="ALL">🔍 Todos los movimientos</option>
             <option value="INGRESO_PROVEEDOR">🚚 Ingresos de Proveedores</option>
             <option value="PROCESO">🔄 Procesos de Feteado/Fraccionado</option>
             <option value="CONVERSION">🧪 Conversiones internas</option>
+            <option value="DECOMISO">🗑️ Decomisos y Descartes</option>
             <option value="PEDIDO_ENVIADO">📦 Descuentos por Pedido</option>
             <option value="AJUSTE_DIRECTO">⚙️ Ajustes Manuales</option>
             <option value="PRODUCTO_CREADO">➕ Altas de Catálogo</option>
@@ -105,13 +58,17 @@
       </div>
     </div>
 
-    <!-- Tabla Principal de Movimientos -->
-    <div class="card">
-      <div class="card-header font-bold" style="background-color: #0b5394; color: white;">
-        <span class="card-title">Registro de Auditoría de Stock</span>
-      </div>
+    <!-- TABLA LIBRE DE AUDITORÍA (SIN CONTENEDOR DE CARD Y SIN SCROLLBARS INTERNOS) -->
+    <div class="table-header-info mb-2" style="display: flex; justify-content: space-between; align-items: center;">
+      <h4 style="font-size: 0.95rem; font-weight: 700; margin: 0;">
+        <i class="ph ph-list-checks text-accent"></i> Registro de Auditoría de Stock ({{ filteredLogs.length }})
+      </h4>
+      <span class="text-xs text-muted fw-bold">
+        Mostrando {{ filteredLogs.length }} de {{ rawLogs.length }} movimientos
+      </span>
+    </div>
 
-      <div class="table-container" style="overflow-x: auto; max-height: 550px; overflow-y: auto;">
+    <div class="table-container" style="border: 1px solid var(--bevel-dark); border-radius: 0;">
         <table v-if="!loading && filteredLogs.length > 0">
           <thead>
             <tr>
@@ -124,30 +81,15 @@
               <th @click="sortBy('Producto.nombre')" class="sortable" style="min-width: 150px;">
                 Producto <i v-if="sortKey === 'Producto.nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('tipo_movimiento')" class="sortable text-center" style="width: 120px;">
-                Tipo Mov. <i v-if="sortKey === 'tipo_movimiento'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              <th @click="sortBy('tipo_movimiento')" class="sortable text-center" style="width: 100px;">
+                Tipo <i v-if="sortKey === 'tipo_movimiento'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
               <th style="min-width: 180px;">Concepto / Detalle</th>
               <th @click="sortBy('cantidad_piezas')" class="sortable text-right" style="width: 80px;">
                 Pzas <i v-if="sortKey === 'cantidad_piezas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('kilos_block')" class="sortable text-right" style="width: 95px;">
-                Kg Block <i v-if="sortKey === 'kilos_block'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('kilos_calculado')" class="sortable text-right" style="width: 95px;">
-                Kg Calc. <i v-if="sortKey === 'kilos_calculado'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('kg_fraccionados')" class="sortable text-right" style="width: 95px;">
-                Kg Frac. <i v-if="sortKey === 'kg_fraccionados'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('kg_recorte')" class="sortable text-right" style="width: 95px;">
-                Kg Recorte <i v-if="sortKey === 'kg_recorte'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('kg_decomiso')" class="sortable text-right" style="width: 95px;">
-                Kg Decomiso <i v-if="sortKey === 'kg_decomiso'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('usuario')" class="sortable text-center" style="width: 100px;">
-                Operario <i v-if="sortKey === 'usuario'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              <th @click="sortBy('kilos_calculado')" class="sortable text-right" style="width: 110px;">
+                Cantidad <i v-if="sortKey === 'kilos_calculado'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
             </tr>
           </thead>
@@ -168,11 +110,9 @@
                 {{ log.Producto?.nombre || 'Producto Autocreado' }}
               </td>
 
-              <!-- Tipo Movimiento Badge -->
-              <td class="text-center">
-                <span :class="['badge', getBadgeClass(log.tipo_movimiento)]">
-                  {{ formatMovType(log.tipo_movimiento) }}
-                </span>
+              <!-- Tipo Movimiento (Texto Plano) -->
+              <td class="text-center font-bold text-xs" style="color: var(--text-primary);">
+                {{ formatMovType(log.tipo_movimiento) }}
               </td>
 
               <!-- Concepto -->
@@ -185,34 +125,9 @@
                 {{ formatNumber(log.cantidad_piezas, true, 0) }}
               </td>
 
-              <!-- Delta Kilos Block -->
-              <td class="text-right font-semibold" :class="getColorClass(log.kilos_block)">
-                {{ formatNumber(log.kilos_block, true, 3) }}
-              </td>
-
-              <!-- Delta Kilos Calculado -->
-              <td class="text-right font-semibold" :class="getColorClass(log.kilos_calculado)">
-                {{ formatNumber(log.kilos_calculado, true, 3) }}
-              </td>
-
-              <!-- Delta Kg Fraccionados -->
-              <td class="text-right font-semibold" :class="getColorClass(log.kg_fraccionados)">
-                {{ formatNumber(log.kg_fraccionados, true, 3) }}
-              </td>
-
-              <!-- Delta Kg Recorte -->
-              <td class="text-right font-semibold" :class="getColorClass(log.kg_recorte)">
-                {{ formatNumber(log.kg_recorte, true, 3) }}
-              </td>
-
-              <!-- Delta Kg Decomiso -->
-              <td class="text-right font-semibold" :class="getColorClass(log.kg_decomiso)">
-                {{ formatNumber(log.kg_decomiso, true, 3) }}
-              </td>
-
-              <!-- Usuario -->
-              <td class="text-center text-xs font-semibold text-muted">
-                {{ log.usuario || 'Sistema' }}
+              <!-- Cantidad (Kilos Movimiento) -->
+              <td class="text-right font-semibold" :class="getColorClass(log.kilos_calculado || log.stock)">
+                {{ formatNumber(log.kilos_calculado || log.stock, true, 3) }} kg
               </td>
             </tr>
           </tbody>
@@ -225,7 +140,6 @@
           {{ searchQuery ? 'No se encontraron movimientos que coincidan con la búsqueda.' : 'No hay movimientos de stock registrados para mostrar.' }}
         </div>
       </div>
-    </div>
 
     <!-- Pantalla de Carga -->
     <div v-if="loading" class="loading-state card mt-4">
@@ -375,6 +289,7 @@ const formatMovType = (type) => {
     'INGRESO_PROVEEDOR': 'PROVEEDOR',
     'PROCESO': 'PROCESO',
     'CONVERSION': 'CONVERSIÓN',
+    'DECOMISO': 'DECOMISO',
     'PEDIDO_ENVIADO': 'PEDIDO',
     'AJUSTE_DIRECTO': 'AJUSTE',
     'PRODUCTO_CREADO': 'NUEVO'
@@ -387,6 +302,7 @@ const getBadgeClass = (type) => {
     'INGRESO_PROVEEDOR': 'badge-success',
     'PROCESO': 'badge-primary',
     'CONVERSION': 'badge-warning',
+    'DECOMISO': 'badge-danger',
     'PEDIDO_ENVIADO': 'badge-danger',
     'AJUSTE_DIRECTO': 'badge-dark-retro',
     'PRODUCTO_CREADO': 'badge-info-retro'
@@ -397,12 +313,13 @@ const getBadgeClass = (type) => {
 // Exportar a CSV
 const exportToCSV = () => {
   let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
-  csvContent += "Fecha;Codigo;Producto;Tipo Movimiento;Concepto;Piezas;Kg Block;Kg Calculado;Kg Fraccionados;Kg Recorte;Kg Decomiso;Operario\n"
+  csvContent += "Fecha;Codigo;Producto;Tipo Movimiento;Concepto;Piezas;Cantidad\n"
   
   filteredLogs.value.forEach(log => {
     const pName = log.Producto?.nombre || 'Autocreado'
     const formattedDate = formatDateTime(log.fecha)
-    csvContent += `"${formattedDate}";"${log.codigo_producto}";"${pName}";"${log.tipo_movimiento}";"${log.concepto}";${log.cantidad_piezas};${log.kilos_block};${log.kilos_calculado};${log.kg_fraccionados};${log.kg_recorte};${log.kg_decomiso};"${log.usuario || 'Sistema'}"\n`
+    const kgMov = log.kilos_calculado || log.stock || 0
+    csvContent += `"${formattedDate}";"${log.codigo_producto}";"${pName}";"${log.tipo_movimiento}";"${log.concepto}";${log.cantidad_piezas};${kgMov}\n`
   })
 
   const encodedUri = encodeURI(csvContent)

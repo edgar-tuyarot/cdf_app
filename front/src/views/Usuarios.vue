@@ -149,6 +149,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useWinDialog } from '../composables/useWinDialog'
+
+const { winConfirm } = useWinDialog()
 
 const usuarios = ref([])
 const ubicaciones = ref([])
@@ -296,7 +299,7 @@ const deleteUsuario = async (usuario) => {
     return
   }
 
-  if (confirm(`¿Estás seguro de que deseas eliminar al usuario "${usuario.nombre}"?`)) {
+  if (await winConfirm(`¿Estás seguro de que deseas eliminar al usuario "${usuario.nombre}"?`, 'Eliminar Usuario')) {
     try {
       const res = await fetch(`/api/usuarios/${usuario.id}`, {
         method: 'DELETE'

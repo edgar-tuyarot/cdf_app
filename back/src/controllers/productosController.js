@@ -1,4 +1,5 @@
 const { Producto, ProductoVencimiento, IngresoProveedor, Proveedor, Generador, Sucursal, Proceso, LogConversion, Bulto, Fraccionado, SucursalProductoPermiso, Ubicacion, ProductoStock, MovimientoStock, sequelize } = require('../models');
+const wmsService = require('../services/wmsService');
 
 // Helper to sync Fraccionado template mapping
 const syncFraccionadoTemplate = async (codigoProductoOriginal, codigoFraccionado, id_ubicacion, transaction) => {
@@ -310,6 +311,7 @@ exports.actualizarProducto = async (req, res) => {
       // Filter and insert new vencimientos
       let calculatedPieces = 0;
       if (Array.isArray(vencimientosList) && vencimientosList.length > 0) {
+        const pesoXP = parseFloat(producto.peso_x_pieza) || 0;
         const activeVencimientos = vencimientosList
           .filter(v => v.vencimiento && (parseInt(v.piezas, 10) || 0) > 0)
           .map(v => {
@@ -319,6 +321,7 @@ exports.actualizarProducto = async (req, res) => {
               codigo_producto: id,
               vencimiento: v.vencimiento,
               piezas: piezasCount,
+              peso: piezasCount * pesoXP,
               id_ubicacion
             };
           });
@@ -628,6 +631,52 @@ exports.convertirRecorte = async (req, res) => {
 
     await transaction.commit();
 
+    // Emitir automáticamente Orden de Ajuste en BlockWMS para Picaditas:
+    // Bajas ID 49 ("Baja fiambrería para picaditas") de originales y Alta ID 28 ("Elaboración del Sector") para 7718
+    try {
+      const wmsItems = [];
+      for (const item of items) {
+        const valKilos = parseFloat(item.kilos) || 0;
+        if (item.codigo && valKilos > 0) {
+          wmsItems.push({
+            codigoProducto: item.codigo,
+            cantidad: valKilos,
+            operador: 'resta',
+            idMotivo: '49' // 49 = Baja fiambreria para picaditas
+          });
+        }
+      }
+
+      if (totalKilosConvertidos > 0) {
+        wmsItems.push({
+          codigoProducto: '7718', // 7718 = FIAM PICADITAS X KG
+          cantidad: totalKilosConvertidos,
+          operador: 'suma',
+          idMotivo: '28' // 28 = Elaboración del Sector
+        });
+      }
+
+      if (wmsItems.length > 0) {
+        const wmsCreds = {
+          sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
+          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
+          host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
+        };
+
+        wmsService.ejecutarAjusteMultipleWMS({
+          items: wmsItems,
+          observaciones: `Conversión Picaditas (Comprobante: ${comprobante})`,
+          ...wmsCreds
+        }).then(resWms => {
+          console.log(`[WMS-Picadas] Orden de ajuste #${resWms.idOrdenes} generada en BlockWMS.`);
+        }).catch(errWms => {
+          console.warn('[WMS-Picadas] Advertencia al emitir orden en BlockWMS:', errWms.message);
+        });
+      }
+    } catch (errWms) {
+      console.warn('[WMS-Picadas] Error WMS:', errWms.message);
+    }
+
     res.json({
       mensaje: 'Lote de recortes convertido exitosamente',
       detalles: resultDetails,
@@ -741,8 +790,10 @@ exports.descontarDecomiso = async (req, res) => {
       prodStock.decomiso = Math.max(0, decomisoActual - valorKilos);
       await prodStock.save({
         transaction,
-        tipo_movimiento: 'AJUSTE_DIRECTO',
-        concepto: `Descarte de decomiso (Comprobante: ${comprobante})`
+        tipo_movimiento: 'DECOMISO',
+        concepto: `Baja / Descarte de decomiso (Comprobante: ${comprobante})`,
+        kg_decomiso: -valorKilos,
+        usuario: usuario || 'Sistema'
       });
 
       resultDetails.push({
@@ -753,6 +804,43 @@ exports.descontarDecomiso = async (req, res) => {
     }
 
     await transaction.commit();
+
+    // Emitir automáticamente Orden de Ajuste en BlockWMS para Decomisos:
+    // Bajas ID 55 ("Decomiso")
+    try {
+      const wmsItems = [];
+      for (const item of items) {
+        const valKilos = parseFloat(item.kilos) || 0;
+        if (item.codigo && valKilos > 0) {
+          wmsItems.push({
+            codigoProducto: item.codigo,
+            cantidad: valKilos,
+            operador: 'resta',
+            idMotivo: '55' // 55 = Decomiso
+          });
+        }
+      }
+
+      if (wmsItems.length > 0) {
+        const wmsCreds = {
+          sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
+          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
+          host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
+        };
+
+        wmsService.ejecutarAjusteMultipleWMS({
+          items: wmsItems,
+          observaciones: `Baja por Decomiso (Comprobante: ${comprobante})`,
+          ...wmsCreds
+        }).then(resWms => {
+          console.log(`[WMS-Decomisos] Orden de ajuste #${resWms.idOrdenes} generada en BlockWMS.`);
+        }).catch(errWms => {
+          console.warn('[WMS-Decomisos] Advertencia al emitir orden en BlockWMS:', errWms.message);
+        });
+      }
+    } catch (errWms) {
+      console.warn('[WMS-Decomisos] Error WMS:', errWms.message);
+    }
 
     res.json({
       mensaje: 'Lote de decomisos descontado exitosamente',
@@ -1094,6 +1182,11 @@ exports.ingresarProveedor = async (req, res) => {
       kilosASumar = valorPiezas * (parseFloat(producto.peso_x_pieza) || 0);
     }
 
+    if (isNaN(valorPiezas) || valorPiezas <= 0) {
+      const pxp = parseFloat(producto.peso_x_pieza) || 0;
+      valorPiezas = (pxp > 0 && kilosASumar > 0) ? Math.max(1, Math.round(kilosASumar / pxp)) : 1;
+    }
+
     const id_ubicacion = req.ubicacionId;
 
     // 2. Crear la fila de auditoría persistente en la tabla ingreso_proveedores
@@ -1121,12 +1214,14 @@ exports.ingresarProveedor = async (req, res) => {
 
     if (prodVencimiento) {
       prodVencimiento.piezas = (parseInt(prodVencimiento.piezas, 10) || 0) + valorPiezas;
+      prodVencimiento.peso = (parseFloat(prodVencimiento.peso) || 0) + kilosASumar;
       await prodVencimiento.save({ transaction });
     } else {
       prodVencimiento = await ProductoVencimiento.create({
         codigo_producto: codigo,
         vencimiento: vencimiento,
         piezas: valorPiezas,
+        peso: kilosASumar,
         id_ubicacion
       }, { transaction });
     }
@@ -1285,11 +1380,7 @@ exports.ingresarProveedorLote = async (req, res) => {
         return res.status(400).json({ error: 'El código del producto, la cantidad y la fecha de vencimiento son obligatorios para todos los ítems.' });
       }
 
-      const valorPiezas = parseInt(piezas, 10);
-      if (isNaN(valorPiezas) || valorPiezas <= 0) {
-        if (!transaction.finished) await transaction.rollback();
-        return res.status(400).json({ error: 'La cantidad debe ser un número entero mayor a cero.' });
-      }
+      let valorPiezas = parseInt(piezas, 10);
 
       // Buscar el producto
       const producto = await Producto.findByPk(codigo, { transaction });
@@ -1300,7 +1391,17 @@ exports.ingresarProveedorLote = async (req, res) => {
 
       let kilosASumar = parseFloat(peso);
       if (isNaN(kilosASumar) || kilosASumar < 0) {
-        kilosASumar = valorPiezas * (parseFloat(producto.peso_x_pieza) || 0);
+        kilosASumar = (!isNaN(valorPiezas) && valorPiezas > 0) ? valorPiezas * (parseFloat(producto.peso_x_pieza) || 0) : 0;
+      }
+
+      if (isNaN(valorPiezas) || valorPiezas <= 0) {
+        const pxp = parseFloat(producto.peso_x_pieza) || 0;
+        valorPiezas = (pxp > 0 && kilosASumar > 0) ? Math.max(1, Math.round(kilosASumar / pxp)) : 1;
+      }
+
+      if (!codigo || !vencimiento) {
+        if (!transaction.finished) await transaction.rollback();
+        return res.status(400).json({ error: 'El código del producto y la fecha de vencimiento son obligatorios para todos los ítems.' });
       }
 
       const id_ubicacion = req.ubicacionId;
@@ -1331,12 +1432,14 @@ exports.ingresarProveedorLote = async (req, res) => {
 
       if (prodVencimiento) {
         prodVencimiento.piezas = (parseInt(prodVencimiento.piezas, 10) || 0) + valorPiezas;
+        prodVencimiento.peso = (parseFloat(prodVencimiento.peso) || 0) + kilosASumar;
         await prodVencimiento.save({ transaction });
       } else {
         prodVencimiento = await ProductoVencimiento.create({
           codigo_producto: codigo,
           vencimiento: vencimiento,
           piezas: valorPiezas,
+          peso: kilosASumar,
           id_ubicacion
         }, { transaction });
       }
@@ -1420,25 +1523,30 @@ exports.ingresarProveedorLote = async (req, res) => {
 // Obtener todos los ingresos de proveedores para trazabilidad en el historial
 exports.obtenerIngresosProveedores = async (req, res) => {
   try {
+    const id_ubicacion = req.ubicacionId;
+    const { Op } = require('sequelize');
+    const whereClause = id_ubicacion ? { [Op.or]: [{ id_ubicacion }, { id_ubicacion: null }] } : {};
+
     const ingresos = await IngresoProveedor.findAll({
+      where: whereClause,
       include: [
         {
           model: Producto,
           as: 'Producto',
-          attributes: ['nombre']
+          attributes: ['codigo', 'nombre']
         },
         {
           model: Proveedor,
           as: 'Proveedor',
-          attributes: ['nombre']
+          attributes: ['id', 'nombre']
         },
         {
           model: Bulto,
           as: 'Bulto',
-          attributes: ['nombre']
+          attributes: ['id', 'nombre', 'cantidad_piezas']
         }
       ],
-      order: [['fecha', 'DESC']]
+      order: [['fecha', 'DESC'], ['id', 'DESC']]
     });
     res.json(ingresos);
   } catch (error) {
@@ -1588,12 +1696,14 @@ exports.controlPiezas = async (req, res) => {
 
       // Actualizar o crear los lotes entrantes
       let auditedPiecesTotal = 0;
+      const pesoXPieza = parseFloat(producto.peso_x_pieza) || 0;
 
       for (const incomingL of lotes) {
         const incomingPieces = parseInt(incomingL.piezas, 10) || 0;
         if (incomingPieces <= 0) continue;
 
         auditedPiecesTotal += incomingPieces;
+        const pesoLote = incomingPieces * pesoXPieza;
 
         if (incomingL.id) {
           const existingV = currentVencimientos.find(v => v.id === parseInt(incomingL.id, 10));
@@ -1604,6 +1714,7 @@ exports.controlPiezas = async (req, res) => {
 
             if (hasChanges) {
               existingV.piezas = incomingPieces;
+              existingV.peso = pesoLote;
               existingV.vencimiento = incomingL.vencimiento;
               await existingV.save({ transaction });
 
@@ -1611,10 +1722,10 @@ exports.controlPiezas = async (req, res) => {
                 codigo_producto,
                 id_ubicacion,
                 tipo_movimiento: 'AUDITORIA_PIEZAS',
-                concepto: `Auditoría: Lote modificado (${oldDate} -> ${incomingL.vencimiento}, piezas: ${oldPieces} -> ${incomingPieces})`,
+                concepto: `Auditoría: Lote modificado (${oldDate} -> ${incomingL.vencimiento}, piezas: ${oldPieces} -> ${incomingPieces}, peso: ${pesoLote.toFixed(3)} kg)`,
                 cantidad_piezas: incomingPieces - oldPieces,
-                stock: 0,
-                kilos_calculado: 0,
+                stock: (incomingPieces - oldPieces) * pesoXPieza,
+                kilos_calculado: (incomingPieces - oldPieces) * pesoXPieza,
                 usuario
               }, { transaction });
             }
@@ -1624,17 +1735,18 @@ exports.controlPiezas = async (req, res) => {
             codigo_producto,
             id_ubicacion,
             vencimiento: incomingL.vencimiento,
-            piezas: incomingPieces
+            piezas: incomingPieces,
+            peso: pesoLote
           }, { transaction });
 
           await MovimientoStock.create({
             codigo_producto,
             id_ubicacion,
             tipo_movimiento: 'AUDITORIA_PIEZAS',
-            concepto: `Auditoría: Nuevo lote vencimiento ${incomingL.vencimiento} con ${incomingPieces} piezas`,
+            concepto: `Auditoría: Nuevo lote vencimiento ${incomingL.vencimiento} con ${incomingPieces} piezas (${pesoLote.toFixed(3)} kg)`,
             cantidad_piezas: incomingPieces,
-            stock: 0,
-            kilos_calculado: 0,
+            stock: pesoLote,
+            kilos_calculado: pesoLote,
             usuario
           }, { transaction });
         }

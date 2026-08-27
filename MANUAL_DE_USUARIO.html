@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual de Usuario Final - CDF Gestión</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    @page {
+      size: A4;
+      margin: 18mm 15mm 20mm 15mm;
+      @bottom-right {
+        content: counter(page);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.6;
+      font-size: 10.5pt;
+      padding: 0 10px;
+    }
+
+    /* CARÁTULA / COVER PAGE */
+    .cover-page {
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      page-break-after: always;
+      background: linear-gradient(135deg, #0b5394 0%, #1e6ec8 100%);
+      color: #ffffff;
+      border-radius: 12px;
+      padding: 40px 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .cover-badge {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 11pt;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 25px;
+    }
+
+    .cover-title {
+      font-size: 32pt;
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .cover-subtitle {
+      font-size: 18pt;
+      font-weight: 400;
+      color: #e0f2fe;
+      margin-bottom: 40px;
+    }
+
+    .cover-meta {
+      font-size: 10pt;
+      color: #bae6fd;
+      border-top: 1px solid rgba(255, 255, 255, 0.25);
+      padding-top: 20px;
+      width: 80%;
+      max-width: 450px;
+      margin: 0 auto;
+    }
+
+    /* ENCABEZADOS */
+    h1.page-title-break {
+      font-size: 20pt;
+      font-weight: 800;
+      color: #0b5394;
+      border-bottom: 3px solid #0b5394;
+      padding-bottom: 8px;
+      margin-top: 30px;
+      margin-bottom: 20px;
+      page-break-before: always;
+    }
+
+    h1.page-title-break:first-of-type {
+      page-break-before: avoid;
+    }
+
+    h2.section-heading {
+      font-size: 15pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      border-left: 4px solid #1e6ec8;
+      padding-left: 10px;
+    }
+
+    h3.subsection-heading {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #334155;
+      margin-top: 18px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+
+    /* LISTAS */
+    ul.custom-list {
+      margin-left: 20px;
+      margin-bottom: 14px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* TABLAS */
+    .table-wrapper {
+      margin: 18px 0;
+      overflow-x: auto;
+    }
+
+    .custom-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .custom-table th {
+      background-color: #0b5394;
+      color: #ffffff;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 12px;
+      text-transform: uppercase;
+      font-size: 8.5pt;
+      letter-spacing: 0.5px;
+    }
+
+    .custom-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    .custom-table tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .custom-table tr:hover {
+      background-color: #f1f5f9;
+    }
+
+    /* CALLOUT BOXES */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 16px 0;
+      font-size: 9.5pt;
+    }
+
+    .callout-header {
+      font-weight: 700;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .callout-note {
+      background-color: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-left: 5px solid #2563eb;
+      color: #1e3a8a;
+    }
+
+    .callout-note .callout-header { color: #1d4ed8; }
+
+    .callout-important {
+      background-color: #fefce8;
+      border: 1px solid #fef08a;
+      border-left: 5px solid #eab308;
+      color: #713f12;
+    }
+
+    .callout-important .callout-header { color: #a16207; }
+
+    .callout-caution {
+      background-color: #fef2f2;
+      border: 1px solid #fecaca;
+      border-left: 5px solid #ef4444;
+      color: #7f1d1d;
+    }
+
+    .callout-caution .callout-header { color: #dc2626; }
+
+    /* DIAGRAMAS / PRE */
+    .diagram-box {
+      background: #0f172a;
+      color: #38bdf8;
+      padding: 14px 18px;
+      border-radius: 8px;
+      margin: 18px 0;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 9pt;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .diagram-title {
+      color: #94a3b8;
+      font-size: 8pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 4px;
+    }
+
+    .mermaid-code {
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    .inline-code {
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 9pt;
+      border: 1px solid #cbd5e1;
+    }
+
+    .quote {
+      border-left: 3px solid #cbd5e1;
+      padding-left: 12px;
+      color: #475569;
+      font-style: italic;
+      margin: 10px 0;
+    }
+
+    .footer-page-num {
+      text-align: center;
+      font-size: 8pt;
+      color: #94a3b8;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER PAGE -->
+  <div class="cover-page">
+    <div class="cover-badge">Manual Operativo</div>
+    <div class="cover-title">MANUAL DE USUARIO FINAL</div>
+    <div class="cover-subtitle">CDF Gestión — Centro de Distribución y Fraccionamiento</div>
+    <div class="cover-meta">
+      <p><strong>Versión:</strong> 1.0.0 | <strong>Fecha:</strong> 17/8/2026</p>
+      <p>Documentación técnica y operativa oficial para usuarios y administradores.</p>
+    </div>
+  </div>
+
+  <!-- DOCUMENT BODY -->
+  <h1 class="page-title-break">Manual de Usuario Final — CDF Gestión</h1>
+<strong>Centro de Distribución y Fraccionamiento</strong>
+
+<p>---</p>
+
+<h2 class="section-heading">📖 Tabla de Contenidos</h2>
+<li class="num-item">[Introducción y Conceptos Generales](#1-introducción-y-conceptos-generales)</li>
+   - [¿Qué es CDF Gestión?](#qué-es-cdf-gestión)
+   - [Roles y Permisos de Acceso](#roles-y-permisos-de-acceso)
+   - [Navegación e Interfaz del Sistema](#navegación-e-interfaz-del-sistema)
+<li class="num-item">[Módulo 1: Gestión de Inventario y Stock](#módulo-1-gestión-de-inventario-y-stock)</li>
+   - [Catálogo de Productos](#catálogo-de-productos)
+   - [Órdenes de Compra](#órdenes-de-compra)
+   - [Ingreso de Mercadería (Recepciones)](#ingreso-de-mercadería-recepciones)
+   - [Historial de Ingresos y Movimientos de Stock](#historial-de-ingresos-y-movimientos-de-stock)
+   - [Control de Vencimientos](#control-de-vencimientos)
+   - [Control de Piezas](#control-de-piezas)
+<li class="num-item">[Módulo 2: Producción y Fraccionamiento](#módulo-2-producción-y-fraccionamiento)</li>
+   - [Registro de Procesos (Feteado, Envasado, Picada)](#registro-de-procesos-feteado-envasado-picada)
+   - [Conversiones de Productos](#conversiones-de-productos)
+   - [Gestión de Recortes](#gestión-de-recortes)
+   - [Gestión de Decomisos (Bajas y Mermas)](#gestión-de-decomisos-bajas-y-mermas)
+<li class="num-item">[Módulo 3: Pedidos y Distribución a Sucursales](#módulo-3-pedidos-y-distribución-a-sucursales)</li>
+   - [Carga de Pedido de Sucursal](#carga-de-pedido-de-sucursal)
+   - [Demanda Pendiente Consolidada](#demanda-pendiente-consolidada)
+   - [Preparación de Pedidos (Picking y Despacho)](#preparación-de-pedidos-picking-y-despacho)
+   - [Seguimiento y Estados de Pedidos](#seguimiento-y-estados-de-pedidos)
+<li class="num-item">[Módulo 4: Configuración y Administración del Sistema](#módulo-4-configuración-y-administración-del-sistema)</li>
+   - [Gestión de Colaboradores, Usuarios y Roles](#gestión-de-colaboradores-usuarios-y-roles)
+   - [Gestión de Sucursales y Ubicaciones](#gestión-de-sucursales-y-ubicaciones)
+   - [Gestión de Proveedores y Bultos](#gestión-de-proveedores-y-bultos)
+<li class="num-item">[Preguntas Frecuentes (FAQ) y Glosario](#preguntas-frecuentes-faq-y-glosario)</li>
+
+<p>---</p>
+
+<h2 class="section-heading">1. Introducción y Conceptos Generales</h2>
+
+<h3 class="subsection-heading">¿Qué es CDF Gestión?</h3>
+<strong>CDF Gestión</strong> es la plataforma informática centralizada diseñada para el <strong>Centro de Distribución y Fraccionamiento</strong>. Permite controlar integralmente el ciclo de vida de los productos comestibles y perecederos: desde la recepción de mercadería enviada por proveedores o transferida entre sucursales, el fraccionamiento o feteado (producción interna), la trazabilidad de lotes y vencimientos, hasta la preparación y despacho de pedidos solicitados por las sucursales comercializadoras.
+
+<div class="diagram-box"><div class="diagram-title">⚡ Diagrama de Flujo / Proceso</div><pre class="mermaid-code">flowchart LR
+    A[Proveedores / Recepción] --> B[Depósito / Inventario CDF]
+    B --> C[Producción / Fraccionamiento]
+    C --> B
+    B --> D[Preparación de Pedidos]
+    D --> E[Sucursales Destino]</pre></div>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Roles y Permisos de Acceso</h3>
+
+<p>El acceso a las pantallas y operaciones está resguardado mediante un esquema de perfiles. A continuación se resumen los niveles de responsabilidad:</p>
+
+<div class="table-wrapper"><table class="custom-table"><thead><tr><th>Rol</th><th>Descripción y Alcance</th></tr></thead><tbody><tr><td><strong>Administrador (Admin)</strong></td><td>Acceso total a todos los módulos, auditoría, parámetros del sistema, gestión de usuarios, roles, sucursales, proveedores y configuraciones.</td></tr><tr><td><strong>Referente</strong></td><td>Supervisión técnica y operativa en planta. Acceso a Inventario, Control de Piezas, Conversiones, Recortes, Decomisos y Movimientos de Stock.</td></tr><tr><td><strong>Preparador</strong></td><td>Encargado del armado de pedidos para sucursales (<em>picking</em>), conteo de bultos, carga de recepción y demanda pendiente.</td></tr><tr><td><strong>Feteador / Envasador</strong></td><td>Personal operativo del área de producción. Registra fraccionamientos, procesos de feteado, picada, envasado y conversiones.</td></tr><tr><td><strong>Colaborador</strong></td><td>Operario habilitado para registrar procesos de producción específicos a su nombre y armar pedidos asignados.</td></tr><tr><td><strong>Usuario / Sucursal</strong></td><td>Perfil de consulta y carga de requerimientos de stock / órdenes de compra.</td></tr></tbody></table></div>
+---
+
+<h3 class="subsection-heading">Navegación e Interfaz del Sistema</h3>
+
+<p>La interfaz del sistema utiliza un diseño intuitivo con barra lateral (<em>sidebar</em>) desplegable y colapsable organizada en 4 grupos temáticos:</p>
+
+<p><li class="num-item"><strong>Inventario</strong>: Productos, Órdenes de Compra, Ingreso Mercadería (Nuevo e Historial), Historial de Stock, Vencimientos, Control de Piezas.</li>
+<li class="num-item"><strong>Producción</strong>: Procesos, Conversiones, Recortes, Decomisos.</li>
+<li class="num-item"><strong>Pedidos</strong>: Preparar, Ver Todos, Cargar Pedido, Demanda Pendiente.</li>
+<li class="num-item"><strong>Configuración</strong>: Colaboradores, Sucursales, Proveedores, Bultos, Ubicaciones, Usuarios, Permisos de Roles.</li></p>
+
+<p>En la barra superior siempre podrá visualizar su <strong>Usuario activo</strong>, el <strong>Rol asignado</strong> y el botón para <strong>Cerrar Sesión</strong>.</p>
+
+<p>---</p>
+
+<h2 class="section-heading">2. Módulo 1: Gestión de Inventario y Stock</h2>
+
+<h3 class="subsection-heading">Catálogo de Productos</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Inventario -> Productos</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Preparador, Feteador, Envasador.</li>
+
+<p></ul>Permite consultar la totalidad de los artículos gestionados en la planta.
+<ul class="custom-list"><li><strong>Buscar y Filtrar</strong>: Puede filtrar por nombre, código interno, categoría o estado (Entero / Fraccionado).</li>
+<li><strong>Alta / Edición de Producto (Solo Admin)</strong>:</li>
+  </ul>1. Presione el botón <code class="inline-code">Nuevo Producto</code>.
+  2. Complete la descripción, código de barras/código interno, unidad de medida (<code class="inline-code">kg</code>, <code class="inline-code">unidades</code>, <code class="inline-code">bultos</code>), pesable/no pesable.
+  3. Marque si requiere control de lotes/vencimiento obligatorio.</p>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Órdenes de Compra</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Inventario -> Órdenes de Compra</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Preparador, Feteador, Envasador, Usuario.</li>
+
+<p></ul>Gestiona las intenciones de compra acordadas con los proveedores.
+<li class="num-item">Presione <code class="inline-code">Nueva Orden de Compra</code>.</li>
+<li class="num-item">Seleccione el <strong>Proveedor</strong>, fecha estimada de entrega y las líneas de producto solicitadas con sus respectivas cantidades.</li>
+<li class="num-item">Al recibir la mercadería en planta, la Orden de Compra podrá vincularse directamente desde la pantalla de <strong>Ingreso de Mercadería</strong> para validar lo recibido contra lo solicitado.</li></p>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Ingreso de Mercadería (Recepciones)</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Inventario -> Ingreso Mercadería -> Nuevo ingreso</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Preparador, Feteador, Envasador, Usuario.</li>
+
+<p></ul><div class="callout callout-note"><div class="callout-header">💡 NOTA IMPORTANTE</div><div class="callout-body">Esta pantalla descuenta automáticamente la <strong>tara</strong> (peso de la caja vacía o contenedor) según el tipo de bulto seleccionado.</div></div></p>
+
+<p>#### Pasos para registrar un Ingreso:
+<li class="num-item"><strong>Seleccionar Origen</strong>:</li>
+   - <strong>Proveedor (Por Lote)</strong>: Para recepciones directas de compras.
+   - <strong>Sucursal (Manual)</strong>: Para devoluciones o transferencias inter-sucursales.
+<li class="num-item"><strong>Cargar la Grilla de Ingreso</strong>:</li>
+   - Seleccione el <strong>Producto</strong>.
+   - Indique el <strong>Número de Lote</strong> y la <strong>Fecha de Vencimiento</strong> impresa en el empaque.
+   - Ingrese la cantidad de <strong>Piezas</strong> y el <strong>Peso Bruto (kg)</strong>.
+   - Seleccione el <strong>Tipo de Bulto</strong> (ej. <em>Caja Cartón</em>, <em>Jaula Plástica</em>). El sistema restará el peso de tara automáticamente obteniendo el <strong>Peso Neto (kg)</strong>.
+   - Asigne la <strong>Ubicación en Depósito</strong> (ej. <em>Cámara 1 - Estante A</em>).
+<li class="num-item"><strong>Confirmación</strong>: Presione <code class="inline-code">Confirmar e Ingresar al Stock</code>. La mercadería se acreditará inmediatamente al inventario.</li></p>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Historial de Ingresos y Movimientos de Stock</h3>
+<ul class="custom-list"><li><strong>Rutas de Menú</strong>: </li>
+  </ul>- <code class="inline-code">Inventario -> Ingreso Mercadería -> Historial</code>
+  - <code class="inline-code">Inventario -> Historial de Stock</code>
+
+<p>Permite auditar el histórico de recepciones y las variaciones del inventario (entradas por recepción, salidas por ventas/despacho, bajas por decomiso o transformaciones por fraccionamiento).
+<ul class="custom-list"><li>Puede filtrar por <strong>Rango de Fechas</strong>, <strong>Producto</strong> o <strong>Lote</strong>.</li>
+<li>Permite exportar o imprimir los comprobantes de recepción.</li></p>
+
+<p></ul>---</p>
+
+<h3 class="subsection-heading">Control de Vencimientos</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Inventario -> Vencimientos</code></li>
+<li><strong>Acceso</strong>: Todos los roles.</li>
+
+<p></ul>Muestra un semáforo de alerta con los lotes almacenados en la planta:
+<ul class="custom-list"><li>🔴 <strong>Vencido</strong>: Producto cuya fecha de vencimiento ya expiró. Debe evaluarse para decomiso.</li>
+<li>🟡 <strong>Próximo a Vencer (0 a 15 días)</strong>: Prioritario para despacho o procesamiento inmediato (regla FEFO: <em>First Expired, First Out</em>).</li>
+<li>🟢 <strong>En Regla</strong>: Producto con margen amplio de vigencia.</li></p>
+
+<p></ul>---</p>
+
+<h3 class="subsection-heading">Control de Piezas</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Inventario -> Control de Piezas</code></li>
+<li><strong>Acceso</strong>: Admin, Referente.</li>
+
+<p></ul>Permite auditar el conteo individual de hormas, piezas de fiambre o trozos cárnicos de alto valor en inventario.
+<ul class="custom-list"><li>Permite auditar si el peso promedio de la pieza coincide con las tolerancias esperadas.</li>
+<li>Facilita el pesaje individual antes de enviar las piezas a la sala de feteado o fraccionamiento.</li></p>
+
+<p></ul>---</p>
+
+<h2 class="section-heading">3. Módulo 2: Producción y Fraccionamiento</h2>
+
+<div class="diagram-box"><div class="diagram-title">⚡ Diagrama de Flujo / Proceso</div><pre class="mermaid-code">flowchart TD
+    M[Pieza Entera / Horma] -->|Proceso de Feteado| F[Pachas / Feteado Envasado]
+    M -->|Corte / Trozado| R[Recortes Utilizables]
+    M -->|Merma No Utilizable| D[Decomiso / Merma]</pre></div>
+
+<h3 class="subsection-heading">Registro de Procesos (Feteado, Envasado, Picada)</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Producción -> Procesos</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Feteador, Envasador, Colaborador.</li>
+
+<p></ul>Esta interfaz registra la actividad diaria de la sala de fraccionamiento:
+<li class="num-item">Presione <code class="inline-code">Nuevo Proceso</code>.</li>
+<li class="num-item">Seleccione el <strong>Colaborador / Operario</strong> a cargo (ej. <em>Feteador 1</em>).</li>
+<li class="num-item">Elija el tipo de proceso: <code class="inline-code">Feteado</code>, <code class="inline-code">Envasado al Vacío</code>, <code class="inline-code">Picada</code>, <code class="inline-code">Trozado</code>.</li>
+<li class="num-item">Seleccione la <strong>Materia Prima</strong> consumida (ej. <em>Horma de Jamón Cocido Entero</em>, Lote #X).</li>
+<li class="num-item">Ingrese la cantidad de piezas procesadas, peso bruto consumido y el <strong>Producto Terminado</strong> resultante (ej. <em>Sobres de Jamón Feteado 200g</em>).</li>
+<li class="num-item">Registre si se generó <strong>Recorte</strong> o <strong>Merma</strong>.</li>
+<li class="num-item">Guarde el proceso para descontar la materia prima del stock y dar de alta los paquetes terminados.</li></p>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Conversiones de Productos</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Producción -> Conversiones</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Feteador, Envasador.</li>
+
+<p></ul>Permite realizar transformaciones directas o equivalencias entre un producto padre (entero) y productos hijos (fraccionados).
+<ul class="custom-list"><li>Calcula automáticamente la <strong>Rendibilidad %</strong> y el <strong>Porcentaje de Merma</strong>.</li>
+<li>Mantiene el historial de conversión para auditorías de eficiencia de fraccionamiento por operario.</li></p>
+
+<p></ul>---</p>
+
+<h3 class="subsection-heading">Gestión de Recortes</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Producción -> Recortes</code></li>
+<li><strong>Acceso</strong>: Admin, Referente.</li>
+
+<p></ul>Administra el sobrante de piezas utilizables generado en los procesos de corte o feteado (puntas de fiambre, recortes limpios de queso).
+<ul class="custom-list"><li>Los recortes pueden ser reincorporados como materia prima para procesos de <code class="inline-code">Picada</code> o embutidos secundarios.</li>
+<li>Permite consultar el stock acumulado de recortes por categoría.</li></p>
+
+<p></ul>---</p>
+
+<h3 class="subsection-heading">Gestión de Decomisos (Bajas y Mermas)</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Producción -> Decomisos</code></li>
+<li><strong>Acceso</strong>: Admin, Referente.</li>
+
+<p></ul><div class="callout callout-caution"><div class="callout-header">⚠️ ADVERTENCIA / PRECAUCIÓN</div><div class="callout-body">El decomiso da de baja de forma definitiva e irreversible el stock seleccionado.</div></div></p>
+
+<p>Pasos para registrar un Decomiso:
+<li class="num-item">Presione <code class="inline-code">Nuevo Decomiso</code>.</li>
+<li class="num-item">Seleccione el <strong>Producto</strong> y el <strong>Lote</strong> específico.</li>
+<li class="num-item">Ingrese los <strong>Kg / Unidades</strong> a desechar.</li>
+<li class="num-item">Indique el <strong>Motivo</strong>: <code class="inline-code">Vencimiento</code>, <code class="inline-code">Rotura de Cadena de Frío</code>, <code class="inline-code">Envasado Defectuoso</code>, <code class="inline-code">Deterioro / Contaminación</code>.</li>
+<li class="num-item">Guarde la operación. El movimiento quedará asentado en la auditoría con el usuario responsable.</li></p>
+
+<p>---</p>
+
+<h2 class="section-heading">4. Módulo 3: Pedidos y Distribución a Sucursales</h2>
+
+<h3 class="subsection-heading">Carga de Pedido de Sucursal</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Pedidos -> Cargar Pedido</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Preparador, Feteador, Envasador.</li>
+
+<p></ul>Permite crear una solicitud formal de mercadería para una sucursal destino:
+<li class="num-item">Seleccione la <strong>Sucursal Solicitante</strong> y la <strong>Fecha Deseada de Entrega</strong>.</li>
+<li class="num-item">Agregue los productos deseados indicando la cantidad solicitada.</li>
+<li class="num-item">Presione <code class="inline-code">Guardar Pedido</code>. El pedido ingresará en estado <strong>PENDIENTE</strong>.</li></p>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Demanda Pendiente Consolidada</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Pedidos -> Demanda Pendiente</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Preparador, Colaborador, Usuario.</li>
+
+<p></ul>Muestra la suma total de las cantidades solicitadas por <strong>todas</strong> las sucursales para un determinado producto.
+<ul class="custom-list"><li>Permite a la sala de producción saber cuántas unidades/kg de producto feteado o preparado deben elaborar durante el día.</li></p>
+
+<p></ul>---</p>
+
+<h3 class="subsection-heading">Preparación de Pedidos (Picking y Despacho)</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Pedidos -> Preparar</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Preparador, Colaborador.</li>
+
+<p></ul>Es la herramienta de trabajo en depósito para el armado de los pedidos (<em>picking</em>):
+<li class="num-item">Seleccione un pedido en estado <strong>PENDIENTE</strong>.</li>
+<li class="num-item">El sistema mostrará la lista de productos requeridos y la ubicación en estantería/cámara.</li>
+<li class="num-item">Al escanear o seleccionar el lote a despachar, el preparador confirma las cantidades reales embaladas.</li>
+<li class="num-item">Indique los <strong>Bultos / Cajas</strong> en los que se empaquetó el pedido.</li>
+<li class="num-item">Al finalizar, presione <code class="inline-code">Finalizar Preparación</code>. El pedido cambiará a estado <strong>LISTO / DESPACHADO</strong>, descontando el stock correspondiente del depósito CDF.</li></p>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Seguimiento y Estados de Pedidos</h3>
+<ul class="custom-list"><li><strong>Ruta de Menú</strong>: <code class="inline-code">Pedidos -> Ver Todos</code></li>
+<li><strong>Acceso</strong>: Admin, Referente, Preparador, Colaborador.</li>
+
+<p></ul>Permite consultar el listado completo de pedidos y su estado en el flujo de trabajo:</p>
+
+<div class="diagram-box"><div class="diagram-title">⚡ Diagrama de Flujo / Proceso</div><pre class="mermaid-code">stateDiagram-v2
+    [*] --> Pendiente: Carga por Sucursal
+    Pendiente --> EnPreparacion: Preparador toma pedido
+    EnPreparacion --> Listo: Picking completado
+    Listo --> Despachado: En tránsito a sucursal
+    Despachado --> Entregado: Confirmado en sucursal
+    Pendiente --> Cancelado: Anulación</pre></div>
+
+<p>---</p>
+
+<h2 class="section-heading">5. Módulo 4: Configuración y Administración del Sistema</h2>
+
+<div class="callout callout-important"><div class="callout-header">⭐ INFORMACIÓN CLAVE</div><div class="callout-body">Los ítems de este módulo son exclusivos del rol <strong>Administrador (Admin)</strong>.</div></div>
+
+<h3 class="subsection-heading">Gestión de Colaboradores, Usuarios y Roles</h3>
+<ul class="custom-list"><li><strong>Colaboradores</strong> (<code class="inline-code">Configuración -> Colaboradores</code>): Registro del personal operario de planta (nombre, legajo, área asignada).</li>
+<li><strong>Usuarios</strong> (<code class="inline-code">Configuración -> Usuarios</code>): Creación de cuentas de acceso al sistema, asignación de contraseña y vinculación a un Colaborador y Rol.</li>
+<li><strong>Permisos de Roles</strong> (<code class="inline-code">Configuración -> Permisos de Roles</code>): Matriz dinámica para habilitar o restringir vistas del menú según la función de la persona.</li>
+
+<p></ul>---</p>
+
+<h3 class="subsection-heading">Gestión de Sucursales y Ubicaciones</h3>
+<ul class="custom-list"><li><strong>Sucursales</strong> (<code class="inline-code">Configuración -> Sucursales</code>): Registro de los locales de venta y puntos de entrega (código, dirección, teléfono, responsable).</li>
+<li><strong>Ubicaciones</strong> (<code class="inline-code">Configuración -> Ubicaciones</code>): Mapeo del depósito central CDF (Cámaras de frío, pasillos, estantes y posiciones).</li>
+
+<p></ul>---</p>
+
+<h3 class="subsection-heading">Gestión de Proveedores y Bultos</h3>
+<ul class="custom-list"><li><strong>Proveedores</strong> (<code class="inline-code">Configuración -> Proveedores</code>): Padrón de empresas suministradoras de insumos y materia prima.</li>
+</ul><em> <strong>Bultos</strong> (<code class="inline-code">Configuración -> Bultos</code>): Definición de tipos de empaque y sus respectivas <strong>taras en kilogramos</strong> (ej. </em>Caja de cartón 0.5 kg<em>, </em>Bin plástico 4.2 kg*).
+
+<p>---</p>
+
+<h2 class="section-heading">6. Preguntas Frecuentes (FAQ) y Glosario</h2>
+
+<h3 class="subsection-heading">Preguntas Frecuentes (FAQ)</h3>
+
+<p><strong>1. ¿Qué hago si el peso neto al ingresar mercadería da negativo o incorrecto?</strong>
+<blockquote class="quote">Verifique haber seleccionado el tipo de bulto adecuado. Recuerde que el sistema resta automáticamente la tara de la caja o jaula del peso bruto ingresado.</blockquote></p>
+
+<p><strong>2. ¿Cómo priorizo los productos a despachar para evitar que se venzan en depósito?</strong>
+<blockquote class="quote">Utilice la regla <strong>FEFO</strong> consultando la pantalla de <code class="inline-code">Inventario -> Vencimientos</code>. Despache primero los lotes resaltados en amarillo o con fecha de caducidad más cercana.</blockquote></p>
+
+<p><strong>3. ¿Se puede modificar un pedido que ya está en estado "LISTO" o "DESPACHADO"?</strong>
+<blockquote class="quote">No. Una vez finalizada la preparación, el stock ya fue descontado. En caso de requerir corregir un despacho, un usuario con perfil <strong>Admin</strong> o <strong>Referente</strong> deberá cancelar o ajustar la orden y rearmarla.</blockquote></p>
+
+<p><strong>4. ¿Dónde registro la merma de grasa o cuero en el proceso de feteado?</strong>
+<blockquote class="quote">En la pantalla de <code class="inline-code">Producción -> Procesos</code>, complete el campo <strong>Merma (kg)</strong> al cerrar la orden de trabajo. De esta forma, el balance de masa quedará cerrado correctamente.</blockquote></p>
+
+<p>---</p>
+
+<h3 class="subsection-heading">Glosario de Términos</h3>
+
+<ul class="custom-list"><li><strong>Bulto</strong>: Contenedor físico (caja, jaula, bin, pallet) utilizado para transportar o almacenar productos.</li>
+<li><strong>Tara</strong>: Peso del empaque o contenedor vacío que debe descontarse del peso total para obtener el peso neto de la mercadería.</li>
+</ul><em> <strong>FEFO (</em>First Expired, First Out*)</strong>: Criterio de gestión logística donde el lote que vence primero es el primero en ser despachado o procesado.
+<ul class="custom-list"><li><strong>Picking</strong>: Proceso de selección y recolección de productos desde las ubicaciones de almacenamiento para armar un pedido.</li>
+<li><strong>Decomiso</strong>: Retiro definitivo y baja del inventario de productos no aptos para consumo.</li>
+<li><strong>Recorte</strong>: Sobrante de materia prima limpia y apta generado durante el trozado o fraccionamiento, reincorporable al proceso productivo.</li>
+<li><strong>Rendimiento / Rendibilidad</strong>: Porcentaje de aprovechamiento de un producto entero convertido en producto fraccionado final.</li>
+</ul>
+
+</body>
+</html>

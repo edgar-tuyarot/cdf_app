@@ -85,8 +85,9 @@ exports.create = async (req, res) => {
     });
 
     if (lote) {
-      // Sumar piezas al lote existente
+      // Sumar piezas y peso al lote existente
       lote.piezas += cantPiezas;
+      lote.peso = (parseFloat(lote.peso) || 0) + pesoKilos;
       await lote.save({ transaction: t });
     } else {
       // Crear un lote de vencimiento nuevo
@@ -94,6 +95,7 @@ exports.create = async (req, res) => {
         codigo_producto,
         vencimiento,
         piezas: cantPiezas,
+        peso: pesoKilos,
         id_ubicacion
       }, { transaction: t });
     }

@@ -20,10 +20,18 @@ const groups = [
     icon: 'ph-package',
     items: [
       { name: 'Productos', path: '/productos', icon: 'ph-package', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
-      { name: 'Ingreso Mercadería', path: '/ingresos', icon: 'ph-download-simple', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Stock por Ubicación WMS', path: '/wms-stock-ubicaciones', icon: 'ph-buildings', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
       { name: 'Historial de Stock', path: '/movimientos-stock', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente'] },
       { name: 'Vencimientos', path: '/vencimientos', icon: 'ph-calendar', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
-      { name: 'Control de Piezas', path: '/control-piezas', icon: 'ph-barcode', roles: ['Admin', 'Referente'] },
+    ]
+  },
+  {
+    name: 'Ingresos',
+    icon: 'ph-download-simple',
+    items: [
+      { name: 'Ingreso Mercadería', path: '/ingresos', icon: 'ph-download-simple', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Historia Ingresos', path: '/ingresos-historial', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario']},
+      { name: 'Órdenes de Compra', path: '/ordenes-compra', icon: 'ph-file-text', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
     ]
   },
   {
@@ -32,7 +40,6 @@ const groups = [
     items: [
       { name: 'Procesos', path: '/procesos', icon: 'ph-arrows-clockwise', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
       { name: 'Conversiones', path: '/conversiones', icon: 'ph-arrows-left-right', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
-      { name: 'Ingreso Recortes', path: '/ingreso-recortes', icon: 'ph-plus-circle', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
       { name: 'Recortes', path: '/recortes', icon: 'ph-scissors', roles: ['Admin', 'Referente'] },
       { name: 'Decomisos', path: '/decomisos', icon: 'ph-trash', roles: ['Admin', 'Referente'] },
     ]
@@ -44,7 +51,16 @@ const groups = [
       { name: 'Preparar', path: '/preparar', icon: 'ph-hourglass', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
       { name: 'Ver Todos', path: '/pedidos', icon: 'ph-shopping-cart', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
       { name: 'Cargar Pedido', path: '/crear-pedido-sucursal', icon: 'ph-file-plus', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
-      { name: 'Demanda Pendiente', path: '/demanda-pendiente', icon: 'ph-clipboard-text', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+      { name: 'Demanda Pendiente', path: '/demanda-pendiente', icon: 'ph-clipboard-text', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] }
+    ]
+  },
+  {
+    name: 'Reportes',
+    icon: 'ph-chart-line',
+    items: [
+      { name: 'Reportes de Pedidos', path: '/reportes-pedidos', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+      { name: 'Top Fraccionados', path: '/reportes-produccion', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
+      { name: 'Trazabilidad de Producto', path: '/reporte-trazabilidad', icon: 'ph-line-segments', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] }
     ]
   },
   {
@@ -58,6 +74,10 @@ const groups = [
       { name: 'Ubicaciones', path: '/ubicaciones', icon: 'ph-map-pin', roles: ['Admin'] },
       { name: 'Usuarios', path: '/usuarios', icon: 'ph-user-gear', roles: ['Admin'] },
       { name: 'Permisos de Roles', path: '/permisos', icon: 'ph-shield-check', roles: ['Admin'] },
+      { name: 'Registros', path: '/registros', icon: 'ph-note-pencil', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Block', path: '/block-config', icon: 'ph-shield-check', roles: ['Admin', 'Referente'] },
+
+      { name: 'Debug Stock PHP', path: '/stock-debug', icon: 'ph-bug', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
     ]
   }
 ]

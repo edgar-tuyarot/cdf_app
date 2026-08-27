@@ -11,6 +11,10 @@
           <i class="ph ph-spinner spinner" v-if="uploadingStock"></i>
           <i class="ph ph-package" v-else></i> Cargar Stock (Excel)
         </button>
+        <button v-if="isAdmin" class="btn btn-secondary" style="background: #0284c7; color: #fff; border: 1px solid #0369a1; display: flex; align-items: center; gap: 0.25rem;" @click="runStockSync" :disabled="syncingBlock">
+          <i class="ph ph-spinner spinner" v-if="syncingBlock"></i>
+          <i class="ph ph-arrows-clockwise" v-else></i> Sync Block
+        </button>
         <button v-if="!isSucursal" class="btn btn-secondary" style="background: #275214; color: #fff; border: 1px solid #1c3d0e; display: flex; align-items: center; gap: 0.25rem;" @click="exportToExcel" :disabled="loading || productos.length === 0">
           <i class="ph ph-file-xls"></i> Exportar Vencimientos
         </button>
@@ -31,30 +35,8 @@
     <!-- Tabla de Productos -->
     <div class="card">
       <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-        <span class="card-title">Listado de Productos</span>
+        <span class="card-title">Listado de Productos ({{ filteredAndSortedProductos.length }})</span>
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-          <!-- Filtro de Estado -->
-          <div style="display: flex; align-items: center; gap: 0.25rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-            <i class="ph ph-funnel" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
-            <select v-model="filterStatus" style="border: none; outline: none; font-size: 0.8rem; background: transparent; color: var(--text-primary); cursor: pointer; padding-right: 5px;">
-              <option value="activos" style="background-color: var(--bg-window); color: var(--text-primary);">Activos</option>
-              <option value="con_fraccionado" style="background-color: var(--bg-window); color: var(--text-primary);">Con Fraccionado</option>
-              <option value="desactivados" style="background-color: var(--bg-window); color: var(--text-primary);">Desactivados</option>
-              <option value="todos" style="background-color: var(--bg-window); color: var(--text-primary);">Todos</option>
-            </select>
-          </div>
-
-          <!-- Filtro de Sucursal -->
-          <div style="display: flex; align-items: center; gap: 0.25rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-            <i class="ph ph-storefront" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
-            <select v-model="filterSucursal" style="border: none; outline: none; font-size: 0.8rem; background: transparent; color: var(--text-primary); cursor: pointer; padding-right: 5px;">
-              <option value="" style="background-color: var(--bg-window); color: var(--text-primary);">Todas las Sucursales</option>
-              <option v-for="suc in sucursales" :key="suc.id" :value="suc.id" style="background-color: var(--bg-window); color: var(--text-primary);">
-                {{ suc.sucursal }}
-              </option>
-            </select>
-          </div>
-
           <!-- Filtro de Proveedor -->
           <div style="display: flex; align-items: center; gap: 0.25rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
             <i class="ph ph-truck" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
@@ -79,6 +61,16 @@
               <i class="ph ph-x-circle"></i>
             </button>
           </div>
+
+          <!-- Casilla para mostrar productos desactivados -->
+          <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none; background: var(--bg-window); padding: 0.1rem 0.5rem; box-shadow: var(--inset-shadow); height: 26px;">
+            <input 
+              type="checkbox" 
+              v-model="showTodosProductos" 
+              style="cursor: pointer; accent-color: var(--accent-primary);" 
+            />
+            <span>Ver todos</span>
+          </label>
         </div>
       </div>
       <div class="table-container">
@@ -98,6 +90,14 @@
                 {{ isSucursal ? 'KG Stock' : 'Stock' }} 
                 <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
+              <th @click="sortBy('piezas_est')" class="sortable text-right" title="Piezas estimadas calculadas dividiendo Stock / Peso por Pieza">
+                Piezas Est.
+                <i v-if="sortKey === 'piezas_est'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              </th>
+              <th @click="sortBy('activo')" class="sortable text-center">
+                Estado 
+                <i v-if="sortKey === 'activo'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              </th>
               <th v-if="!isSucursal" @click="sortBy('updated_at')" class="sortable text-center">
                 Última Modificación 
                 <i v-if="sortKey === 'updated_at'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
@@ -106,11 +106,16 @@
                 Piezas 
                 <i v-if="sortKey === 'cantidad_piezas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th v-if="!isSucursal" class="text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in filteredAndSortedProductos" :key="p.codigo">
+            <tr 
+              v-for="p in filteredAndSortedProductos" 
+              :key="p.codigo" 
+              class="clickable-row" 
+              @click="openModal(p)" 
+              style="cursor: pointer;"
+            >
               <td><strong>{{ p.codigo }}</strong></td>
               <td>{{ p.nombre }}</td>
               <td>
@@ -118,13 +123,14 @@
                 <span v-else style="color: var(--text-muted); font-size: 0.8rem;">-</span>
               </td>
               <td class="text-right">{{ p.stock }} {{ p.pesable !== false ? 'kg' : 'ud' }}</td>
+              <td class="text-right fw-bold" style="color: #2563eb;">{{ getPiezasEstimadas(p) }}</td>
+              <td class="text-center">
+                <span :style="p.activo !== false ? { color: '#16a34a', fontWeight: 'bold' } : { color: '#dc2626', fontWeight: 'bold' }">
+                  {{ p.activo !== false ? 'Activo' : 'Desactivado' }}
+                </span>
+              </td>
               <td v-if="!isSucursal" class="text-center">{{ formatDateTime(p.updated_at) }}</td>
               <td class="text-center">{{ p.cantidad_piezas }}</td>
-              <td v-if="!isSucursal" class="text-center">
-                <button class="btn btn-secondary btn-sm" @click="openModal(p)" style="min-height: 24px; padding: 0.1rem 0.5rem; font-size: 0.75rem;">
-                  Ver más
-                </button>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -146,7 +152,7 @@
     <!-- Modal Formulario -->
     <Teleport to="body">
       <div v-if="showModal" class="modal-overlay" @mousedown.self="closeModal">
-        <div class="modal-card" style="max-width: 880px; width: 95vw;">
+        <div class="modal-card" style="max-width: 1200px; width: 96vw; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
           <div class="modal-header">
             <h3 class="modal-title">
               <span v-if="!isAdmin">Detalles del Producto</span>
@@ -155,10 +161,10 @@
             <button class="icon-btn" @click="closeModal"><i class="ph ph-x"></i></button>
           </div>
           <form @submit.prevent="saveProducto">
-            <div class="modal-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1rem; padding: 1rem; align-items: stretch;">
+            <div class="modal-body" style="overflow-y: auto; flex-grow: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1rem; padding: 1rem; align-items: stretch;">
               
               <!-- Columna Izquierda: Información del Producto y Pesos -->
-              <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: var(--border-radius-md); padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow);">
+              <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: 0; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow);">
                 <h4 style="margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.25rem;"><i class="ph ph-package"></i> Datos y Pesos de Stock</h4>
                 
                 <div class="form-group">
@@ -206,7 +212,7 @@
                   <div 
                     v-if="selectedFraccionadoProduct" 
                     class="selected-product-badge mt-2 animate-fade"
-                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary); border-radius: 4px;"
+                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary); border-radius: 0;"
                   >
                     <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
                     <span>
@@ -289,7 +295,7 @@
               </div>
 
               <!-- Columna Derecha: Lotes de Vencimiento -->
-              <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: var(--border-radius-md); padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow); height: 100%;">
+              <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: 0; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow); height: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.25rem;">
                   <h4 style="margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;"><i class="ph ph-calendar"></i> Lotes de Vencimiento</h4>
                   <button v-if="isAdmin" type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.75rem;" @click="agregarVencimientoRow">
@@ -488,8 +494,42 @@ const isEditing = ref(false)
 const itemToDelete = ref(null)
 const uploading = ref(false)
 const uploadingStock = ref(false)
+const syncingBlock = ref(false)
 const fileInput = ref(null)
 const stockFileInput = ref(null)
+
+const runStockSync = async () => {
+  syncingBlock.value = true
+  showAlert('Iniciando sincronización de stock con BlockWMS...', 'info')
+  try {
+    let headers = { 'Content-Type': 'application/json' }
+    const savedSession = localStorage.getItem('wms_session')
+    if (savedSession) {
+      try {
+        const sess = JSON.parse(savedSession)
+        if (sess.sessionId) {
+          headers['X-WMS-Session-Id'] = sess.sessionId
+          headers['X-WMS-Site-Id'] = sess.siteId || '194326'
+          headers['X-WMS-Host'] = sess.host || 'http://192.168.10.2'
+        }
+      } catch (e) {}
+    }
+
+    const res = await fetch('/api/wms/sync-stock', { method: 'POST', headers })
+    const data = await res.json()
+    if (res.ok && data.ok) {
+      const msg = data.message || data.mensaje || 'Sincronización de stock con BlockWMS completada exitosamente.'
+      showAlert(msg, 'success')
+      await fetchProductos()
+    } else {
+      throw new Error(data.error || 'Error en la sincronización con BlockWMS.')
+    }
+  } catch (err) {
+    showAlert(`Error al sincronizar con BlockWMS: ${err.message}`, 'error')
+  } finally {
+    syncingBlock.value = false
+  }
+}
 
 const alert = ref({
   show: false,
@@ -498,10 +538,28 @@ const alert = ref({
 })
 
 const searchQuery = ref('')
-const filterStatus = ref('activos') // 'todos', 'activos', 'desactivados'
+const showTodosProductos = ref(false)
+const filterStatus = ref('todos')
 const filterSucursal = ref('')
 const sortKey = ref('nombre')
 const sortOrder = ref(1) // 1 = asc, -1 = desc
+
+const getPiezasEstimadasNum = (p) => {
+  if (!p) return 0
+  const stockKilos = parseFloat(p.stock) || 0
+  const pesoPieza = parseFloat(p.peso_x_pieza) || 0
+  if (stockKilos <= 0 || pesoPieza <= 0) return 0
+  return Math.max(1, Math.round(stockKilos / pesoPieza))
+}
+
+const getPiezasEstimadas = (p) => {
+  if (!p) return '-'
+  const stockKilos = parseFloat(p.stock) || 0
+  const pesoPieza = parseFloat(p.peso_x_pieza) || 0
+  if (stockKilos <= 0) return 0
+  if (pesoPieza <= 0) return '-'
+  return Math.max(1, Math.round(stockKilos / pesoPieza))
+}
 
 // Filtro y ordenación reactiva de productos
 const filteredAndSortedProductos = computed(() => {
@@ -522,13 +580,11 @@ const filteredAndSortedProductos = computed(() => {
     result = result.filter(p => p.proveedor_id === provId)
   }
 
-  // Filtro por estado activo/desactivado
-  if (filterStatus.value === 'activos') {
+  // Si la casilla "Mostrar desactivados" NO está marcada, mostrar solo productos activos
+  if (!showTodosProductos.value) {
     result = result.filter(p => p.activo !== false)
   } else if (filterStatus.value === 'con_fraccionado') {
-    result = result.filter(p => p.activo !== false && p.codigo_fraccionado && p.codigo_fraccionado.trim() !== '')
-  } else if (filterStatus.value === 'desactivados') {
-    result = result.filter(p => p.activo === false)
+    result = result.filter(p => p.codigo_fraccionado && p.codigo_fraccionado.trim() !== '')
   }
 
   // Búsqueda
@@ -546,6 +602,12 @@ const filteredAndSortedProductos = computed(() => {
   // Ordenación
   if (sortKey.value) {
     result.sort((a, b) => {
+      if (sortKey.value === 'piezas_est') {
+        const pzA = getPiezasEstimadasNum(a)
+        const pzB = getPiezasEstimadasNum(b)
+        return (pzA - pzB) * sortOrder.value
+      }
+
       let valA = a[sortKey.value]
       let valB = b[sortKey.value]
 
@@ -553,6 +615,12 @@ const filteredAndSortedProductos = computed(() => {
         const timeA = valA ? new Date(valA).getTime() : 0
         const timeB = valB ? new Date(valB).getTime() : 0
         return (timeA - timeB) * sortOrder.value
+      }
+
+      if (sortKey.value === 'activo') {
+        const statusA = a.activo !== false ? 1 : 0
+        const statusB = b.activo !== false ? 1 : 0
+        return (statusA - statusB) * sortOrder.value
       }
 
       // Valores por defecto
@@ -914,20 +982,21 @@ const exportTableToExcel = () => {
   let csvContent = '\uFEFF' // BOM para Excel
   
   if (!isSucursal.value) {
-    csvContent += 'Código;Nombre;Stock;Unidad;Piezas;Última Modificación\n'
+    csvContent += 'Código;Nombre;Stock;Unidad;Piezas Est.;Piezas;Última Modificación\n'
   } else {
-    csvContent += 'Código;Nombre;Stock;Unidad;Piezas\n'
+    csvContent += 'Código;Nombre;Stock;Unidad;Piezas Est.;Piezas\n'
   }
 
   filteredAndSortedProductos.value.forEach(p => {
     const stockVal = p.stock || 0
     const unidad = p.pesable !== false ? 'kg' : 'ud'
+    const piezasEst = getPiezasEstimadas(p)
     const piezas = p.cantidad_piezas || 0
     
     if (!isSucursal.value) {
-      csvContent += `"${p.codigo}";"${p.nombre}";"${stockVal}";"${unidad}";"${piezas}";"${formatDateTime(p.updated_at)}"\n`
+      csvContent += `"${p.codigo}";"${p.nombre}";"${stockVal}";"${unidad}";"${piezasEst}";"${piezas}";"${formatDateTime(p.updated_at)}"\n`
     } else {
-      csvContent += `"${p.codigo}";"${p.nombre}";"${stockVal}";"${unidad}";"${piezas}"\n`
+      csvContent += `"${p.codigo}";"${p.nombre}";"${stockVal}";"${unidad}";"${piezasEst}";"${piezas}"\n`
     }
   })
 

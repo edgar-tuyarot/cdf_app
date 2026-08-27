@@ -3,10 +3,10 @@
    Mobile First
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;850&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700;850&display=swap');
 
 html {
-  font-size: 14.4px; /* Zoom a ~90% de 16px */
+  font-size: 14px; /* Aumentado 2 puntos */
 }
 
 :root {
@@ -48,8 +48,10 @@ html {
   /* Layout */
   --sidebar-width:    240px;
   --header-height:    50px;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
+  --border-radius-sm: 0px;
+  --border-radius-md: 0px;
+  --border-radius-lg: 0px;
+  --border-radius-xl: 0px;
 
   /* Container padding */
   --container-px: 0.5rem;
@@ -61,21 +63,35 @@ html {
   }
 }
 
-* {
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  border-radius: 0 !important;
 }
 
-body {
+body, input, button, select, textarea {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.45;
+  line-height: 1.4;
   overflow-x: hidden;
-  font-size: 0.85rem; /* ~12.2px */
+  font-size: 0.84rem;
 }
+
+/* Preservar fuentes para los pseudo-elementos ::before e ::after de Phosphor Icons */
+.ph, [class^="ph-"], [class*=" ph-"],
+.ph::before, [class^="ph-"]::before, [class*=" ph-"]::before {
+  font-family: 'Phosphor' !important;
+}
+.ph-bold, .ph-bold::before { font-family: 'Phosphor-Bold' !important; }
+.ph-fill, .ph-fill::before { font-family: 'Phosphor-Fill' !important; }
+.ph-duotone, .ph-duotone::before { font-family: 'Phosphor-Duotone' !important; }
+.ph-light, .ph-light::before { font-family: 'Phosphor-Light' !important; }
+.ph-thin, .ph-thin::before { font-family: 'Phosphor-Thin' !important; }
+
+
 
 /* ============================================================
    LAYOUT GENÉRICO
@@ -122,7 +138,7 @@ body {
 .card {
   background-color: var(--bg-secondary);
   border: 2px solid var(--bevel-dark);
-  border-radius: var(--border-radius-lg);
+  border-radius: 0 !important;
   box-shadow: var(--raised-shadow);
   padding: 0;
   margin-bottom: 0.75rem;
@@ -187,7 +203,7 @@ body {
   border: 1.5px solid var(--bevel-dark);
   color: var(--text-primary);
   padding: 0 0.65rem;
-  border-radius: var(--border-radius-md);
+  border-radius: 0 !important;
   font-size: 0.88rem;
   font-family: inherit;
   outline: none;
@@ -225,7 +241,7 @@ body {
   gap: 0.35rem;
   cursor: pointer;
   border: 1px solid var(--bevel-dark);
-  border-radius: var(--border-radius-md);
+  border-radius: 0 !important;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
@@ -278,7 +294,7 @@ body {
 }
 
 /* ============================================================
-   TABLAS DE ALTO CONTRASTE
+   TABLAS DE ALTO CONTRASTE (Sin esquinas redondeadas, sin stripes, padding compacto)
    ============================================================ */
 
 .table-container {
@@ -286,66 +302,60 @@ body {
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  border-radius: var(--border-radius-md);
+  border-radius: 0 !important;
   border: 2px solid var(--bevel-darker);
   box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
 }
 
-.table-container th:first-child {
-  border-top-left-radius: 6px;
-}
-.table-container th:last-child {
-  border-top-right-radius: 6px;
-}
-.table-container tr:last-child td:first-child {
-  border-bottom-left-radius: 6px;
-}
+.table-container th:first-child,
+.table-container th:last-child,
+.table-container tr:last-child td:first-child,
 .table-container tr:last-child td:last-child {
-  border-bottom-right-radius: 6px;
+  border-radius: 0 !important;
 }
 
-table, .responsive-table {
+table, .responsive-table, .access-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
   background: var(--bg-window);
+  border-radius: 0 !important;
 }
 
 th {
   background: #1e293b; /* Slate 800 (Fuerte contraste y look premium) */
   color: #ffffff;
-  padding: 0.6rem 0.75rem;
+  padding: 0.35rem 0.5rem !important;
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 2.5px solid var(--bevel-darker);
   border-right: 1.5px solid var(--bevel-dark);
+  border-radius: 0 !important;
 }
 
 td {
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1.5px solid var(--bevel-dark); /* Línea divisoria muy visible */
-  border-right: 1.5px solid var(--bevel-dark);   /* Línea vertical muy visible */
+  padding: 0.35rem 0.5rem !important;
+  border-bottom: 1.5px solid var(--bevel-dark); /* Línea divisoria visible */
+  border-right: 1.5px solid var(--bevel-dark);   /* Línea vertical visible */
   color: var(--text-primary);
   font-weight: 500;
+  border-radius: 0 !important;
 }
 
 th:last-child, td:last-child {
   border-right: none;
 }
 
-tr:nth-child(odd) td {
-  background-color: var(--bg-secondary); /* Slate 50 (Opaqued white) */
-}
-
+tr:nth-child(odd) td,
 tr:nth-child(even) td {
-  background-color: #e2e8f0; /* Slate 200 (Zebra striping con alto contraste) */
+  background-color: var(--bg-secondary) !important; /* Fondo uniforme sin rayas cebra */
 }
 
 tr:hover td {
-  background-color: #a7f3d0; /* Resaltado verde esmeralda con alto contraste */
+  background-color: #ebf3a7 !important; /* Resaltado hover verde esmeralda */
 }
 
 .text-right { text-align: right; }
@@ -362,7 +372,7 @@ tr:hover td {
   font-weight: 700;
   text-transform: none;
   letter-spacing: normal;
-  border-radius: 4px;
+  border-radius: 0 !important;
   border: 1.5px solid transparent;
 }
 
@@ -373,36 +383,79 @@ tr:hover td {
 .badge-danger   { background: #fef2f2; color: #dc2626; border-color: #f87171; }
 
 /* ============================================================
-   ALERTAS / MENSAJES
+   ALERTAS / MENSAJES (LIVE TOASTS - ESQUINA INFERIOR DERECHA)
    ============================================================ */
 
 .alert-box {
-  padding: 0.75rem 1rem;
-  font-size: 0.88rem;
-  font-weight: 600;
-  border: 1.5px solid;
-  border-radius: var(--border-radius-md);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  position: fixed !important;
+  bottom: 1.5rem !important;
+  right: 1.5rem !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 999999 !important;
+  min-width: 320px;
+  max-width: 480px;
+  padding: 0.9rem 1.25rem !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  border: 1.5px solid !important;
+  border-left-width: 5px !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  box-shadow: 0 14px 35px -5px rgba(15, 23, 42, 0.35), 0 6px 16px -2px rgba(15, 23, 42, 0.2) !important;
+  animation: toastSlideInBottomRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+/* Excepción para alertas internas (inline) dentro de formularios o modales */
+.alert-inline,
+.modal-body .alert-box,
+.card-body .alert-box:not(:first-child) {
+  position: static !important;
+  bottom: auto !important;
+  right: auto !important;
+  z-index: auto !important;
+  box-shadow: none !important;
+  animation: none !important;
+  min-width: unset !important;
+  max-width: 100% !important;
 }
 
 .alert-box.success {
-  background: #ecfdf5;
-  color: #047857;
-  border-color: #34d399;
+  background: #ecfdf5 !important;
+  color: #065f46 !important;
+  border-color: #10b981 !important;
 }
 
 .alert-box.error {
-  background: #fef2f2;
-  color: #b91c1c;
-  border-color: #f87171;
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  border-color: #ef4444 !important;
 }
 
 .alert-box.warning {
-  background: #fffbeb;
-  color: #b45309;
-  border-color: #fbbf24;
+  background: #fffbeb !important;
+  color: #92400e !important;
+  border-color: #f59e0b !important;
+}
+
+.alert-box.info {
+  background: #f0f9ff !important;
+  color: #075985 !important;
+  border-color: #0284c7 !important;
+}
+
+@keyframes toastSlideInBottomRight {
+  from {
+    transform: translateY(30px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 /* ============================================================
@@ -574,7 +627,7 @@ tr:hover td {
   cursor: pointer;
   font-size: 1.1rem;
   color: var(--text-primary);
-  border-radius: 6px;
+  border-radius: 0 !important;
   flex-shrink: 0;
   transition: all 0.12s;
 }
@@ -608,7 +661,7 @@ tr:hover td {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #e2e8f0; }
-::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 0 !important; }
 ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
 /* Animaciones */
@@ -632,7 +685,7 @@ tr:hover td {
   margin-top: 0.35rem;
   padding: 0.35rem 0.65rem;
   background: var(--accent-primary-light);
-  border-radius: 4px;
+  border-radius: 0 !important;
   font-size: 0.82rem;
   color: #047857;
   font-weight: 600;
@@ -657,7 +710,7 @@ tr:hover td {
 
 .modal-card {
   background: var(--bg-secondary);
-  border-radius: 16px;
+  border-radius: 0 !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
   width: 100%;
   max-width: 380px;
@@ -670,7 +723,7 @@ tr:hover td {
 
 .modal-content {
   background: var(--bg-secondary);
-  border-radius: 12px;
+  border-radius: 0 !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
   width: 100%;
   overflow: hidden;
@@ -730,7 +783,7 @@ tr:hover td {
   text-align: center;
   padding: 0 0.25rem;
   border: 1.5px solid var(--bevel-dark);
-  border-radius: 6px;
+  border-radius: 0 !important;
   background: white;
   font-family: inherit;
 }
@@ -771,7 +824,7 @@ tr:hover td {
   background: #f1f5f9;
   color: #475569;
   cursor: pointer;
-  border-radius: 8px 8px 0 0;
+  border-radius: 0 !important;
   position: relative;
   top: 1px;
   transition: all 0.15s;
@@ -791,7 +844,7 @@ tr:hover td {
   border: 2px solid var(--bevel-dark);
   background: var(--bg-secondary);
   padding: 1rem 0.85rem;
-  border-radius: var(--border-radius-md);
+  border-radius: 0 !important;
   min-height: 80px;
 }
 
@@ -812,7 +865,7 @@ tr:hover td {
 .win-dialog {
   background: var(--bg-secondary);
   border: 2px solid var(--bevel-darker);
-  border-radius: 16px;
+  border-radius: 0 !important;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
   width: 90vw;
   max-width: 420px;
@@ -841,7 +894,7 @@ tr:hover td {
   color: #1e293b;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 0 !important;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -882,7 +935,7 @@ tr:hover td {
 
 .win-dialog-btn {
   height: 38px;
-  border-radius: 8px;
+  border-radius: 0 !important;
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0 1.25rem;
@@ -923,17 +976,17 @@ tr:hover td {
 
 .close-btn {
   background: #ef4444 !important;
-  border-radius: 6px !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
 }
 
 .avatar {
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
 }
 
 .group-header {
-  border-radius: 6px !important;
+  border-radius: 0 !important;
   border: 1.5px solid var(--bevel-dark) !important;
   box-shadow: none !important;
   background-color: #f8fafc !important;
@@ -951,7 +1004,7 @@ tr:hover td {
 }
 
 .nav-link {
-  border-radius: 6px !important;
+  border-radius: 0 !important;
   text-transform: none !important;
   font-weight: 600 !important;
   padding: 0.45rem 0.75rem !important;
@@ -974,7 +1027,7 @@ tr:hover td {
 }
 
 .logout-btn {
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   border: 1.5px solid #fee2e2 !important;
   background: #fff5f5 !important;
   box-shadow: none !important;

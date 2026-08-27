@@ -34,14 +34,14 @@
       <button 
         :class="['btn', activeTab === 'templates' ? 'btn-primary' : 'btn-secondary']" 
         @click="activeTab = 'templates'"
-        style="border-radius: 4px 4px 0 0; padding: 0.5rem 1rem; border-bottom: none; font-weight: bold;"
+        style="border-radius: 0; padding: 0.5rem 1rem; border-bottom: none; font-weight: bold;"
       >
         <i class="ph ph-arrows-left-right" style="margin-right: 0.3rem;"></i> Plantillas de Conversión
       </button>
       <button 
         :class="['btn', activeTab === 'logs' ? 'btn-primary' : 'btn-secondary']" 
         @click="activeTab = 'logs'"
-        style="border-radius: 4px 4px 0 0; padding: 0.5rem 1rem; border-bottom: none; font-weight: bold;"
+        style="border-radius: 0; padding: 0.5rem 1rem; border-bottom: none; font-weight: bold;"
       >
         <i class="ph ph-clock-counter-clockwise" style="margin-right: 0.3rem;"></i> Log de Conversiones Realizadas
       </button>
@@ -426,7 +426,7 @@
               <label class="form-label" style="font-size: 0.75rem; font-weight: bold; margin-bottom: 0.25rem; display: block;">
                 Lote de conversiones a procesar ({{ itemsToProcesar.length }})
               </label>
-              <div style="max-height: 160px; overflow-y: auto; border: 1px solid var(--bevel-dark); border-radius: var(--border-radius-sm); margin-bottom: 0.75rem; background: var(--bg-window); box-shadow: var(--inset-shadow);">
+              <div style="max-height: 160px; overflow-y: auto; border: 1px solid var(--bevel-dark); border-radius: 0; margin-bottom: 0.75rem; background: var(--bg-window); box-shadow: var(--inset-shadow);">
                 <table style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
                   <thead>
                     <tr style="background: var(--bg-secondary); border-bottom: 1px solid var(--bevel-dark); position: sticky; top: 0; z-index: 1;">
@@ -766,6 +766,7 @@ const totalKilosAFraccionar = computed(() => {
 })
 
 const handleProcesar = async () => {
+  if (processingFrac.value) return
   if (itemsToProcesar.value.length === 0) return
   if (!comprobanteProcesar.value.trim()) {
     showAlert('El número de comprobante es obligatorio', 'error')
@@ -774,11 +775,24 @@ const handleProcesar = async () => {
 
   processingFrac.value = true
   try {
+    let headers = { 'Content-Type': 'application/json' }
+    const savedSession = localStorage.getItem('wms_session')
+    if (savedSession) {
+      try {
+        const sess = JSON.parse(savedSession)
+        if (sess.sessionId) {
+          headers['X-WMS-Session-Id'] = sess.sessionId
+          headers['X-WMS-Site-Id'] = sess.siteId || '194326'
+          headers['X-WMS-Host'] = sess.host || 'http://192.168.10.2'
+        }
+      } catch (e) {}
+    }
+
     let res
     if (itemsToProcesar.value.length === 1) {
       res = await fetch(`/api/fraccionados/${itemsToProcesar.value[0].id}/procesar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           comprobante: comprobanteProcesar.value.trim(),
           usuario: authStore.user?.nombre || 'Sistema'
@@ -787,7 +801,7 @@ const handleProcesar = async () => {
     } else {
       res = await fetch('/api/fraccionados/procesar-lote', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           ids: itemsToProcesar.value.map(item => item.id),
           comprobante: comprobanteProcesar.value.trim(),

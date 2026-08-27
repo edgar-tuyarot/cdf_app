@@ -97,6 +97,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useWinDialog } from '../composables/useWinDialog'
+
+const { winConfirm } = useWinDialog()
 
 const proveedores = ref([])
 const loading = ref(true)
@@ -177,7 +180,7 @@ const saveProveedor = async () => {
 }
 
 const deleteProveedor = async (id) => {
-  if (!confirm('¿Estás seguro de eliminar este proveedor?')) return
+  if (!await winConfirm('¿Estás seguro de eliminar este proveedor?', 'Eliminar Proveedor')) return
 
   try {
     const res = await fetch(`/api/proveedores/${id}`, { method: 'DELETE' })
@@ -211,7 +214,7 @@ onMounted(() => {
 }
 .modal-content {
   background-color: var(--bg-window);
-  border-radius: 12px;
+  border-radius: 0;
   padding: 1.5rem;
   width: 90%;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);

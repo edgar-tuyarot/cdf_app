@@ -120,7 +120,7 @@ const handleFormSubmit = () => {
                   <button 
                     type="button" 
                     class="btn btn-primary profile-btn" 
-                    style="width: 125px; height: 125px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; border-radius: 12px;"
+                    style="width: 125px; height: 125px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; border-radius: 0;"
                     @click="switchToPersonalMode"
                   >
                     <i class="ph ph-user" style="font-size: 2.2rem;"></i>
@@ -131,7 +131,7 @@ const handleFormSubmit = () => {
                   <button 
                     type="button" 
                     class="btn btn-secondary profile-btn" 
-                    style="width: 125px; height: 125px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; border-radius: 12px; border: 2px solid var(--bevel-dark);" 
+                    style="width: 125px; height: 125px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; border-radius: 0; border: 2px solid var(--bevel-dark);" 
                     @click="switchToSucursalMode"
                   >
                     <i class="ph ph-storefront" style="font-size: 2.2rem; color: var(--accent-primary);"></i>
@@ -152,7 +152,7 @@ const handleFormSubmit = () => {
                   placeholder="Nombre de usuario"
                   autocomplete="username"
                   required
-                  style="width: 100%; height: 36px; padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: var(--border-radius-md); font-size: 0.85rem;"
+                  style="width: 100%; height: 36px; padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: 0; font-size: 0.85rem;"
                 >
               </div>
 
@@ -165,7 +165,7 @@ const handleFormSubmit = () => {
                   placeholder="••••••••"
                   autocomplete="current-password"
                   required
-                  style="width: 100%; height: 36px; padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: var(--border-radius-md); font-size: 0.85rem;"
+                  style="width: 100%; height: 36px; padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: 0; font-size: 0.85rem;"
                 >
               </div>
 
@@ -192,7 +192,7 @@ const handleFormSubmit = () => {
                   class="form-control"
                   v-model="selectedSucursalId"
                   required
-                  style="width: 100%; height: 36px; padding: 0 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: var(--border-radius-md); font-size: 0.85rem; cursor: pointer;"
+                  style="width: 100%; height: 36px; padding: 0 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: 0; font-size: 0.85rem; cursor: pointer;"
                 >
                   <option value="" disabled>Seleccione su sucursal...</option>
                   <option v-for="s in sucursales" :key="s.id" :value="s.id">
@@ -268,7 +268,7 @@ const handleFormSubmit = () => {
   background-color: #fee2e2;
   color: var(--accent-danger);
   padding: 10px;
-  border-radius: 6px;
+  border-radius: 0;
   border: 1.5px solid var(--accent-danger);
   font-size: 0.8rem;
   font-weight: 600;

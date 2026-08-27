@@ -165,17 +165,18 @@ const allMenuItems = [
   { path: '/productos', title: 'Productos', desc: 'Ver catálogo y stock de productos', icon: 'ph-package', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
   { path: '/ingresos', title: 'Ingreso Mercadería', desc: 'Registrar entrada de mercadería', icon: 'ph-download-simple', color: 'var(--accent-info)', bg: 'rgba(6, 182, 212, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
   { path: '/movimientos-stock', title: 'Historial de Stock', desc: 'Ver log de movimientos de stock', icon: 'ph-clock-counter-clockwise', color: 'var(--accent-primary)', bg: 'rgba(99, 102, 241, 0.1)', roles: ['Admin', 'Referente'] },
-  { path: '/vencimientos', title: 'Vencimientos', desc: 'Ver productos próximos a vencer', icon: 'ph-calendar', color: 'var(--accent-warning)', bg: 'rgba(245, 158, 11, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
-  { path: '/control-piezas', title: 'Control de Piezas', desc: 'Iniciar auditoría de vencimientos y piezas', icon: 'ph-barcode', color: 'var(--accent-orange)', bg: 'rgba(249, 115, 22, 0.1)', roles: ['Admin', 'Referente'] },
+  { path: '/vencimientos', title: 'Vencimientos', desc: 'Ver productos próximos a vencer e iniciar auditoría', icon: 'ph-calendar', color: 'var(--accent-warning)', bg: 'rgba(245, 158, 11, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
   { path: '/procesos', title: 'Gestión de Procesos', desc: 'Registrar fraccionamiento, envasado y mermas', icon: 'ph-arrows-clockwise', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
   { path: '/conversiones', title: 'Conversiones', desc: 'Convertir recortes y registrar cambios', icon: 'ph-arrows-left-right', color: 'var(--accent-orange)', bg: 'rgba(249, 115, 22, 0.1)', roles: ['Admin', 'Referente', 'Feteador', 'Envasador'] },
-  { path: '/ingreso-recortes', title: 'Ingresar Recortes', desc: 'Registrar recortes de producción', icon: 'ph-plus-circle', color: 'var(--accent-info)', bg: 'rgba(6, 182, 212, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
   { path: '/recortes', title: 'Stock de Recortes', desc: 'Ver stock y planillas de recortes', icon: 'ph-scissors', color: 'var(--accent-danger)', bg: 'rgba(239, 68, 68, 0.1)', roles: ['Admin', 'Referente'] },
   { path: '/decomisos', title: 'Decomisos', desc: 'Ver descarte y mermas por mal estado', icon: 'ph-trash', color: 'var(--accent-danger)', bg: 'rgba(239, 68, 68, 0.1)', roles: ['Admin', 'Referente'] },
   { path: '/preparar', title: 'Preparar Pedidos', desc: 'Ver pedidos entrantes y armar bultos', icon: 'ph-shopping-cart', color: 'var(--accent-success)', bg: 'rgba(16, 185, 129, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
   { path: '/pedidos', title: 'Ver Pedidos', desc: 'Buscar y ver planillas de pedidos', icon: 'ph-shopping-cart-simple', color: 'var(--accent-success)', bg: 'rgba(16, 185, 129, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador'] },
   { path: '/crear-pedido-sucursal', title: 'Cargar Pedido', desc: 'Cargar pedido manual o sucursales', icon: 'ph-file-plus', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
   { path: '/demanda-pendiente', title: 'Demanda Pendiente', desc: 'Ver stock y pedidos solicitados', icon: 'ph-chart-line', color: 'var(--accent-info)', bg: 'rgba(139, 92, 246, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+  { path: '/reportes-pedidos', title: 'Reportes de Pedidos', desc: 'Gráficos y planillas de balance de pedidos', icon: 'ph-chart-line-up', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+  { path: '/reportes-produccion', title: 'Top Fraccionados', desc: 'Estadísticas de productos más feteados', icon: 'ph-chart-bar', color: 'var(--accent-success)', bg: 'rgba(16, 185, 129, 0.1)', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
+  { path: '/reporte-trazabilidad', title: 'Trazabilidad de Producto', desc: 'Evolución e historial de stock por producto', icon: 'ph-line-segments', color: 'var(--accent-primary)', bg: 'rgba(2, 132, 199, 0.1)', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
   { path: '/colaboradores', title: 'Colaboradores', desc: 'Administrar personal y operarios', icon: 'ph-users', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
   { path: '/sucursales', title: 'Sucursales', desc: 'Administrar sucursales asociadas', icon: 'ph-storefront', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
   { path: '/proveedores', title: 'Proveedores', desc: 'Administrar proveedores de planta', icon: 'ph-handshake', color: 'var(--accent-primary)', bg: 'rgba(59, 130, 246, 0.1)', roles: ['Admin'] },
@@ -262,7 +263,7 @@ onMounted(cargarDatos)
             <li><strong>Reportes:</strong> Análisis de rendimiento y evolución histórica de stock.</li>
           </ul>
 
-          <div style="background-color: var(--bg-window); border-left: 4px solid var(--accent-info); padding: 0.75rem 1rem; border-radius: 4px; border-top: 1px solid var(--bevel-dark); border-right: 1px solid var(--bevel-dark); border-bottom: 1px solid var(--bevel-dark);">
+          <div style="background-color: var(--bg-window); border-left: 4px solid var(--accent-info); padding: 0.75rem 1rem; border-radius: 0; border-top: 1px solid var(--bevel-dark); border-right: 1px solid var(--bevel-dark); border-bottom: 1px solid var(--bevel-dark);">
             <strong>Soporte Técnico:</strong> Si requieres acceso a un nuevo módulo o tienes consultas operativas, ponte en contacto con el administrador del sistema.
           </div>
         </div>
@@ -620,10 +621,10 @@ onMounted(cargarDatos)
                 <td v-for="dia in DIAS" :key="dia" class="text-center">
                   <div v-if="op.dias[dia] && (op.dias[dia].feteado_kilos > 0 || op.dias[dia].feteado_bolsitas > 0 || op.dias[dia].envasado_bolsitas > 0)">
                     <div style="display: flex; flex-direction: column; gap: 2px; align-items: center;">
-                      <div style="background: #f3f3f3; border-radius: 4px; padding: 2px 6px; font-size: 0.78em; color: #222; font-weight: 700; min-width: 60px;">
+                      <div style="background: #f3f3f3; border-radius: 0; padding: 2px 6px; font-size: 0.78em; color: #222; font-weight: 700; min-width: 60px;">
                         {{ Number((op.dias[dia].feteado_kilos || 0) + (op.dias[dia].envasado_kilos || 0)).toFixed(2) }} Kg
                       </div>
-                      <div style="background: #e0e0e0; border-radius: 4px; padding: 2px 6px; font-size: 0.78em; color: #222; font-weight: 700; min-width: 60px;">
+                      <div style="background: #e0e0e0; border-radius: 0; padding: 2px 6px; font-size: 0.78em; color: #222; font-weight: 700; min-width: 60px;">
                         {{ (op.dias[dia].feteado_bolsitas || 0) + (op.dias[dia].envasado_bolsitas || 0) }} unid.
                       </div>
                     </div>
@@ -743,7 +744,7 @@ onMounted(cargarDatos)
   align-items: center;
   gap: 0.9rem;
   padding: 0.85rem 1rem;
-  border-radius: 10px;
+  border-radius: 0;
   border: 1px solid rgba(0,0,0,0.04);
 }
 .kpi-icon { font-size: 1.6rem; opacity: 0.85; }
@@ -923,7 +924,7 @@ onMounted(cargarDatos)
   background: var(--bg-secondary);
   border: 1px solid var(--bevel-dark);
   padding: 0.6rem 0.75rem;
-  border-radius: 4px;
+  border-radius: 0;
 }
 .activity-icon-wrapper {
   display: flex;
@@ -931,7 +932,7 @@ onMounted(cargarDatos)
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 0;
   flex-shrink: 0;
   font-size: 1.1rem;
   box-shadow: var(--inset-shadow);
@@ -966,7 +967,7 @@ onMounted(cargarDatos)
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 0;
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 .badge-gray { background: #e5e7eb; color: #374151; }
@@ -990,7 +991,7 @@ onMounted(cargarDatos)
   padding: 0.85rem 1rem;
   background-color: var(--bg-window);
   border: 2px solid var(--bevel-dark);
-  border-radius: var(--border-radius-md);
+  border-radius: 0;
   color: var(--text-primary);
   text-decoration: none;
   text-align: left;
@@ -1009,7 +1010,7 @@ onMounted(cargarDatos)
   height: 42px;
   background-color: var(--accent-primary-light);
   color: var(--accent-primary);
-  border-radius: 8px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;

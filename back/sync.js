@@ -584,7 +584,36 @@ async function syncDatabase() {
     console.log('Eliminando tablas obsoletas pedidos_enviados y pedido_enviado_items...');
     await sequelize.query("DROP TABLE IF EXISTS pedido_enviado_items;");
     await sequelize.query("DROP TABLE IF EXISTS pedidos_enviados;");
-    console.log('Tablas eliminadas con éxito.');
+    // Crear tablas de Órdenes de Compra (si no existen)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS ordenes_compra (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        numero_orden VARCHAR(255) NOT NULL,
+        id_proveedor INT NOT NULL,
+        fecha DATE DEFAULT (CURRENT_DATE),
+        estado VARCHAR(50) DEFAULT 'Pendiente',
+        observaciones TEXT NULL,
+        id_ubicacion INT NULL,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_proveedor) REFERENCES proveedores(id) ON DELETE CASCADE,
+        FOREIGN KEY (id_ubicacion) REFERENCES ubicaciones(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS orden_compra_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_orden_compra INT NOT NULL,
+        codigo_producto VARCHAR(255) NOT NULL,
+        cantidad_cajas DECIMAL(10,3) DEFAULT 0.000,
+        cantidad_piezas INT DEFAULT 0,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_orden_compra) REFERENCES ordenes_compra(id) ON DELETE CASCADE,
+        FOREIGN KEY (codigo_producto) REFERENCES productos(codigo) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    console.log('Tablas ordenes_compra y orden_compra_items verificadas/creadas.');
 
     console.log('MIGRACIÓN Y SINCRONIZACIÓN REALIZADA CON ÉXITO.');
 

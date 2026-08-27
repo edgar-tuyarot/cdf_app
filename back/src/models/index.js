@@ -257,7 +257,8 @@ const ProductoPedido = sequelize.define('ProductoPedido', {
   cantidad_enviada: { type: DataTypes.INTEGER, defaultValue: 0 },
   fraccion_enviada: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
   confirmado: { type: DataTypes.BOOLEAN, defaultValue: false },
-  no_envia: { type: DataTypes.BOOLEAN, defaultValue: false }
+  no_envia: { type: DataTypes.BOOLEAN, defaultValue: false },
+  sin_stock: { type: DataTypes.BOOLEAN, defaultValue: false }
 }, {
   tableName: 'producto_pedidos',
   timestamps: false
@@ -302,6 +303,7 @@ const ProductoVencimiento = sequelize.define('ProductoVencimiento', {
   },
   vencimiento: { type: DataTypes.DATEONLY, allowNull: false },
   piezas: { type: DataTypes.INTEGER, defaultValue: 0 },
+  peso: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
   id_ubicacion: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -785,7 +787,7 @@ const Bulto = sequelize.define('Bulto', {
   },
   peso_caja: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0.000 },
   peso_caja_vacia: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0.000 },
-  cantidad_piezas: { type: DataTypes.INTEGER, defaultValue: 0 },
+  cantidad_piezas: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
   activo: { type: DataTypes.BOOLEAN, defaultValue: true }
 }, {
   tableName: 'bultos',
@@ -934,16 +936,29 @@ ProductoStock.afterUpdate(async (prodStock, options) => {
   const currStock = parseFloat(prodStock.stock) || 0;
   const delta = currStock - prevStock;
 
-  if (Math.abs(delta) > 0.0001) {
+  const piezasOpt = options.cantidad_piezas !== undefined ? options.cantidad_piezas : 0;
+  const kgRecorteOpt = parseFloat(options.kg_recorte) || 0;
+  const kgDecomisoOpt = parseFloat(options.kg_decomiso) || 0;
+
+  if (Math.abs(delta) > 0.0001 || piezasOpt !== 0 || kgRecorteOpt !== 0 || kgDecomisoOpt !== 0) {
     const { MovimientoStock } = sequelize.models;
+    let finalKilos = delta;
+    if (Math.abs(finalKilos) < 0.0001) {
+      if (kgDecomisoOpt !== 0) finalKilos = kgDecomisoOpt;
+      else if (kgRecorteOpt !== 0) finalKilos = kgRecorteOpt;
+    }
+
     await MovimientoStock.create({
       codigo_producto: prodStock.codigo_producto,
       id_ubicacion: prodStock.id_ubicacion,
       tipo_movimiento: options.tipo_movimiento || 'AJUSTE_DIRECTO',
       referencia_id: options.referencia_id || null,
       concepto: options.concepto || 'Ajuste de stock en ubicación',
-      stock: delta,
-      kilos_calculado: delta,
+      stock: finalKilos,
+      kilos_calculado: finalKilos,
+      cantidad_piezas: piezasOpt,
+      kg_recorte: kgRecorteOpt,
+      kg_decomiso: kgDecomisoOpt,
       usuario: options.usuario || 'Sistema'
     }, { transaction: options.transaction });
   }
@@ -958,6 +973,116 @@ const RolPermiso = sequelize.define('RolPermiso', {
   tableName: 'rol_permisos',
   timestamps: false
 });
+
+const OrdenCompra = sequelize.define('OrdenCompra', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  numero_orden: { type: DataTypes.STRING, allowNull: false },
+  id_proveedor: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'proveedores',
+      key: 'id'
+    },
+    onDelete: 'CASCADE'
+  },
+  fecha: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
+  estado: { type: DataTypes.STRING, defaultValue: 'Pendiente' }, // 'Pendiente', 'Recibida', 'Cancelada'
+  observaciones: { type: DataTypes.TEXT, allowNull: true },
+  id_ubicacion: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'ubicaciones',
+      key: 'id'
+    },
+    onDelete: 'SET NULL'
+  }
+}, {
+  tableName: 'ordenes_compra',
+  timestamps: true
+});
+
+const OrdenCompraItem = sequelize.define('OrdenCompraItem', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  id_orden_compra: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'ordenes_compra',
+      key: 'id'
+    },
+    onDelete: 'CASCADE'
+  },
+  codigo_producto: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'productos',
+      key: 'codigo'
+    },
+    onDelete: 'CASCADE'
+  },
+  cantidad_cajas: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
+  cantidad_piezas: { type: DataTypes.INTEGER, defaultValue: 0 },
+  timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, {
+  tableName: 'orden_compra_items',
+  timestamps: false
+});
+
+OrdenCompra.belongsTo(Proveedor, { foreignKey: 'id_proveedor', as: 'proveedor' });
+Proveedor.hasMany(OrdenCompra, { foreignKey: 'id_proveedor', as: 'ordenesCompra' });
+
+OrdenCompra.hasMany(OrdenCompraItem, { foreignKey: 'id_orden_compra', as: 'items', onDelete: 'CASCADE' });
+OrdenCompraItem.belongsTo(OrdenCompra, { foreignKey: 'id_orden_compra', as: 'ordenCompra' });
+
+OrdenCompraItem.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'producto' });
+Producto.hasMany(OrdenCompraItem, { foreignKey: 'codigo_producto', as: 'ordenCompraItems' });
+
+const Registro = sequelize.define('Registro', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  texto: { type: DataTypes.TEXT, allowNull: false },
+  usuario_registro: { type: DataTypes.STRING, allowNull: false },
+  id_ubicacion: { type: DataTypes.INTEGER, allowNull: true }
+}, {
+  tableName: 'registros',
+  timestamps: false
+});
+
+// Garantizar migración segura de columnas y tablas
+(async () => {
+  try {
+    const queryInterface = sequelize.getQueryInterface();
+    try {
+      const tableDef = await queryInterface.describeTable('producto_vencimientos');
+      if (!tableDef.peso) {
+        await queryInterface.addColumn('producto_vencimientos', 'peso', {
+          type: DataTypes.DECIMAL(10, 3),
+          allowNull: true,
+          defaultValue: 0
+        });
+        console.log('[Migration] Columna "peso" agregada exitosamente a "producto_vencimientos".');
+      }
+    } catch (e) {}
+
+    try {
+      await queryInterface.describeTable('registros');
+    } catch (e) {
+      await queryInterface.createTable('registros', {
+        id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+        fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+        texto: { type: DataTypes.TEXT, allowNull: false },
+        usuario_registro: { type: DataTypes.STRING, allowNull: false },
+        id_ubicacion: { type: DataTypes.INTEGER, allowNull: true }
+      });
+      console.log('[Migration] Tabla "registros" creada exitosamente.');
+    }
+  } catch (err) {
+    // Continuar de forma silenciosa
+  }
+})();
 
 module.exports = {
   sequelize,
@@ -975,7 +1100,7 @@ module.exports = {
   ProductoVencimiento,
   IngresoProveedor,
   MovimientoStock,
-  IngresoSucursal,
+  IngresosSucursal: IngresoSucursal,
   Usuario,
   Ubicacion,
   ProductoStock,
@@ -984,6 +1109,10 @@ module.exports = {
   PedidoArmadoItem,
   SucursalProductoPermiso,
   RolPermiso,
-  Bulto
+  Bulto,
+  OrdenCompra,
+  OrdenCompraItem,
+  Registro
 };
+
 

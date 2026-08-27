@@ -60,7 +60,7 @@
           
           <!-- Resumen de Destino Seleccionado -->
           <div v-if="selectedSucursal" class="selected-sucursal-summary animate-fade" style="margin-bottom: 1.25rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background-color: var(--accent-primary-light); border: 2px solid var(--accent-primary); border-radius: 8px; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background-color: var(--accent-primary-light); border: 2px solid var(--accent-primary); border-radius: 0; gap: 0.5rem;">
               <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-primary);">
                 🏬 Cargando para: <strong class="text-green">N° {{ selectedSucursal.numero }} - {{ selectedSucursal.sucursal }}</strong>
               </span>
@@ -236,7 +236,7 @@
                       v-for="item in basketItems" 
                       :key="item.codigo" 
                       class="basket-item-row"
-                      style="display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.65rem; background-color: var(--bg-window); border: 2px solid var(--bevel-dark); border-radius: 6px; gap: 0.5rem;"
+                      style="display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.65rem; background-color: var(--bg-window); border: 2px solid var(--bevel-dark); border-radius: 0; gap: 0.5rem;"
                     >
                       <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
                         <span class="font-bold text-xs truncate-name">{{ item.nombre }}</span>
@@ -568,7 +568,7 @@ const printCatalog = () => {
         <td style="font-family: monospace; font-weight: bold; border: 1px solid #000; padding: 6px; text-align: center; font-size: 11px;">${p.codigo}</td>
         <td style="border: 1px solid #000; padding: 6px; font-weight: bold; font-size: 11px;">
           ${p.nombre}
-          ${isFrac ? '<span style="font-size: 8px; border: 1px solid #000; padding: 1px 3px; margin-left: 4px; border-radius: 2px; background-color: #eee;">FRAC</span>' : ''}
+          ${isFrac ? '<span style="font-size: 8px; border: 1px solid #000; padding: 1px 3px; margin-left: 4px; border-radius: 0; background-color: #eee;">FRAC</span>' : ''}
         </td>
         <td style="border: 1px solid #000; padding: 6px; text-align: center; width: 90px; font-size: 11px; font-weight: bold;">${piezasContent}</td>
         <td style="border: 1px solid #000; padding: 6px; text-align: center; width: 90px; font-size: 11px; font-weight: bold;">${fraccionesContent}</td>
@@ -861,7 +861,7 @@ onMounted(async () => {
   background-color: var(--bg-primary);
   max-height: 320px !important; /* Altura compacta para scroll de 5-10 elementos */
   overflow-y: auto;
-  border-radius: var(--border-radius-md);
+  border-radius: 0;
 }
 
 .access-table {
@@ -935,7 +935,7 @@ onMounted(async () => {
   font-size: 0.82rem;
   font-weight: bold;
   border: 2px solid var(--bevel-dark);
-  border-radius: 4px;
+  border-radius: 0;
   text-align: center;
   background-color: var(--bg-secondary);
   color: var(--text-primary);
@@ -968,7 +968,7 @@ onMounted(async () => {
   gap: 0.4rem;
   font-weight: bold;
   box-shadow: var(--raised-shadow);
-  border-radius: var(--border-radius-md);
+  border-radius: 0;
 }
 
 .btn-confirm-giant:active {
@@ -1043,7 +1043,7 @@ onMounted(async () => {
   align-items: center;
   background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
   border: 2px solid var(--accent-primary);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   height: 44px;
   margin: 0.5rem 0 1.75rem 0; /* Más margen arriba y abajo para desahogar el espacio */
@@ -1100,7 +1100,7 @@ onMounted(async () => {
   padding: 0.25rem 0.65rem;
   background: var(--bg-primary);
   border: 1px solid var(--bevel-dark);
-  border-radius: 100px;
+  border-radius: 0;
   font-size: 0.76rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -1123,7 +1123,7 @@ onMounted(async () => {
   width: 7px;
   height: 7px;
   background-color: var(--accent-success);
-  border-radius: 50%;
+  border-radius: 0;
   display: inline-block;
   box-shadow: 0 0 4px var(--accent-success);
 }

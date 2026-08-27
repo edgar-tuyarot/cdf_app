@@ -113,6 +113,11 @@ exports.crearProceso = async (req, res) => {
     const valKgASumar = parseFloat(kg_a_sumar) || 0;
     const valKgADescontar = parseFloat(kg_a_desc) || 0;
 
+    if (!valPiezas || valPiezas <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'La cantidad de piezas es obligatoria y debe ser mayor a 0.' });
+    }
+
     const id_ubicacion = req.ubicacionId;
     let stockActual = 0;
     let pStockRecord = null;
@@ -215,7 +220,11 @@ exports.crearProceso = async (req, res) => {
         transaction,
         tipo_movimiento: 'PROCESO',
         referencia_id: nuevoProceso.id,
-        concepto: `Proceso de ${proceso || 'Producción'} registrado`
+        concepto: `Proceso de ${proceso || 'Producción'} registrado`,
+        cantidad_piezas: valPiezas > 0 ? -valPiezas : 0,
+        kg_recorte: valRecorte,
+        kg_decomiso: valDecomiso,
+        usuario: req.body.usuario || 'Sistema'
       });
 
       // 3. FIFO deduction on ProductoVencimiento (lotes de vencimiento)
@@ -239,20 +248,47 @@ exports.crearProceso = async (req, res) => {
             await v.save({ transaction });
           }
         }
+
+        // Si aún restan piezas por descontar (producto sin lotes previos o con piezas insuficientes en lotes)
+        if (remainingToDeduct > 0) {
+          const farFuture = new Date();
+          farFuture.setFullYear(farFuture.getFullYear() + 1);
+          const defaultDateStr = farFuture.toISOString().split('T')[0];
+
+          await ProductoVencimiento.create({
+            codigo_producto: codigo,
+            id_ubicacion,
+            vencimiento: defaultDateStr,
+            piezas: -remainingToDeduct
+          }, { transaction });
+        }
       }
 
-      // 4. Si el código está en fraccionados como producto original, actualizamos peso_a_fraccionar y peso_a_descontar
-      if (valKgASumar > 0 || valKgADescontar > 0) {
-        const mappings = await Fraccionado.findAll({
+      // 4. Si el código está en fraccionados como producto original (o si el producto tiene codigo_fraccionado configurado), actualizamos peso_a_fraccionar y peso_a_descontar
+      const descAplicar = valKgADescontar > 0 ? valKgADescontar : valPesoBruto;
+      if (valKgASumar > 0 || descAplicar > 0) {
+        let mappings = await Fraccionado.findAll({
           where: { codigo_producto_original: codigo, id_ubicacion },
           transaction
         });
+
+        if (mappings.length === 0 && producto.codigo_fraccionado) {
+          const newMapping = await Fraccionado.create({
+            id_ubicacion,
+            codigo_producto_original: codigo,
+            codigo_fraccionado: producto.codigo_fraccionado,
+            peso_a_fraccionar: 0,
+            peso_a_descontar: 0
+          }, { transaction });
+          mappings = [newMapping];
+        }
+
         for (const mapping of mappings) {
           const pesoActual = parseFloat(mapping.peso_a_fraccionar) || 0;
           mapping.peso_a_fraccionar = pesoActual + valKgASumar;
 
           const descActual = parseFloat(mapping.peso_a_descontar) || 0;
-          mapping.peso_a_descontar = descActual + valKgADescontar;
+          mapping.peso_a_descontar = descActual + descAplicar;
 
           await mapping.save({ transaction });
         }
@@ -650,20 +686,47 @@ exports.confirmarProceso = async (req, res) => {
           await v.save({ transaction });
         }
       }
+
+      // Si aún restan piezas por descontar (producto sin lotes previos o con piezas insuficientes en lotes)
+      if (remainingToDeduct > 0) {
+        const farFuture = new Date();
+        farFuture.setFullYear(farFuture.getFullYear() + 1);
+        const defaultDateStr = farFuture.toISOString().split('T')[0];
+
+        await ProductoVencimiento.create({
+          codigo_producto: proceso.codigo,
+          id_ubicacion: proceso.id_ubicacion,
+          vencimiento: defaultDateStr,
+          piezas: -remainingToDeduct
+        }, { transaction });
+      }
     }
 
-    // 4. Si el código está en fraccionados como producto original, actualizamos peso_a_fraccionar y peso_a_descontar
-    if (valKgASumar > 0 || valKgADescontar > 0) {
-      const mappings = await Fraccionado.findAll({
-        where: { codigo_producto_original: proceso.codigo },
+    // 4. Si el código está en fraccionados como producto original (o si el producto tiene codigo_fraccionado configurado), actualizamos peso_a_fraccionar y peso_a_descontar
+    const descAplicar = valKgADescontar > 0 ? valKgADescontar : valPesoBruto;
+    if (valKgASumar > 0 || descAplicar > 0) {
+      let mappings = await Fraccionado.findAll({
+        where: { codigo_producto_original: proceso.codigo, id_ubicacion: proceso.id_ubicacion },
         transaction
       });
+
+      if (mappings.length === 0 && producto.codigo_fraccionado) {
+        const newMapping = await Fraccionado.create({
+          id_ubicacion: proceso.id_ubicacion,
+          codigo_producto_original: proceso.codigo,
+          codigo_fraccionado: producto.codigo_fraccionado,
+          peso_a_fraccionar: 0,
+          peso_a_descontar: 0
+        }, { transaction });
+        mappings = [newMapping];
+      }
+
       for (const mapping of mappings) {
         const pesoActual = parseFloat(mapping.peso_a_fraccionar) || 0;
         mapping.peso_a_fraccionar = pesoActual + valKgASumar;
 
         const descActual = parseFloat(mapping.peso_a_descontar) || 0;
-        mapping.peso_a_descontar = descActual + valKgADescontar;
+        mapping.peso_a_descontar = descActual + descAplicar;
 
         await mapping.save({ transaction });
       }

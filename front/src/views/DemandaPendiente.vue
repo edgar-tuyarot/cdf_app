@@ -24,7 +24,7 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
       <div class="card" style="background-color: var(--bg-secondary); border-top: 4px solid var(--accent-primary);">
         <div class="card-body" style="padding: 1rem; display: flex; align-items: center; gap: 1rem;">
-          <div style="background: var(--bg-window); padding: 8px; border-radius: 4px; box-shadow: var(--inset-shadow);">
+          <div style="background: var(--bg-window); padding: 8px; border-radius: 0; box-shadow: var(--inset-shadow);">
             <i class="ph ph-package" style="font-size: 1.8rem; color: var(--accent-primary);"></i>
           </div>
           <div>
@@ -37,7 +37,7 @@
 
       <div class="card" style="background-color: var(--bg-secondary); border-top: 4px solid #e67e22;">
         <div class="card-body" style="padding: 1rem; display: flex; align-items: center; gap: 1rem;">
-          <div style="background: var(--bg-window); padding: 8px; border-radius: 4px; box-shadow: var(--inset-shadow);">
+          <div style="background: var(--bg-window); padding: 8px; border-radius: 0; box-shadow: var(--inset-shadow);">
             <i class="ph ph-hash" style="font-size: 1.8rem; color: #e67e22;"></i>
           </div>
           <div>
@@ -50,13 +50,26 @@
 
       <div class="card" style="background-color: var(--bg-secondary); border-top: 4px solid #1e6ec8;">
         <div class="card-body" style="padding: 1rem; display: flex; align-items: center; gap: 1rem;">
-          <div style="background: var(--bg-window); padding: 8px; border-radius: 4px; box-shadow: var(--inset-shadow);">
+          <div style="background: var(--bg-window); padding: 8px; border-radius: 0; box-shadow: var(--inset-shadow);">
             <i class="ph ph-article" style="font-size: 1.8rem; color: #1e6ec8;"></i>
           </div>
           <div>
             <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: bold; text-transform: uppercase;">Fracciones Pendientes</div>
             <div style="font-size: 1.5rem; font-weight: bold; font-family: monospace; color: #1e6ec8;">{{ Math.round(totalFracciones) }}</div>
             <div style="font-size: 0.7rem; color: var(--text-muted);">Suma acumulada de porciones/fracciones</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="background-color: var(--bg-secondary); border-top: 4px solid #0284c7;">
+        <div class="card-body" style="padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+          <div style="background: var(--bg-window); padding: 8px; border-radius: 0; box-shadow: var(--inset-shadow);">
+            <i class="ph ph-scales" style="font-size: 1.8rem; color: #0284c7;"></i>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: bold; text-transform: uppercase;">Total Requerido</div>
+            <div style="font-size: 1.5rem; font-weight: bold; font-family: monospace; color: #0284c7;">{{ totalRequeridoGeneral.toFixed(2) }} kg</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted);">Suma acumulada de kg demandados</div>
           </div>
         </div>
       </div>
@@ -89,37 +102,69 @@
         </div>
       </div>
       
-      <div class="table-container">
+      <div class="table-container table-compact">
         <table v-if="!loading && filteredAndSorted.length > 0">
           <thead>
             <tr>
-              <th @click="sortBy('codigo_producto')" class="sortable" style="width: 120px;">
+              <th @click="sortBy('codigo_producto')" class="sortable" style="width: 85px;">
                 Código <i v-if="sortKey === 'codigo_producto'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
               <th @click="sortBy('producto_nombre')" class="sortable">
                 Nombre del Producto <i v-if="sortKey === 'producto_nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('total_piezas_pedidas')" class="sortable text-right" style="width: 180px;">
-                Piezas Requeridas <i v-if="sortKey === 'total_piezas_pedidas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              <th @click="sortBy('total_piezas_pedidas')" class="sortable text-right" style="width: 110px;">
+                Pzas Req <i v-if="sortKey === 'total_piezas_pedidas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('total_fracciones_pedidas')" class="sortable text-right" style="width: 180px;">
-                Fracciones Requeridas <i v-if="sortKey === 'total_fracciones_pedidas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              <th @click="sortBy('total_fracciones_pedidas')" class="sortable text-right" style="width: 110px;">
+                Fracc Req <i v-if="sortKey === 'total_fracciones_pedidas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              </th>
+              <th @click="sortBy('total_requerido')" class="sortable text-right" style="width: 110px; color: var(--accent-primary);">
+                Total Req <i v-if="sortKey === 'total_requerido'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              </th>
+              <th @click="sortBy('stock')" class="sortable text-right" style="width: 100px;">
+                Stock Disp <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              </th>
+              <th @click="sortBy('limite')" class="sortable text-right" style="width: 100px;">
+                Límite <i v-if="sortKey === 'limite'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in filteredAndSorted" :key="row.codigo_producto">
               <td>
-                <span class="fw-bold font-mono text-xs" style="background: var(--bg-secondary); padding: 1px 5px; border: 1px solid var(--bevel-dark); border-radius: 2px;">
-                  {{ row.codigo_producto }}
-                </span>
+                <strong class="font-mono" style="font-size: 0.8rem;">{{ row.codigo_producto }}</strong>
               </td>
-              <td class="fw-bold">{{ row.producto_nombre }}</td>
-              <td class="text-right font-mono fw-bold text-orange" style="font-size: 0.95rem;">
-                {{ Math.round(row.total_piezas_pedidas) }}
+              <td class="fw-bold" style="font-size: 0.82rem;">{{ row.producto_nombre }}</td>
+              <td class="text-right font-mono fw-bold text-orange" style="font-size: 0.82rem;">
+                <template v-if="parseFloat(row.peso_x_pieza || 0) > 0">
+                  {{ getKilosPiezas(row).toFixed(2) }} kg
+                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; line-height: 1.1; margin-top: 1px;">
+                    {{ Math.round(row.total_piezas_pedidas) }} pzas × {{ parseFloat(row.peso_x_pieza).toFixed(3) }} kg
+                  </div>
+                </template>
+                <template v-else>
+                  {{ Math.round(row.total_piezas_pedidas) }}
+                </template>
               </td>
-              <td class="text-right font-mono fw-bold text-blue" style="font-size: 0.95rem;">
-                {{ Math.round(row.total_fracciones_pedidas) }}
+              <td class="text-right font-mono fw-bold text-blue" style="font-size: 0.82rem;">
+                <template v-if="parseFloat(row.kg_x_bolsita || 0) > 0">
+                  {{ getKilosFracciones(row).toFixed(2) }} kg
+                  <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; line-height: 1.1; margin-top: 1px;">
+                    {{ Math.round(row.total_fracciones_pedidas) }} u. × {{ parseFloat(row.kg_x_bolsita).toFixed(3) }} kg
+                  </div>
+                </template>
+                <template v-else>
+                  {{ Math.round(row.total_fracciones_pedidas) }}
+                </template>
+              </td>
+              <td class="text-right font-mono fw-bold" style="font-size: 0.85rem; color: #0284c7;">
+                {{ getTotalRequerido(row).toFixed(2) }} kg
+              </td>
+              <td class="text-right font-mono fw-bold" style="font-size: 0.82rem;" :style="{ color: parseFloat(row.stock || 0) <= 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }">
+                {{ parseFloat(row.stock || 0).toFixed(2) }}
+              </td>
+              <td class="text-right font-mono fw-bold" style="font-size: 0.85rem;" :style="{ color: getLimite(row) >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }">
+                {{ getLimite(row).toFixed(2) }}
               </td>
             </tr>
           </tbody>
@@ -190,6 +235,33 @@ const totalFracciones = computed(() => {
   return items.value.reduce((acc, row) => acc + parseFloat(row.total_fracciones_pedidas || 0), 0)
 })
 
+const totalRequeridoGeneral = computed(() => {
+  return items.value.reduce((acc, row) => acc + getTotalRequerido(row), 0)
+})
+
+// Helpers para cálculos por producto
+const getKilosPiezas = (row) => {
+  const pzas = parseFloat(row.total_piezas_pedidas || 0)
+  const peso = parseFloat(row.peso_x_pieza || 0)
+  return peso > 0 ? pzas * peso : pzas
+}
+
+const getKilosFracciones = (row) => {
+  const frac = parseFloat(row.total_fracciones_pedidas || 0)
+  const peso = parseFloat(row.kg_x_bolsita || 0)
+  return peso > 0 ? frac * peso : frac
+}
+
+const getTotalRequerido = (row) => {
+  return getKilosPiezas(row) + getKilosFracciones(row)
+}
+
+const getLimite = (row) => {
+  const totalReq = getTotalRequerido(row)
+  const stock = parseFloat(row.stock || 0)
+  return stock - totalReq
+}
+
 // Filtrado y Ordenamiento
 const filteredAndSorted = computed(() => {
   let result = [...items.value]
@@ -204,14 +276,28 @@ const filteredAndSorted = computed(() => {
 
   if (sortKey.value) {
     result.sort((a, b) => {
-      const valA = a[sortKey.value]
-      const valB = b[sortKey.value]
+      let valA = a[sortKey.value]
+      let valB = b[sortKey.value]
+
+      if (sortKey.value === 'total_piezas_pedidas') {
+        valA = getKilosPiezas(a)
+        valB = getKilosPiezas(b)
+      } else if (sortKey.value === 'total_fracciones_pedidas') {
+        valA = getKilosFracciones(a)
+        valB = getKilosFracciones(b)
+      } else if (sortKey.value === 'total_requerido') {
+        valA = getTotalRequerido(a)
+        valB = getTotalRequerido(b)
+      } else if (sortKey.value === 'limite') {
+        valA = getLimite(a)
+        valB = getLimite(b)
+      }
 
       const isNumeric = !isNaN(parseFloat(valA)) && isFinite(valA) && !isNaN(parseFloat(valB)) && isFinite(valB)
       if (isNumeric) {
         return (parseFloat(valA) - parseFloat(valB)) * sortOrder.value
       } else {
-        return valA.toString().localeCompare(valB.toString()) * sortOrder.value
+        return (valA || '').toString().localeCompare((valB || '').toString()) * sortOrder.value
       }
     })
   }
@@ -224,10 +310,15 @@ const exportCSV = () => {
   if (filteredAndSorted.value.length === 0) return
 
   let csvContent = '\uFEFF' // BOM para Excel
-  csvContent += 'Código Producto;Producto;Piezas Requeridas;Fracciones Requeridas\n'
+  csvContent += 'Código Producto;Producto;Piezas (Cant);Piezas Requeridas (Kg);Fracciones (Cant);Fracciones Requeridas (Kg);Total Requerido (Kg);Stock Disponible;Límite (Faltante)\n'
 
   filteredAndSorted.value.forEach(row => {
-    csvContent += `"${row.codigo_producto}";"${row.producto_nombre}";${row.total_piezas_pedidas};${row.total_fracciones_pedidas}\n`
+    const kgPzas = getKilosPiezas(row).toFixed(2)
+    const kgFrac = getKilosFracciones(row).toFixed(2)
+    const totalReq = getTotalRequerido(row).toFixed(2)
+    const stock = parseFloat(row.stock || 0).toFixed(2)
+    const limite = getLimite(row).toFixed(2)
+    csvContent += `"${row.codigo_producto}";"${row.producto_nombre}";${row.total_piezas_pedidas};${kgPzas};${row.total_fracciones_pedidas};${kgFrac};${totalReq};${stock};${limite}\n`
   })
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -249,6 +340,22 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.table-compact table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-compact th {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.table-compact td {
+  padding: 0.25rem 0.5rem;
+  vertical-align: middle;
+}
+
 th.sortable {
   cursor: pointer;
   user-select: none;

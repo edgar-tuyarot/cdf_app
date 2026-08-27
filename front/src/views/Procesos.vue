@@ -1,16 +1,17 @@
 <template>
   <div class="page-container animate-fade">
+    <!-- Header de Página -->
     <div class="page-header">
       <div class="header-content">
         <h2 class="page-title">Gestión de Procesos</h2>
         <p class="page-description">Registra y administra los procesos generales (Fraccionamiento, Envasado, Picada, Decomisos).</p>
       </div>
-      <div class="header-actions mt-2" style="display: flex; gap: 0.5rem;">
+      <div class="header-actions mt-2" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button class="btn btn-secondary" @click="fetchInitialData" :disabled="loadingData">
           <i class="ph ph-spinner spinner" v-if="loadingData"></i>
           <i class="ph ph-arrows-clockwise" v-else></i> Actualizar Procesos
         </button>
-        <button class="btn btn-primary" @click="openModal()">
+        <button v-if="!showModal" class="btn btn-primary" @click="openModal()">
           <i class="ph ph-plus"></i> Nuevo Proceso
         </button>
       </div>
@@ -21,35 +22,44 @@
       {{ alert.message }}
     </div>
 
-    <!-- HISTORIAL: LISTADO DE PROCESOS -->
-    <div class="card">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-        <span class="card-title" style="color: white; font-weight: bold;">
+    <!-- VISTA 1: HISTORIAL DE PROCESOS (Cuando NO estamos creando/editando un proceso) -->
+    <div v-if="!showModal" class="card">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background-color: #0f172a; padding: 0.75rem 1rem;">
+        <span class="card-title" style="color: white; font-weight: bold; font-size: 0.95rem;">
           Historial de Procesos
         </span>
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-          <div v-if="isColaborador" style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: white;">
-            <input type="checkbox" id="toggle-my-proc" v-model="showOnlyMyProcesos" style="cursor: pointer; width: 14px; height: 14px; margin: 0;" />
-            <label for="toggle-my-proc" style="cursor: pointer; user-select: none; font-weight: bold;">Ver solo mis procesos</label>
+        
+        <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+          <!-- Checkbox Aumentado Ligeramente -->
+          <div v-if="isColaborador" style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: white;">
+            <input 
+              type="checkbox" 
+              id="toggle-my-proc" 
+              v-model="showOnlyMyProcesos" 
+              style="cursor: pointer; width: 18px; height: 18px; accent-color: var(--accent-primary);" 
+            />
+            <label for="toggle-my-proc" style="cursor: pointer; user-select: none; font-weight: 700;">Ver solo mis procesos</label>
           </div>
-          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-            <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
+
+          <!-- Cuadro de Búsqueda Aumentado Ligeramente -->
+          <div style="display: flex; align-items: center; gap: 0.35rem; background: var(--bg-window); padding: 0.2rem 0.5rem; border: 1.5px solid var(--bevel-dark); height: 34px; min-width: 220px; flex: 1;">
+            <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 1rem;"></i>
             <input 
               type="text" 
               v-model="searchQuery" 
-              placeholder="Buscar proceso..." 
-              style="border: none; outline: none; font-size: 0.85rem; background: transparent; width: 140px; color: var(--text-primary);"
+              placeholder="Buscar por código, producto o id..." 
+              style="border: none; outline: none; font-size: 0.88rem; font-weight: 600; background: transparent; width: 100%; color: var(--text-primary);"
             />
             <button v-if="searchQuery" @click="searchQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
-              <i class="ph ph-x-circle"></i>
+              <i class="ph ph-x-circle" style="font-size: 1rem;"></i>
             </button>
           </div>
         </div>
       </div>
 
-      <div class="table-container" style="max-height: 520px; overflow-y: auto;">
+      <div class="table-container" style="max-height: 540px; overflow-y: auto;">
         <!-- VISTA DE TABLA (ESCRITORIO) -->
-        <table v-if="!loadingData && filteredAndSortedProcesos.length > 0" class="desktop-table">
+        <table v-if="!loadingData && filteredAndSortedProcesos.length > 0" class="desktop-table access-table">
           <thead>
             <tr>
               <th @click="sortBy('id')" class="sortable">ID <i v-if="sortKey === 'id'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
@@ -99,7 +109,7 @@
 
             <div class="card-row product-row" style="margin-top: 0.35rem;">
               <strong class="product-code" style="margin-right: 0.25rem;">[{{ p.codigo }}]</strong>
-              <span class="product-name truncate-name" style="font-size: 0.8rem;">{{ p.Producto?.nombre || 'Desconocido' }}</span>
+              <span class="product-name truncate-name" style="font-size: 0.82rem; font-weight: bold;">{{ p.Producto?.nombre || 'Desconocido' }}</span>
             </div>
 
             <div class="card-row details-row" style="margin-top: 0.5rem;">
@@ -140,190 +150,182 @@
       </div>
     </div>
 
-
-    <!-- Modal Formulario -->
-    <Teleport to="body">
-      <div v-if="showModal" class="modal-overlay" @mousedown.self="closeModal">
-        <div class="modal-card" style="max-width: 580px; width: 95vw;">
-          <div class="modal-header" :style="isEditing ? 'background-color: var(--accent-orange);' : ''">
-            <h3 class="modal-title" style="color: white; font-weight: bold;">
-              {{ isEditing ? 'Editar Proceso #' + editId : 'Registrar Nuevo Proceso' }}
-            </h3>
-            <button class="icon-btn" style="color: white;" @click="closeModal"><i class="ph ph-x"></i></button>
-          </div>
-          <form @submit.prevent="submitForm" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.65rem;">
-              
-              <!-- FILA 1: DATOS DEL PROCESAMIENTO -->
-              <div v-if="!isColaborador" class="modal-section">
-                <span class="modal-section-title">1. Datos del Procesamiento</span>
-                <div class="modal-grid-4">
-                  <div class="form-group">
-                    <label class="form-label">Tipo de Origen *</label>
-                    <select v-model="form.generador_tipo" class="form-control" required style="padding: 0 0.25rem;" @change="handleTipoOrigenChange">
-                      <option value="colaborador">👤 Colaborador</option>
-                      <option value="sucursal">🏬 Sucursal</option>
-                      <option value="proveedor">🚚 Proveedor</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group animate-fade">
-                    <label class="form-label">Origen / Entidad *</label>
-                    <select ref="origenInput" v-model="form.id_asociado" class="form-control" required style="padding: 0 0.25rem;">
-                      <option :value="null" disabled>Seleccione una opción</option>
-                      <template v-if="form.generador_tipo === 'colaborador'">
-                        <option v-for="c in colaboradores" :key="c.id" :value="c.id">
-                          {{ c.nombre }}
-                        </option>
-                      </template>
-                      <template v-else-if="form.generador_tipo === 'sucursal'">
-                        <option v-for="s in sucursales" :key="s.id" :value="s.id">
-                          {{ s.sucursal }} {{ s.numero ? '#' + s.numero : '' }}
-                        </option>
-                      </template>
-                      <template v-else-if="form.generador_tipo === 'proveedor'">
-                        <option v-for="pr in proveedores" :key="pr.id" :value="pr.id">
-                          {{ pr.nombre }}
-                        </option>
-                      </template>
-                    </select>
-                  </div>
-
-                  <div class="form-group" style="display: none;">
-                    <label class="form-label">Tipo de Proceso *</label>
-                    <select v-model="form.proceso" class="form-control" required style="padding: 0 0.25rem;">
-                      <option value="Fraccionamiento">Fraccionamiento</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Fecha del Proceso</label>
-                    <input type="date" v-model="form.fecha" class="form-control" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- FILA 2: DATOS DEL PRODUCTO -->
-              <div class="modal-section">
-                <span class="modal-section-title">2. Datos del Producto</span>
-                <div class="modal-grid-3">
-                  <!-- Selector Autocomplete de Producto -->
-                  <div class="form-group">
-                    <label class="form-label">Producto Asociado *</label>
-                    <div style="position: relative; display: flex; align-items: center;">
-                      <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
-                      <input 
-                        type="text" 
-                        v-model="productSearch" 
-                        list="catalog-products-list-main" 
-                        @input="handleProductInput" 
-                        class="form-control" 
-                        placeholder="Buscar código o nombre..." 
-                        required 
-                        style="padding-left: 2rem; height: 40px;"
-                      />
-                    </div>
-                    <datalist id="catalog-products-list-main">
-                      <option 
-                        v-for="p in productos" 
-                        :key="p.codigo" 
-                        :value="p.codigo"
-                      >
-                        {{ p.nombre }}
-                      </option>
-                    </datalist>
-                    
-                    <!-- Vista previa del producto seleccionado -->
-                    <div 
-                      v-if="selectedMainProduct" 
-                      class="selected-product-badge mt-2 animate-fade"
-                      style="display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.55rem; background-color: var(--accent-primary-light); border: 1.5px solid var(--accent-primary); font-size: 0.8rem; color: var(--text-primary); border-radius: 4px;"
-                    >
-                      <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
-                      <span class="truncate-name">
-                        Seleccionado: <strong>{{ selectedMainProduct.nombre }}</strong>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Piezas</label>
-                    <input type="number" min="0" v-model.number="form.piezas" class="form-control" />
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Peso Bruto (kg)</label>
-                    <input type="number" step="0.001" min="0" v-model.number="form.peso_bruto" class="form-control" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- FILA 3: DATOS DE PESOS -->
-              <div class="modal-section">
-                <span class="modal-section-title">
-                  3. Datos de los Pesos
-                </span>
-                
-                <!-- Recorte y Decomiso -->
-                <div class="modal-grid-2" style="margin-bottom: 0.75rem;">
-                  <div class="form-group">
-                    <label class="form-label">Recorte (kg)</label>
-                    <input type="number" step="0.001" min="0" v-model.number="form.recorte" class="form-control" />
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Decomiso (kg)</label>
-                    <input type="number" step="0.001" min="0" v-model.number="form.decomiso" class="form-control" />
-                  </div>
-                </div>
-
-                <!-- Peso Envasado y Peso Bandeja -->
-                <div class="modal-grid-2">
-                  <div class="form-group">
-                    <label class="form-label">Peso Envasado (kg)</label>
-                    <input 
-                      type="number" 
-                      step="0.001" 
-                      min="0" 
-                      v-model.number="pesoEnvasadoConBandeja" 
-                      class="form-control" 
-                      placeholder="0.000"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Peso Bandeja (kg)</label>
-                    <input type="number" step="0.001" min="0" v-model.number="form.peso_bandeja" class="form-control" />
-                  </div>
-                </div>
-
-                <!-- Kg a Sumar Final (Neto a Inventariar) -->
-                <div style="margin-top: 1rem; padding: 0.5rem; background-color: var(--bg-secondary); border-radius: 4px; border: 1px solid var(--bevel-dark); display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-weight: bold; font-size: 0.85rem; color: var(--text-secondary);">Kg a Sumar Final (Neto):</span>
-                  <span style="font-weight: 800; font-size: 1.15rem; color: var(--accent-success);">{{ form.kg_a_sumar.toFixed(3) }} kg</span>
-                </div>
-
-                <input type="hidden" v-model.number="form.kg_a_desc" />
-              </div>
-
-            </div>
-            <div class="modal-footer">
-              <button v-if="isEditing" type="button" class="btn btn-danger" style="margin-right: auto;" @click="confirmDeleteFromModal">
-                <i class="ph ph-trash"></i> Eliminar Registro
-              </button>
-              <button type="button" class="btn btn-secondary" @click="closeModal">
-                Cancelar
-              </button>
-              <button type="submit" class="btn btn-primary" :disabled="submitting">
-                <i class="ph ph-spinner spinner" v-if="submitting"></i>
-                <i class="ph ph-floppy-disk" v-else></i>
-                {{ submitting ? 'Guardando...' : (isEditing ? 'Actualizar' : 'Registrar') }}
-              </button>
-            </div>
-          </form>
+    <!-- VISTA 2: FORMULARIO DE REGISTRO EN PÁGINA COMPLETA (NO MODAL) -->
+    <div v-else class="animate-fade">
+      <!-- Encabezado de Creación / Edición en Vista Completa -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; padding: 0.75rem 1rem; background: #0f172a; color: white; border-left: 4px solid var(--accent-primary);">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <button class="btn btn-secondary" @click="closeModal" style="display: flex; align-items: center; gap: 0.35rem; font-weight: bold;">
+            <i class="ph ph-arrow-left" style="font-size: 1.1rem; color: var(--accent-primary);"></i> Volver al Listado
+          </button>
+          <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: white;">
+            {{ isEditing ? 'Editar Proceso #' + editId : 'Registrar Nuevo Proceso' }}
+          </h3>
         </div>
+        <button v-if="isEditing" type="button" class="btn btn-danger" @click="confirmDeleteFromModal">
+          <i class="ph ph-trash"></i> Eliminar Registro
+        </button>
       </div>
-    </Teleport>
+
+      <div class="card" style="padding: 1.25rem;">
+        <form @submit.prevent="submitForm" style="display: flex; flex-direction: column; gap: 1.25rem;">
+          
+          <!-- FILA 1: DATOS DEL PROCESAMIENTO -->
+          <div v-if="!isColaborador" class="modal-section">
+            <span class="modal-section-title">1. Datos del Procesamiento</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div class="form-group">
+                <label class="form-label">Tipo de Origen *</label>
+                <select v-model="form.generador_tipo" class="form-control" required @change="handleTipoOrigenChange">
+                  <option value="colaborador">👤 Colaborador</option>
+                  <option value="sucursal">🏬 Sucursal</option>
+                  <option value="proveedor">🚚 Proveedor</option>
+                </select>
+              </div>
+
+              <div class="form-group animate-fade">
+                <label class="form-label">Origen / Entidad *</label>
+                <select ref="origenInput" v-model="form.id_asociado" class="form-control" required>
+                  <option :value="null" disabled>Seleccione una opción</option>
+                  <template v-if="form.generador_tipo === 'colaborador'">
+                    <option v-for="c in colaboradores" :key="c.id" :value="c.id">
+                      {{ c.nombre }}
+                    </option>
+                  </template>
+                  <template v-else-if="form.generador_tipo === 'sucursal'">
+                    <option v-for="s in sucursales" :key="s.id" :value="s.id">
+                      {{ s.sucursal }} {{ s.numero ? '#' + s.numero : '' }}
+                    </option>
+                  </template>
+                  <template v-else-if="form.generador_tipo === 'proveedor'">
+                    <option v-for="pr in proveedores" :key="pr.id" :value="pr.id">
+                      {{ pr.nombre }}
+                    </option>
+                  </template>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Fecha del Proceso</label>
+                <input type="date" v-model="form.fecha" class="form-control" />
+              </div>
+            </div>
+          </div>
+
+          <!-- FILA 2: DATOS DEL PRODUCTO -->
+          <div class="modal-section">
+            <span class="modal-section-title">2. Datos del Producto</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <!-- Selector Autocomplete de Producto -->
+              <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label">Producto Asociado *</label>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.65rem; color: var(--text-muted); pointer-events: none; font-size: 1.1rem;"></i>
+                  <input 
+                    type="text" 
+                    v-model="productSearch" 
+                    list="catalog-products-list-main" 
+                    @input="handleProductInput" 
+                    class="form-control" 
+                    placeholder="Buscar por código o nombre..." 
+                    required 
+                    style="padding-left: 2.2rem; height: 38px; font-size: 0.9rem;"
+                  />
+                </div>
+                <datalist id="catalog-products-list-main">
+                  <option 
+                    v-for="p in productos" 
+                    :key="p.codigo" 
+                    :value="p.codigo"
+                  >
+                    {{ p.nombre }}
+                  </option>
+                </datalist>
+                
+                <!-- Vista previa del producto seleccionado -->
+                <div 
+                  v-if="selectedMainProduct" 
+                  class="selected-product-badge mt-2 animate-fade"
+                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.65rem; background-color: var(--accent-primary-light); border: 1.5px solid var(--accent-primary); font-size: 0.85rem; color: var(--text-primary);"
+                >
+                  <i class="ph ph-circle-wavy-check text-green" style="font-size: 1.1rem;"></i>
+                  <span class="truncate-name">
+                    Seleccionado: <strong>{{ selectedMainProduct.nombre }}</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Piezas *</label>
+                <input type="number" min="1" v-model.number="form.piezas" class="form-control" required style="height: 38px; font-size: 0.9rem;" placeholder="Ej: 1" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Peso Bruto (kg)</label>
+                <input type="number" step="0.001" min="0" v-model.number="form.peso_bruto" class="form-control" style="height: 38px; font-size: 0.9rem;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- FILA 3: DATOS DE PESOS -->
+          <div class="modal-section">
+            <span class="modal-section-title">
+              3. Datos de los Pesos
+            </span>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Recorte (kg)</label>
+                <input type="number" step="0.001" min="0" v-model.number="form.recorte" class="form-control" style="height: 38px;" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Decomiso (kg)</label>
+                <input type="number" step="0.001" min="0" v-model.number="form.decomiso" class="form-control" style="height: 38px;" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Peso Envasado (kg)</label>
+                <input 
+                  type="number" 
+                  step="0.001" 
+                  min="0" 
+                  v-model.number="pesoEnvasadoConBandeja" 
+                  class="form-control" 
+                  placeholder="0.000"
+                  style="height: 38px;"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Peso Bandeja (kg)</label>
+                <input type="number" step="0.001" min="0" v-model.number="form.peso_bandeja" class="form-control" style="height: 38px;" />
+              </div>
+            </div>
+
+            <!-- Kg a Sumar Final (Neto a Inventariar) -->
+            <div style="margin-top: 1rem; padding: 0.75rem 1rem; background-color: var(--bg-secondary); border: 1.5px solid var(--bevel-dark); display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: bold; font-size: 0.9rem; color: var(--text-secondary);">Kg a Sumar Final (Neto):</span>
+              <span style="font-weight: 850; font-size: 1.25rem; color: var(--accent-success);">{{ form.kg_a_sumar.toFixed(3) }} kg</span>
+            </div>
+
+            <input type="hidden" v-model.number="form.kg_a_desc" />
+          </div>
+
+          <!-- Acciones de Formulario (Botón Cancelar regresa a la vista anterior) -->
+          <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 0.5rem;">
+            <button type="button" class="btn btn-secondary" @click="closeModal" style="height: 38px; padding: 0 1.25rem;">
+              <i class="ph ph-arrow-left"></i> Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="submitting" style="height: 38px; padding: 0 1.5rem;">
+              <i class="ph ph-spinner spinner" v-if="submitting"></i>
+              <i class="ph ph-floppy-disk" v-else></i>
+              {{ submitting ? 'Guardando...' : (isEditing ? 'Actualizar Proceso' : 'Registrar Proceso') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Modal Confirmación Eliminar -->
     <Teleport to="body">
@@ -378,30 +380,24 @@ const getMatchedCollaboratorId = () => {
   const username = (authStore.user?.usuario || '').toLowerCase().trim()
   if (!username) return colaboradores.value[0].id
 
-  // 1. Coincidencia exacta
   const exact = colaboradores.value.find(c => c.nombre.toLowerCase().trim() === username)
   if (exact) return exact.id
 
-  // 2. Coincidencia parcial
   const partial = colaboradores.value.find(c => {
     const name = c.nombre.toLowerCase().trim()
     return name.includes(username) || username.includes(name)
   })
   if (partial) return partial.id
 
-  // 3. Fallback al primero
   return colaboradores.value[0].id
 }
 
-// Watcher para autocompletar origen cuando se carguen los colaboradores
 watch(colaboradores, (newVal) => {
   if (isColaborador.value && !form.value.id_asociado && newVal.length > 0) {
     form.value.generador_tipo = 'colaborador'
     form.value.id_asociado = getMatchedCollaboratorId()
   }
 })
-
-
 
 const alert = ref({ show: false, message: '', type: 'success' })
 const pesoEnvasadoConBandeja = ref(0)
@@ -423,7 +419,6 @@ const closeModal = () => {
   resetForm()
 }
 
-// Formulario Procesos Generales
 const getTodayString = () => new Date().toISOString().split('T')[0]
 
 const defaultForm = {
@@ -444,7 +439,6 @@ const defaultForm = {
 
 const form = ref({ ...defaultForm })
 
-// Autocomplete Preselección (Nueva Lógica)
 const productSearch = ref('')
 const selectedMainProduct = ref(null)
 
@@ -460,7 +454,6 @@ const handleProductInput = () => {
   }
 }
 
-// Watcher para calcular en caliente los kilos a descontar
 watch(
   () => [form.value.peso_bruto, form.value.recorte, form.value.decomiso],
   ([bruto, recorte, decomiso]) => {
@@ -471,12 +464,10 @@ watch(
     const calc = valBruto - (valRecorte + valDecomiso)
     form.value.kg_a_desc = parseFloat(calc.toFixed(3))
     
-    // Autocompletar sugerencia de Peso Envasado (con bandeja)
     pesoEnvasadoConBandeja.value = parseFloat(Math.max(0, calc).toFixed(3))
   }
 )
 
-// Watcher para restar peso de bandeja del peso envasado con bandeja
 watch(
   () => [pesoEnvasadoConBandeja.value, form.value.peso_bandeja],
   ([envasadoRaw, bandeja]) => {
@@ -486,10 +477,9 @@ watch(
   }
 )
 
-// Búsqueda y Ordenación
 const searchQuery = ref('')
 const sortKey = ref('id')
-const sortOrder = ref(-1) // Más reciente primero
+const sortOrder = ref(-1)
 
 const showAlert = (msg, type = 'success') => {
   alert.value = { show: true, message: msg, type }
@@ -529,7 +519,6 @@ const fetchProveedores = async () => {
   }
 }
 
-// Cargar Datos Iniciales de Procesos
 const fetchInitialData = async () => {
   loadingData.value = true
   try {
@@ -556,7 +545,6 @@ const fetchInitialData = async () => {
   }
 }
 
-// CRUD: PROCESOS GENERALES
 const submitForm = async () => {
   if (!form.value.codigo) {
     showAlert('Debe seleccionar un producto válido', 'error')
@@ -564,6 +552,10 @@ const submitForm = async () => {
   }
   if (!form.value.id_asociado) {
     showAlert('Debe seleccionar un origen válido', 'error')
+    return
+  }
+  if (!form.value.piezas || form.value.piezas <= 0) {
+    showAlert('La cantidad de piezas es obligatoria (mínimo 1)', 'error')
     return
   }
 
@@ -582,14 +574,7 @@ const submitForm = async () => {
 
     if (res.ok) {
       showAlert(isEditing.value ? 'Proceso actualizado correctamente' : 'Proceso registrado exitosamente')
-      if (isEditing.value) {
-        closeModal()
-      } else {
-        resetForm()
-        nextTick(() => {
-          origenInput.value?.focus()
-        })
-      }
+      closeModal()
       fetchInitialData()
     } else {
       showAlert(dataRes.error || 'Ocurrió un error al procesar la solicitud', 'error')
@@ -671,10 +656,6 @@ const loadProcesoToForm = (proceso) => {
   selectedMainProduct.value = matched || null
 }
 
-const cancelEdit = () => {
-  closeModal()
-}
-
 const resetForm = () => {
   isEditing.value = false
   editId.value = null
@@ -688,7 +669,6 @@ const resetForm = () => {
   selectedMainProduct.value = null
 }
 
-// ELIMINACIÓN
 const confirmDelete = (item) => {
   itemToDelete.value = item
 }
@@ -720,7 +700,6 @@ const deleteItem = async () => {
   }
 }
 
-// Auxiliares y Formateos
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   const parts = dateStr.split('T')[0].split('-')
@@ -728,14 +707,6 @@ const formatDate = (dateStr) => {
     return `${parts[2]}/${parts[1]}/${parts[0]}`
   }
   return dateStr
-}
-
-const getBadgeType = (tipo) => {
-  if (tipo === 'Fraccionamiento') return 'badge-primary'
-  if (tipo === 'Envasado') return 'badge-success'
-  if (tipo === 'Picada') return 'badge-warning'
-  if (tipo === 'Decomiso Directo') return 'badge-danger'
-  return ''
 }
 
 const sortBy = (key) => {
@@ -747,7 +718,6 @@ const sortBy = (key) => {
   }
 }
 
-// Búsqueda y Ordenación Reactiva
 const filteredAndSortedProcesos = computed(() => {
   let result = procesos.value.filter(p => p.proceso === 'Fraccionamiento')
 
@@ -819,7 +789,6 @@ th i {
   vertical-align: middle;
 }
 
-/* Badge styles for generator types */
 .generator-badge {
   display: inline-flex;
   align-items: center;
@@ -827,7 +796,7 @@ th i {
   padding: 0.15rem 0.45rem;
   font-size: 0.75rem;
   font-weight: 600;
-  border-radius: 3px;
+  border-radius: 0;
   line-height: 1.2;
 }
 
@@ -849,97 +818,33 @@ th i {
   border: 1px solid var(--accent-success-hover, #a7f3d0);
 }
 
-/* Clases del Modal Rediseñado (Ancho, 3 filas) */
 .modal-section {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.55rem 0.75rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   background-color: var(--bg-window);
   border: 1.5px solid var(--bevel-dark);
-  border-radius: var(--border-radius-md);
-  margin-bottom: 0.15rem;
+  border-radius: 0;
 }
 
 .modal-section-title {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 850;
   text-transform: uppercase;
   color: var(--text-secondary);
   letter-spacing: 0.05em;
   border-bottom: 1.5px dashed var(--bevel-dark);
-  padding-bottom: 0.2rem;
-  margin-bottom: 0.2rem;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 
-.modal-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-
-.modal-grid-3 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-
-.modal-grid-4 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-
-.modal-grid-5 {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
-}
-
-@media (min-width: 480px) {
-  .modal-grid-2 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .modal-grid-3 {
-    grid-template-columns: 2fr 1fr 1fr;
-  }
-  .modal-grid-4 {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .modal-grid-5 {
-    grid-template-columns: 1fr 1fr 1fr 1fr 50px;
-    align-items: end;
-  }
-}
-
-/* responsive display */
 .desktop-table {
   display: table;
   width: 100%;
 }
 .mobile-cards-container {
   display: none;
-}
-
-.input-readonly-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-primary);
-  border: 1px dashed var(--bevel-dark);
-  border-radius: var(--border-radius-md);
-  color: var(--text-primary);
-  font-weight: 600;
-  height: 38px;
-  box-sizing: border-box;
-}
-.input-readonly-badge i {
-  font-size: 1.25rem;
-  color: var(--accent-primary);
-}
-.ml-auto {
-  margin-left: auto;
 }
 
 @media (max-width: 768px) {
@@ -952,19 +857,12 @@ th i {
     gap: 0.75rem;
     padding: 0.25rem;
   }
-  
-  /* modal scaling on mobile */
-  .modal-card {
-    width: 98vw !important;
-    max-height: 96vh;
-    overflow-y: auto;
-  }
 }
 
 .mobile-process-card {
   background: var(--bg-secondary);
   border: 2px solid var(--bevel-dark);
-  border-radius: var(--border-radius-md);
+  border-radius: 0;
   padding: 0.75rem;
   box-shadow: var(--raised-shadow);
   display: flex;
@@ -999,17 +897,6 @@ th i {
   color: var(--text-muted);
 }
 
-.type-row {
-  justify-content: flex-start;
-}
-
-.badge-pending {
-  background-color: var(--accent-orange);
-  color: white;
-  margin-left: 0.25rem;
-  font-size: 0.65rem;
-}
-
 .product-row {
   justify-content: flex-start;
   font-size: 0.85rem;
@@ -1030,7 +917,7 @@ th i {
   gap: 0.35rem;
   background: rgba(0, 0, 0, 0.04);
   padding: 0.5rem;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 0.75rem;
 }
 
@@ -1048,12 +935,6 @@ th i {
   color: var(--accent-success);
   grid-column: span 2;
   font-weight: 600;
-}
-
-.stock-frozen {
-  color: var(--text-muted);
-  font-style: italic;
-  grid-column: span 2;
 }
 
 .actions-row {
@@ -1080,11 +961,6 @@ th i {
 
 .btn-action:active {
   box-shadow: var(--inset-shadow);
-}
-
-.confirm-btn {
-  color: var(--accent-success);
-  border-color: var(--accent-success);
 }
 
 .edit-btn {
