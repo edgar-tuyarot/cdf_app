@@ -4,10 +4,14 @@ const sequelize = require('../config/db');
 const Producto = sequelize.define('Producto', {
   codigo: { type: DataTypes.STRING, primaryKey: true },
   nombre: { type: DataTypes.STRING, allowNull: false },
-  peso_x_pieza: { type: DataTypes.DECIMAL(10, 3) },
-  kg_x_bolsita: { type: DataTypes.DECIMAL(10, 3) },
-  permite_piezas: { type: DataTypes.BOOLEAN, defaultValue: true },
-  permite_fracciones: { type: DataTypes.BOOLEAN, defaultValue: true },
+  peso_pieza: { type: DataTypes.DECIMAL(10, 3) },
+  peso_fraccion: { type: DataTypes.DECIMAL(10, 3) },
+  peso_unidad: { type: DataTypes.DECIMAL(10, 3), defaultValue: 1.000 },
+  tipo_calculo_piezas: {
+    type: DataTypes.ENUM('normal', 'fraccionado', 'unidad'),
+    defaultValue: 'normal',
+    allowNull: false
+  },
   destacado: { type: DataTypes.BOOLEAN, defaultValue: false },
   codigo_barra: { type: DataTypes.STRING, allowNull: true },
   pesable: { type: DataTypes.BOOLEAN, defaultValue: true },
@@ -22,6 +26,18 @@ const Producto = sequelize.define('Producto', {
       key: 'id'
     },
     onDelete: 'SET NULL'
+  },
+  es_fraccionado: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.tipo_calculo_piezas === 'fraccionado';
+    }
+  },
+  es_unidad: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.tipo_calculo_piezas === 'unidad';
+    }
   }
 }, { 
   tableName: 'productos', 
@@ -76,9 +92,7 @@ const SucursalProductoPermiso = sequelize.define('SucursalProductoPermiso', {
       key: 'codigo'
     },
     onDelete: 'CASCADE'
-  },
-  permite_piezas: { type: DataTypes.BOOLEAN, defaultValue: true },
-  permite_fracciones: { type: DataTypes.BOOLEAN, defaultValue: true }
+  }
 }, {
   tableName: 'sucursal_producto_permisos',
   timestamps: false
@@ -815,6 +829,34 @@ Bulto.belongsTo(Proveedor, { foreignKey: 'id_proveedor', as: 'Proveedor' });
 Bulto.hasMany(IngresoProveedor, { foreignKey: 'bulto_id', as: 'Ingresos' });
 IngresoProveedor.belongsTo(Bulto, { foreignKey: 'bulto_id', as: 'Bulto' });
 
+// StockSnapshot Definition
+const StockSnapshot = sequelize.define('StockSnapshot', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  codigo_producto: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: { model: 'productos', key: 'codigo' },
+    onDelete: 'CASCADE'
+  },
+  id_ubicacion: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'ubicaciones', key: 'id' },
+    onDelete: 'SET NULL'
+  },
+  fecha_corte: { type: DataTypes.DATE, allowNull: false },
+  stock_kilos: { type: DataTypes.DECIMAL(10, 3), allowNull: false, defaultValue: 0.000 },
+  observaciones: { type: DataTypes.STRING, allowNull: true },
+  usuario: { type: DataTypes.STRING, defaultValue: 'Sistema' },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, {
+  tableName: 'stock_snapshots',
+  timestamps: false
+});
+
+Producto.hasMany(StockSnapshot, { foreignKey: 'codigo_producto', as: 'StockSnapshots' });
+StockSnapshot.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'Producto' });
+
 
 
 const Ubicacion = sequelize.define('Ubicacion', {
@@ -1056,14 +1098,22 @@ const Registro = sequelize.define('Registro', {
   try {
     const queryInterface = sequelize.getQueryInterface();
     try {
-      const tableDef = await queryInterface.describeTable('producto_vencimientos');
-      if (!tableDef.peso) {
-        await queryInterface.addColumn('producto_vencimientos', 'peso', {
+      const prodTableDef = await queryInterface.describeTable('productos');
+      if (!prodTableDef.tipo_calculo_piezas) {
+        await queryInterface.addColumn('productos', 'tipo_calculo_piezas', {
+          type: DataTypes.ENUM('normal', 'fraccionado', 'unidad'),
+          allowNull: false,
+          defaultValue: 'normal'
+        });
+        console.log('[Migration] Columna "tipo_calculo_piezas" agregada exitosamente a "productos".');
+      }
+      if (!prodTableDef.peso_unidad) {
+        await queryInterface.addColumn('productos', 'peso_unidad', {
           type: DataTypes.DECIMAL(10, 3),
           allowNull: true,
-          defaultValue: 0
+          defaultValue: 1.000
         });
-        console.log('[Migration] Columna "peso" agregada exitosamente a "producto_vencimientos".');
+        console.log('[Migration] Columna "peso_unidad" agregada exitosamente a "productos".');
       }
     } catch (e) {}
 
@@ -1078,6 +1128,13 @@ const Registro = sequelize.define('Registro', {
         id_ubicacion: { type: DataTypes.INTEGER, allowNull: true }
       });
       console.log('[Migration] Tabla "registros" creada exitosamente.');
+    }
+
+    try {
+      await StockSnapshot.sync();
+      console.log('[Migration] Tabla "stock_snapshots" verificada/creada exitosamente.');
+    } catch (e) {
+      console.error('[Migration] Error al verificar tabla stock_snapshots:', e);
     }
   } catch (err) {
     // Continuar de forma silenciosa
@@ -1100,6 +1157,7 @@ module.exports = {
   ProductoVencimiento,
   IngresoProveedor,
   MovimientoStock,
+  IngresoSucursal,
   IngresosSucursal: IngresoSucursal,
   Usuario,
   Ubicacion,
@@ -1112,7 +1170,8 @@ module.exports = {
   Bulto,
   OrdenCompra,
   OrdenCompraItem,
-  Registro
+  Registro,
+  StockSnapshot
 };
 
 

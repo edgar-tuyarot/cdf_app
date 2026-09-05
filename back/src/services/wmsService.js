@@ -657,21 +657,12 @@ const sincronizarStock = async (id_ubicacion = 1, usuarioEjecutor = 'Sistema WMS
       // Actualizar la cantidad de stock si varió
       if (cambio) {
         stockRecord.stock = stockNuevo;
-        await stockRecord.save({ transaction: t });
-
-        // Registrar auditoría del movimiento de stock
-        await MovimientoStock.create({
-          codigo_producto: productoLocal.codigo,
-          id_ubicacion,
+        await stockRecord.save({
+          transaction: t,
           tipo_movimiento: 'AJUSTE_DIRECTO',
-          referencia_id: null,
-          concepto: `Sincronización automática BlockWMS (Anterior: ${stockAnterior} kg)`,
-          cantidad_piezas: 0,
-          stock: cantidadFisicaWms,
-          kilos_calculado: cantidadFisicaWms,
-          usuario: usuarioEjecutor,
-          fecha: new Date()
-        }, { transaction: t });
+          concepto: `Sincronización automática BlockWMS (Anterior: ${stockAnterior.toFixed(3)} kg)`,
+          usuario: usuarioEjecutor
+        });
 
         actualizadosCount++;
 
@@ -1204,46 +1195,58 @@ const obtenerSitesDisponiblesWMS = async () => {
  */
 const obtenerStockPorUbicacionWMS = async (siteIdParam, opts = {}) => {
   const config = cargarConfiguracion();
-  const siteId = siteIdParam || opts.siteId || config.siteId || '194326';
+  const siteId = String(siteIdParam || opts.siteId || config.siteId || '194326').trim();
   if (!siteId) throw new Error('Debe especificar un siteId válido.');
 
   const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
   const sessionId = await ensureValidWmsSession(opts);
 
-  // Consulta SQL directa a proc_paginado_query.php para mostrar la respuesta completa en consola
-  try {
-    const sql = `SELECT p.codigo_productos AS codigo, p.descri AS nombre, COALESCE(pp.codigo_barras, p.codigo_barras, '') AS ean, pp.id_productos_presentaciones, SUM(i.cantidad_fisica) AS cantidad_fisica FROM inventario i INNER JOIN layout_grupos lg ON i.id_layout_grupos = lg.id_layout_grupos INNER JOIN productos_presentaciones pp ON i.id_productos_presentaciones = pp.id_productos_presentaciones INNER JOIN productos p ON pp.id_productos = p.id_productos WHERE lg.id_entidades_sites = ${siteId} GROUP BY p.codigo_productos, p.descri, COALESCE(pp.codigo_barras, p.codigo_barras, ''), pp.id_productos_presentaciones HAVING SUM(i.cantidad_fisica) > 0`;
-    const ajaxParams = new URLSearchParams();
-    ajaxParams.append('query', sql);
-    ajaxParams.append('draw', '1');
-    ajaxParams.append('start', '0');
-    ajaxParams.append('length', '5000');
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    'Cookie': `PHPSESSID=${sessionId}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
 
-    const sqlHeaders = {
-      'User-Agent': 'Mozilla/5.0',
-      'Cookie': `PHPSESSID=${sessionId}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-
-    logWmsRequest('CONSULTA_SQL_DIRECTA_STOCK', `${host}/proc_paginado_query.php`, 'POST', sqlHeaders, ajaxParams);
-    const sqlRes = await axios.post(`${host}/proc_paginado_query.php`, ajaxParams, { headers: sqlHeaders, timeout: 10000, validateStatus: () => true });
-    logWmsResponse('CONSULTA_SQL_DIRECTA_STOCK', sqlRes.status, sqlRes.data);
-  } catch (sqlErr) {
-    console.warn('[wmsService] Error en consulta SQL directa:', sqlErr.message);
+  let numStr = siteId;
+  if (!isNaN(parseInt(siteId, 10)) && parseInt(siteId, 10) < 100) {
+    numStr = String(parseInt(siteId, 10)).padStart(2, '0');
   }
 
-  const res = await obtenerProductosWMS({ ...config, ...opts, siteId });
-  const productos = (res.productos || res.items || []).map(p => ({
-    codigo: String(p.codigo || '').trim(),
-    nombre: String(p.nombre || '').trim(),
-    ean: String(p.ean || p.codigo_barras || p.codigo_ean || '').trim(),
-    id_productos_presentaciones: String(p.id_productos_presentaciones || '').trim(),
-    stockFisico: parseFloat(p.stockFisico || p.stock || 0)
+  const sEscaped = siteId.replace(/'/g, "''");
+  const nEscaped = numStr.replace(/'/g, "''");
+
+  const rawSql = `SELECT site, codigo_productos AS codigo, producto AS nombre, SUM(cantidad_fisica) AS stockFisico FROM view_Reporte_StockXUbicacion WHERE (id_entidades_sites = ''${sEscaped}'' OR site LIKE ''%${sEscaped}%'' OR site LIKE ''%${nEscaped}%'') GROUP BY site, codigo_productos, producto HAVING SUM(cantidad_fisica) > 0 ORDER BY codigo_productos`;
+
+  const queryPayload = new URLSearchParams({
+    query: rawSql,
+    start: '0',
+    length: '10000'
+  });
+
+  let rows = [];
+  try {
+    const res = await axios.post(`${host}/proc_paginado_query.php`, queryPayload, { headers, timeout: 30000 });
+    let data = res.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch (e) { data = []; }
+    }
+    if (Array.isArray(data)) {
+      rows = data;
+    }
+  } catch (err) {
+    console.warn('[wmsService] Error en consulta SQL de stock por sucursal:', err.message);
+  }
+
+  const productos = rows.map(r => ({
+    codigo: String(r.codigo || r.codigo_productos || '').trim(),
+    nombre: String(r.nombre || r.producto || '').trim(),
+    stockFisico: parseFloat(parseFloat(r.stockFisico || r.cantidad_fisica || 0).toFixed(3))
   })).sort((a, b) => a.nombre.localeCompare(b.nombre));
 
   const totalKilos = productos.reduce((acc, p) => acc + p.stockFisico, 0);
 
   return {
+    ok: true,
     siteId,
     totalSkus: productos.length,
     totalKilos: parseFloat(totalKilos.toFixed(3)),
@@ -1251,14 +1254,942 @@ const obtenerStockPorUbicacionWMS = async (siteIdParam, opts = {}) => {
   };
 };
 
+
+/**
+ * Consulta el reporte de diferencias en Órdenes de Ingreso (Recepción) de BlockWMS
+ * ejecutando la consulta SQL contra /proc_paginado_query.php
+ */
+const obtenerReporteDiferenciasIngresoWMS = async (filtros = {}, opts = {}) => {
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const siteId = opts.siteId || filtros.siteId || config.siteId || '194326';
+
+  const sessionId = await ensureValidWmsSession(opts);
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0',
+    'Cookie': `PHPSESSID=${sessionId}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+
+  let whereClauses = [`id_entidades_sites = ''${siteId}''`, `id_operaciones_tipos = 1`];
+
+  if (filtros.codigoOrdenes && filtros.codigoOrdenes.trim()) {
+    whereClauses.push(`codigo_ordenes LIKE ''%${filtros.codigoOrdenes.trim()}%''`);
+  }
+  if (filtros.codigoProveedor && filtros.codigoProveedor.trim()) {
+    whereClauses.push(`cliente_proveedor LIKE ''%${filtros.codigoProveedor.trim()}%''`);
+  }
+  if (filtros.codigoProducto && filtros.codigoProducto.trim()) {
+    const p = filtros.codigoProducto.trim();
+    whereClauses.push(`(codigo_productos LIKE ''%${p}%'' OR producto LIKE ''%${p}%'')`);
+  }
+  if (filtros.lote && filtros.lote.trim()) {
+    whereClauses.push(`lote_VIS_ LIKE ''%${filtros.lote.trim()}%''`);
+  }
+  if (filtros.diferencia !== undefined && filtros.diferencia !== null && String(filtros.diferencia) !== '-1') {
+    if (String(filtros.diferencia) === '1') {
+      whereClauses.push(`ABS(diferencia) > 0.001`);
+    } else if (String(filtros.diferencia) === '0') {
+      whereClauses.push(`ABS(diferencia) <= 0.001`);
+    }
+  }
+
+  const rawSql = `select * from view_CUSTOM_DEPOT_WMS_Rpt_Ordenes_Diferencias_Ingresos WHERE ${whereClauses.join(' AND ')} order by fecha_cierre desc, codigo_ordenes desc`;
+
+  const queryPayload = new URLSearchParams({
+    query: rawSql,
+    start: '0',
+    length: '5000'
+  });
+
+  logWmsRequest('REPORTE_DIFERENCIAS_INGRESO_QUERY', `${host}/proc_paginado_query.php`, 'POST', headers, queryPayload);
+
+  let rows = [];
+  try {
+    const pagRes = await axios.post(`${host}/proc_paginado_query.php`, queryPayload, { headers, timeout: 30000 });
+    let data = pagRes.data;
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch (e) {
+        data = [];
+      }
+    }
+    if (Array.isArray(data)) {
+      rows = data;
+    }
+    logWmsResponse('REPORTE_DIFERENCIAS_INGRESO_QUERY', pagRes.status, `Filas obtenidas: ${rows.length}`);
+  } catch (err) {
+    console.warn('[wmsService] Error en POST a /proc_paginado_query.php:', err.message);
+  }
+
+  const getNumFromRow = (row, keywords) => {
+    for (const key of Object.keys(row)) {
+      const kLower = key.toLowerCase();
+      for (const kw of keywords) {
+        if (kLower.includes(kw.toLowerCase())) {
+          const val = row[key];
+          if (val !== undefined && val !== null && val !== '') {
+            const num = parseFloat(String(val).replace(',', '.'));
+            if (!isNaN(num)) return num;
+          }
+        }
+      }
+    }
+    return 0;
+  };
+
+  const itemsFormateados = rows.map((row, idx) => {
+    const codigo = row.codigo_productos || row.codigo_productos_VIS_ || '-';
+    const productoName = row.producto || row.producto_VIS_ || row.descri || codigo;
+    const esperada = getNumFromRow(row, ['cantidad_original', 'esperada']);
+    const recibida = getNumFromRow(row, ['cantidad_actual', 'recibida']);
+    const diferencia = row.diferencia !== undefined && row.diferencia !== null ? parseFloat(row.diferencia) : (recibida - esperada);
+
+    return {
+      id: idx + 1,
+      orden: row.codigo_ordenes || row.codigo_ordenes_erp || 'S/N',
+      proveedor: row.cliente_proveedor || row.proveedor || '-',
+      codigoProducto: String(codigo).trim(),
+      producto: String(productoName).trim(),
+      lote: row.lote_VIS_ || row.lote || '-',
+      cantidadEsperada: parseFloat(esperada.toFixed(3)),
+      cantidadRecibida: parseFloat(recibida.toFixed(3)),
+      diferencia: parseFloat(diferencia.toFixed(3)),
+      fechaCierre: row.fecha_cierre || row.fecha_alta || '-',
+      operador: row.operador || '-'
+    };
+  });
+
+  const totalEsperada = itemsFormateados.reduce((acc, i) => acc + i.cantidadEsperada, 0);
+  const totalRecibida = itemsFormateados.reduce((acc, i) => acc + i.cantidadRecibida, 0);
+  const totalDiferencia = itemsFormateados.reduce((acc, i) => acc + i.diferencia, 0);
+  const conDiferenciaCount = itemsFormateados.filter(i => Math.abs(i.diferencia) > 0.001).length;
+
+  return {
+    ok: true,
+    totalItems: itemsFormateados.length,
+    conDiferenciaCount,
+    sinDiferenciaCount: itemsFormateados.length - conDiferenciaCount,
+    resumen: {
+      totalEsperada: parseFloat(totalEsperada.toFixed(3)),
+      totalRecibida: parseFloat(totalRecibida.toFixed(3)),
+      totalDiferencia: parseFloat(totalDiferencia.toFixed(3))
+    },
+    items: itemsFormateados
+  };
+};
+
+/**
+ * Obtener listado de todas las tablas y vistas de BlockWMS
+ */
+const obtenerTablasWMS = async (opts = {}) => {
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    'Cookie': `PHPSESSID=${sessionId}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+
+  const rawSql = "SELECT TABLE_TYPE, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES ORDER BY TABLE_TYPE, TABLE_NAME";
+  const queryPayload = new URLSearchParams({ query: rawSql, start: '0', length: '2000' });
+
+  const res = await axios.post(`${host}/proc_paginado_query.php`, queryPayload, { headers, timeout: 20000 });
+  let data = res.data;
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data); } catch (e) { data = []; }
+  }
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * Ejecuta una consulta SQL SELECT contra proc_paginado_query.php
+ */
+const consultarSqlWMS = async (sqlQuery, opts = {}) => {
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    'Cookie': `PHPSESSID=${sessionId}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+
+  const sqlEscaped = sqlQuery.includes("'") && !sqlQuery.includes("''") ? sqlQuery.replace(/'/g, "''") : sqlQuery;
+  const queryPayload = new URLSearchParams({ query: sqlEscaped, start: '0', length: '5000' });
+
+  const res = await axios.post(`${host}/proc_paginado_query.php`, queryPayload, { headers, timeout: 30000 });
+  let data = res.data;
+  if (typeof data === 'string') {
+    try { data = JSON.parse(data); } catch (e) { data = []; }
+  }
+  return Array.isArray(data) ? data : [];
+};
+
+/**
+ * Consulta el stock consolidado por sucursal/sitio para un producto o código dado
+ */
+const obtenerStockSucursalesWMS = async (codigoProducto = '', opts = {}) => {
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    'Cookie': `PHPSESSID=${sessionId}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+
+  const pEscaped = String(codigoProducto || '').trim().replace(/'/g, "''");
+  let whereClause = '';
+  if (pEscaped) {
+    whereClause = `WHERE (codigo_productos LIKE ''%${pEscaped}%'' OR producto LIKE ''%${pEscaped}%'')`;
+  }
+
+  const rawSql = `SELECT site, codigo_productos, producto, SUM(cantidad_fisica) AS stock_total FROM view_Reporte_StockXUbicacion ${whereClause} GROUP BY site, codigo_productos, producto ORDER BY site, codigo_productos`;
+
+  const queryPayload = new URLSearchParams({
+    query: rawSql,
+    start: '0',
+    length: '5000'
+  });
+
+  let rows = [];
+  try {
+    const res = await axios.post(`${host}/proc_paginado_query.php`, queryPayload, { headers, timeout: 30000 });
+    let data = res.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch (e) { data = []; }
+    }
+    if (Array.isArray(data)) {
+      rows = data;
+    }
+  } catch (err) {
+    console.warn('[wmsService] Error al consultar stock por sucursales:', err.message);
+  }
+
+  const items = rows.map((r, idx) => ({
+    id: idx + 1,
+    sucursal: r.site || 'N/A',
+    codigo: String(r.codigo_productos || '-').trim(),
+    nombre: String(r.producto || '-').trim(),
+    stock: parseFloat(parseFloat(r.stock_total || 0).toFixed(3))
+  }));
+
+  const totalStock = items.reduce((acc, i) => acc + i.stock, 0);
+
+  return {
+    ok: true,
+    totalSucursales: items.length,
+    totalStock: parseFloat(totalStock.toFixed(3)),
+    items
+  };
+};
+
+/**
+ * Obtiene órdenes de ingreso (y sus ítems) en un rango de fechas para un site
+ */
+const obtenerOrdenesIngresoWMS = async (filtros = {}, opts = {}) => {
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
+
+  const siteId = String(filtros.siteId || '194326').trim();
+  const fechaDesde = filtros.fechaDesde || ''; // YYYY-MM-DD
+  const fechaHasta = filtros.fechaHasta || ''; // YYYY-MM-DD
+  const tipoComprobante = String(filtros.tipoComprobante || filtros.documento || '').trim();
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    'Cookie': `PHPSESSID=${sessionId}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+
+  let dateWhere = '';
+  if (fechaDesde && fechaHasta) {
+    dateWhere = `AND CONVERT(date, fecha_cierre, 103) >= ''${fechaDesde}'' AND CONVERT(date, fecha_cierre, 103) <= ''${fechaHasta}''`;
+  } else if (fechaDesde) {
+    dateWhere = `AND CONVERT(date, fecha_cierre, 103) >= ''${fechaDesde}''`;
+  } else if (fechaHasta) {
+    dateWhere = `AND CONVERT(date, fecha_cierre, 103) <= ''${fechaHasta}''`;
+  }
+
+  let docWhere = '';
+  if (tipoComprobante && tipoComprobante !== 'TODOS' && tipoComprobante !== 'ALL') {
+    const cEscaped = tipoComprobante.replace(/'/g, "''");
+    docWhere = `AND (codigo_ordenes_documentos LIKE ''%${cEscaped}%'' OR documento LIKE ''%${cEscaped}%'')`;
+  }
+
+  const rawSql = `SELECT * FROM view_CUSTOM_DEPOT_WMS_Rpt_Ordenes_Diferencias_Ingresos WHERE id_entidades_sites = ''${siteId}'' AND id_operaciones_tipos = 1 ${dateWhere} ${docWhere} ORDER BY codigo_ordenes DESC`;
+
+  const queryPayload = new URLSearchParams({
+    query: rawSql,
+    start: '0',
+    length: '3000'
+  });
+
+  let data = [];
+  try {
+    const res = await axios.post(`${host}/proc_paginado_query.php`, queryPayload, { headers, timeout: 60000 });
+    let resData = res.data;
+    if (typeof resData === 'string') {
+      try { resData = JSON.parse(resData); } catch (e) { resData = []; }
+    }
+    if (Array.isArray(resData)) {
+      data = resData;
+    }
+  } catch (err) {
+    console.warn('[wmsService] Error al obtener órdenes de ingreso:', err.message);
+  }
+
+  const parseDDMMYYYY = (dateStr) => {
+    if (!dateStr || dateStr === '-') return null;
+    const parts = String(dateStr).split(' ')[0].split('/');
+    if (parts.length === 3) {
+      return new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`);
+    }
+    return null;
+  };
+
+  const dDesde = fechaDesde ? new Date(`${fechaDesde}T00:00:00`) : null;
+  const dHasta = fechaHasta ? new Date(`${fechaHasta}T23:59:59`) : null;
+
+  const rowsFiltradas = data.filter(row => {
+    const dt = parseDDMMYYYY(row.fecha_cierre || row.fecha_alta);
+    if (!dt) return true;
+    if (dDesde && dt < dDesde) return false;
+    if (dHasta && dt > dHasta) return false;
+    return true;
+  });
+
+  const getNum = (row, keywords) => {
+    for (const key of Object.keys(row)) {
+      const kLower = key.toLowerCase();
+      for (const kw of keywords) {
+        if (kLower.includes(kw.toLowerCase())) {
+          const val = row[key];
+          if (val !== undefined && val !== null && val !== '') {
+            const num = parseFloat(String(val).replace(',', '.'));
+            if (!isNaN(num)) return num;
+          }
+        }
+      }
+    }
+    return 0;
+  };
+
+  const ordersMap = new Map();
+  for (const row of rowsFiltradas) {
+    const ordenCodigo = String(row.codigo_ordenes || row.codigo_ordenes_erp || 'S/N').trim();
+    if (!ordersMap.has(ordenCodigo)) {
+      ordersMap.set(ordenCodigo, {
+        orden: ordenCodigo,
+        codigoOrdenErp: String(row.codigo_ordenes_erp || row.documento || row.codigo_ordenes_documentos || ordenCodigo || '-').trim(),
+        fechaCierre: String(row.fecha_cierre || row.fecha_alta || '-').trim(),
+        proveedor: String(row.cliente_proveedor || row.proveedor || '-').trim(),
+        documento: String(row.documento || row.codigo_ordenes_documentos || '-').trim(),
+        operador: String(row.operador || '-').trim(),
+        totalBultos: parseFloat(getNum(row, ['total_bultos', 'bultos']) || 0),
+        items: []
+      });
+    }
+
+    const orderObj = ordersMap.get(ordenCodigo);
+    const recibida = getNum(row, ['cantidad_actual', 'recibida']);
+    const esperada = getNum(row, ['cantidad_original', 'esperada']);
+    orderObj.items.push({
+      id: orderObj.items.length + 1,
+      codigo: String(row.codigo_productos || row.codigo_productos_VIS_ || '-').trim(),
+      producto: String(row.producto || row.producto_VIS_ || '-').trim(),
+      lote: String(row.lote_VIS_ || row.lote || '-').trim(),
+      recibida: parseFloat(recibida.toFixed(3)),
+      esperada: parseFloat(esperada.toFixed(3)),
+      ubicacion: String(row.ubicacion_origen || row.Ubicación_VIS_ || '-').trim()
+    });
+  }
+
+  const ordenes = Array.from(ordersMap.values());
+
+  // Consultar en la base local qué órdenes ya fueron cargadas como recortes
+  const { MovimientoStock } = require('../models');
+  const { Op } = require('sequelize');
+  const ordenesImpactadasSet = new Set();
+  try {
+    const logs = await MovimientoStock.findAll({
+      where: {
+        tipo_movimiento: { [Op.in]: ['INGRESO_RECORTE', 'INGRESO_DECOMISO', 'REGISTRO_VENCIMIENTO'] },
+        concepto: { [Op.like]: '%desde Orden WMS Nº %' }
+      },
+      attributes: ['concepto'],
+      raw: true
+    });
+    logs.forEach(l => {
+      const match = String(l.concepto || '').match(/Orden WMS Nº (\S+)/);
+      if (match && match[1]) {
+        ordenesImpactadasSet.add(match[1].trim());
+      }
+    });
+  } catch (e) {
+    console.warn('[wmsService] No se pudo verificar estado de recortes/vencimientos:', e.message);
+  }
+
+  for (const o of ordenes) {
+    o.totalKilosRecibidos = parseFloat(o.items.reduce((acc, i) => acc + i.recibida, 0).toFixed(3));
+    o.totalItemsCount = o.items.length;
+    o.recortesImpactados = ordenesImpactadasSet.has(o.orden);
+  }
+
+  const productosMap = new Map();
+  for (const o of ordenes) {
+    for (const item of o.items) {
+      if (!productosMap.has(item.codigo)) {
+        productosMap.set(item.codigo, {
+          codigo: item.codigo,
+          producto: item.producto,
+          totalRecibido: 0,
+          totalEsperado: 0,
+          ordenesSet: new Set()
+        });
+      }
+      const prodObj = productosMap.get(item.codigo);
+      prodObj.totalRecibido += item.recibida;
+      prodObj.totalEsperado += item.esperada;
+      prodObj.ordenesSet.add(o.orden);
+    }
+  }
+
+  const productosConsolidados = Array.from(productosMap.values()).map(p => ({
+    codigo: p.codigo,
+    producto: p.producto,
+    cantOrdenes: p.ordenesSet.size,
+    totalRecibido: parseFloat(p.totalRecibido.toFixed(3)),
+    totalEsperado: parseFloat(p.totalEsperado.toFixed(3))
+  })).sort((a, b) => b.totalRecibido - a.totalRecibido);
+
+  const totalGeneralKilos = ordenes.reduce((acc, o) => acc + o.totalKilosRecibidos, 0);
+
+  return {
+    ok: true,
+    totalOrdenes: ordenes.length,
+    totalProductosDistintos: productosConsolidados.length,
+    totalGeneralKilos: parseFloat(totalGeneralKilos.toFixed(3)),
+    ordenes,
+    productosConsolidados
+  };
+};
+
+/**
+ * Obtiene órdenes de egreso / despacho / salida (y sus ítems) en un rango de fechas para un site
+ */
+const obtenerOrdenesEgresoWMS = async (filtros = {}, opts = {}) => {
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
+
+  const siteId = String(filtros.siteId || '194326').trim();
+  const fechaDesde = filtros.fechaDesde || ''; // YYYY-MM-DD
+  const fechaHasta = filtros.fechaHasta || ''; // YYYY-MM-DD
+  const tipoComprobante = String(filtros.tipoComprobante || filtros.documento || '').trim();
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0',
+    'Cookie': `PHPSESSID=${sessionId}`,
+    'Content-Type': 'application/x-www-form-urlencoded'
+  };
+
+  let dateWhere = '';
+  if (fechaDesde && fechaHasta) {
+    dateWhere = `AND CONVERT(date, fecha_cierre, 103) >= ''${fechaDesde}'' AND CONVERT(date, fecha_cierre, 103) <= ''${fechaHasta}''`;
+  } else if (fechaDesde) {
+    dateWhere = `AND CONVERT(date, fecha_cierre, 103) >= ''${fechaDesde}''`;
+  } else if (fechaHasta) {
+    dateWhere = `AND CONVERT(date, fecha_cierre, 103) <= ''${fechaHasta}''`;
+  }
+
+  let docWhere = '';
+  if (tipoComprobante && tipoComprobante !== 'TODOS' && tipoComprobante !== 'ALL') {
+    const cEscaped = tipoComprobante.replace(/'/g, "''");
+    docWhere = `AND (codigo_ordenes_documentos LIKE ''%${cEscaped}%'' OR documento LIKE ''%${cEscaped}%'' OR operacion LIKE ''%${cEscaped}%'')`;
+  }
+
+  const egresoExclusionSql = `AND (ISNULL(codigo_ordenes_documentos,'''') NOT LIKE ''%RECEPC%'' AND ISNULL(documento,'''') NOT LIKE ''%RECEPC%'' AND ISNULL(operacion,'''') NOT LIKE ''%RECEPC%'')`;
+
+  const rawSql = `SELECT * FROM view_WMS_Rpt_Ordenes_Diferencias_PIC WHERE id_entidades_sites = ''${siteId}'' ${dateWhere} ${docWhere} ${egresoExclusionSql} ORDER BY codigo_ordenes DESC`;
+
+  const queryPayload = new URLSearchParams({
+    query: rawSql,
+    start: '0',
+    length: '3000'
+  });
+
+  let data = [];
+  try {
+    const res = await axios.post(`${host}/proc_paginado_query.php`, queryPayload, { headers, timeout: 60000 });
+    let resData = res.data;
+    if (typeof resData === 'string') {
+      try { resData = JSON.parse(resData); } catch (e) { resData = []; }
+    }
+    if (Array.isArray(resData)) {
+      data = resData;
+    }
+  } catch (err) {
+    console.warn('[wmsService] Error al obtener órdenes de egreso:', err.message);
+  }
+
+  const parseDDMMYYYY = (dateStr) => {
+    if (!dateStr || dateStr === '-') return null;
+    const parts = String(dateStr).split(' ')[0].split('/');
+    if (parts.length === 3) {
+      return new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}T00:00:00`);
+    }
+    return null;
+  };
+
+  const dDesde = fechaDesde ? new Date(`${fechaDesde}T00:00:00`) : null;
+  const dHasta = fechaHasta ? new Date(`${fechaHasta}T23:59:59`) : null;
+
+  const rowsFiltradas = data.filter(row => {
+    const docStr = String(row.documento || row.codigo_ordenes_documentos || row.operacion || '').toUpperCase();
+    if (docStr.includes('RECEPC') || docStr.includes('INGRES')) return false;
+
+    const dt = parseDDMMYYYY(row.fecha_cierre || row.fecha_alta);
+    if (!dt) return true;
+    if (dDesde && dt < dDesde) return false;
+    if (dHasta && dt > dHasta) return false;
+    return true;
+  });
+
+  const getNum = (row, keywords) => {
+    for (const key of Object.keys(row)) {
+      const kLower = key.toLowerCase();
+      for (const kw of keywords) {
+        if (kLower.includes(kw.toLowerCase())) {
+          const val = row[key];
+          if (val !== undefined && val !== null && val !== '') {
+            const num = parseFloat(String(val).replace(',', '.'));
+            if (!isNaN(num)) return Math.abs(num);
+          }
+        }
+      }
+    }
+    return 0;
+  };
+
+  const ordersMap = new Map();
+  for (const row of rowsFiltradas) {
+    const ordenCodigo = String(row.codigo_ordenes || row.codigo_ordenes_erp || 'S/N').trim();
+    if (!ordersMap.has(ordenCodigo)) {
+      ordersMap.set(ordenCodigo, {
+        orden: ordenCodigo,
+        fechaCierre: String(row.fecha_cierre || row.fecha_alta || '-').trim(),
+        destino: String(row.entidad || row.cliente_proveedor || '-').trim(),
+        documento: String(row.documento || row.codigo_ordenes_documentos || '-').trim(),
+        operacion: String(row.operacion || row.codigo_operaciones || '-').trim(),
+        operador: String(row.operador || '-').trim(),
+        items: []
+      });
+    }
+
+    const orderObj = ordersMap.get(ordenCodigo);
+    const despachada = getNum(row, ['cantidad_actual', 'despachada', 'recibida', 'cantidad_original']);
+    orderObj.items.push({
+      id: orderObj.items.length + 1,
+      codigo: String(row.codigo_productos || row.codigo_productos_VIS_ || '-').trim(),
+      producto: String(row.producto || row.producto_VIS_ || '-').trim(),
+      lote: String(row.lote_VIS_ || row.lote || '-').trim(),
+      despachada: parseFloat(despachada.toFixed(3)),
+      ubicacion: String(row.ubicacion_origen || row.Ubicación_VIS_ || '-').trim()
+    });
+  }
+
+  const ordenes = Array.from(ordersMap.values());
+  for (const o of ordenes) {
+    o.totalKilosDespachados = parseFloat(o.items.reduce((acc, i) => acc + i.despachada, 0).toFixed(3));
+    o.totalItemsCount = o.items.length;
+  }
+
+  const productosMap = new Map();
+  for (const o of ordenes) {
+    for (const item of o.items) {
+      if (!productosMap.has(item.codigo)) {
+        productosMap.set(item.codigo, {
+          codigo: item.codigo,
+          producto: item.producto,
+          totalDespachado: 0,
+          ordenesSet: new Set()
+        });
+      }
+      const prodObj = productosMap.get(item.codigo);
+      prodObj.totalDespachado += item.despachada;
+      prodObj.ordenesSet.add(o.orden);
+    }
+  }
+
+  const productosConsolidados = Array.from(productosMap.values()).map(p => ({
+    codigo: p.codigo,
+    producto: p.producto,
+    cantOrdenes: p.ordenesSet.size,
+    totalDespachado: parseFloat(p.totalDespachado.toFixed(3))
+  })).sort((a, b) => b.totalDespachado - a.totalDespachado);
+
+  const totalGeneralKilos = ordenes.reduce((acc, o) => acc + o.totalKilosDespachados, 0);
+
+  return {
+    ok: true,
+    totalOrdenes: ordenes.length,
+    totalProductosDistintos: productosConsolidados.length,
+    totalGeneralKilos: parseFloat(totalGeneralKilos.toFixed(3)),
+    ordenes,
+    productosConsolidados
+  };
+};
+
+/**
+ * Consulta las Órdenes de Ingreso Pendientes reales desde BlockWMS
+ */
+const obtenerOrdenesIngresoPendientesWMS = async (filtros = {}, opts = {}) => {
+  const config = cargarConfiguracion();
+  const siteId = String(opts.siteId || filtros.siteId || config.siteId || '194326').trim();
+  const sEscaped = siteId.replace(/'/g, "''");
+
+  let whereClauses = [
+    `id_entidades_sites = '${sEscaped}'`,
+    "status NOT IN ('Cancelada', 'Cerrada', 'Finalizada', 'Anulada', 'Baja')"
+  ];
+
+  if (filtros.search && filtros.search.trim()) {
+    const sTermEscaped = filtros.search.trim().replace(/'/g, "''");
+    whereClauses.push(`(codigo_ordenes LIKE '%${sTermEscaped}%' OR codigo_ordenes_erp LIKE '%${sTermEscaped}%' OR entidad LIKE '%${sTermEscaped}%' OR codigo_productos LIKE '%${sTermEscaped}%' OR producto LIKE '%${sTermEscaped}%')`);
+  }
+
+  if (filtros.proveedor && filtros.proveedor.trim()) {
+    const pEscaped = filtros.proveedor.trim().replace(/'/g, "''");
+    whereClauses.push(`entidad LIKE '%${pEscaped}%'`);
+  }
+
+  const rawSql = `SELECT * FROM view_CUSTOM_DEPOT_WMS_Rpt_Ordenes_Ingreso2 WHERE ${whereClauses.join(' AND ')} ORDER BY codigo_ordenes DESC, id_ordenes DESC`;
+
+  const rows = await consultarSqlWMS(rawSql, opts);
+
+  const items = rows.map((r, idx) => {
+    const esp = parseFloat(r.cantidad_original || r['Cantidad Original_VIS_¡3'] || 0);
+    const rec = parseFloat(r.Cantidad_recibida || r['Cantidad Recibida_VIS_¡¿3'] || 0);
+    const pend = Math.max(0, esp - rec);
+
+    return {
+      id: r.id_ordenes ? `${r.id_ordenes}-${idx}` : idx + 1,
+      idOrdenes: r.id_ordenes,
+      ordenWms: String(r.codigo_ordenes || '-').trim(),
+      ordenCompraErp: String(r.codigo_ordenes_erp || '-').trim(),
+      fechaAlta: r.fecha_alta || '-',
+      fechaProgramada: r.fecha_entrega_programada || '-',
+      tipoComprobante: r.documento || '-',
+      estadoOrden: r.status || 'Pendiente',
+      proveedor: r.entidad || r.proveedor_VIS_ || '-',
+      codigoProducto: String(r.codigo_productos || r.codigo_VIS_ || '-').trim(),
+      nombreProducto: String(r.producto || r.producto_VIS_ || '-').trim(),
+      cantidadEsperada: parseFloat(esp.toFixed(3)),
+      cantidadRecibida: parseFloat(rec.toFixed(3)),
+      cantidadPendiente: parseFloat(pend.toFixed(3))
+    };
+  }).filter(i => i.cantidadPendiente > 0);
+
+  const ordenesMap = new Map();
+  items.forEach(item => {
+    if (!ordenesMap.has(item.ordenWms)) {
+      ordenesMap.set(item.ordenWms, {
+        ordenWms: item.ordenWms,
+        ordenCompraErp: item.ordenCompraErp,
+        proveedor: item.proveedor,
+        fechaAlta: item.fechaAlta,
+        estadoOrden: item.estadoOrden,
+        itemsCount: 0,
+        totalPendiente: 0
+      });
+    }
+    const o = ordenesMap.get(item.ordenWms);
+    o.itemsCount++;
+    o.totalPendiente += item.cantidadPendiente;
+  });
+
+  const totalPendienteKilos = items.reduce((acc, i) => acc + i.cantidadPendiente, 0);
+
+  return {
+    ok: true,
+    totalItems: items.length,
+    totalOrdenes: ordenesMap.size,
+    totalPendienteKilos: parseFloat(totalPendienteKilos.toFixed(3)),
+    ordenes: Array.from(ordenesMap.values()),
+    items
+  };
+};
+
+/**
+ * Procesar la recepción de una orden de ingreso en BlockWMS y sincronizar stock local
+ */
+const procesarRecepcionOrdenWMS = async (recepcionData = {}, opts = {}) => {
+  const { ordenWms, idOrdenes, items, id_ubicacion = 1, observaciones, usuarioEjecutor = 'Sistema' } = recepcionData;
+
+  if (!ordenWms || !items || !Array.isArray(items) || items.length === 0) {
+    throw new Error('Debe especificar la orden WMS y al menos un ítem a recepcionar.');
+  }
+
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
+
+  console.log(`\n=================== [WMS LOG RECEPCIÓN: INICIO ORDEN ${ordenWms}] ===================`);
+  console.log(`Config Host: ${host} | Session ID: ${sessionId} | ID Ordenes: ${idOrdenes || 'N/A'}`);
+  console.log(`Total Ítems a procesar: ${items.length}`);
+
+  const wmsLogs = [];
+  const t = await sequelize.transaction();
+
+  try {
+    let itemsProcesados = 0;
+    let totalKilosRecepcionados = 0;
+
+    for (const item of items) {
+      const codigo = String(item.codigoProducto || item.codigo || '').trim();
+      const cantRecibida = parseFloat(item.cantidadRecibida || 0);
+
+      if (!codigo || cantRecibida <= 0) continue;
+
+      const postData = new URLSearchParams({
+        accion: 'guardar_recepcion',
+        codigo_ordenes: ordenWms,
+        id_ordenes: String(idOrdenes || ''),
+        codigo_productos: codigo,
+        cantidad_recibida: String(cantRecibida),
+        lote: item.lote || '',
+        fecha_vencimiento: item.fechaVencimiento || ''
+      });
+
+      console.log(`\n---> [WMS RECEPCIÓN HTTP REQUEST] Producto SKU: ${codigo} | Cantidad: ${cantRecibida}`);
+      console.log(`URL: ${host}/proc_ordenes.php`);
+      console.log(`Body Payload: ${postData.toString()}`);
+
+      let wmsResData = null;
+      let wmsResStatus = null;
+
+      try {
+        const resWms = await axios.post(`${host}/proc_ordenes.php`, postData, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0',
+            'Cookie': `PHPSESSID=${sessionId}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          timeout: 15000,
+          validateStatus: () => true
+        });
+
+        wmsResStatus = resWms.status;
+        wmsResData = resWms.data;
+
+        console.log(`<--- [WMS RECEPCIÓN HTTP RESPONSE] Status: ${resWms.status}`);
+        console.log(`Data Content:`, typeof resWms.data === 'object' ? JSON.stringify(resWms.data) : String(resWms.data).substring(0, 1000));
+      } catch (wmsErr) {
+        console.error(`[WMS RECEPCIÓN ERROR HTTP]:`, wmsErr.message);
+        wmsResData = { error: wmsErr.message };
+      }
+
+      // Intentar también actualización directa por SQL en BlockWMS por si el PHP lo requiere
+      try {
+        const sqlUpdateItem = `UPDATE i_Ordenes_Ingreso_Items SET Cantidad_recibida = ISNULL(Cantidad_recibida, 0) + ${cantRecibida} WHERE codigo_ordenes = '${ordenWms.replace(/'/g, "''")}' AND codigo_productos = '${codigo.replace(/'/g, "''")}'`;
+        console.log(`[WMS RECEPCIÓN SQL UPDATE ITEM]: ${sqlUpdateItem}`);
+        await consultarSqlWMS(sqlUpdateItem, opts);
+
+        const sqlUpdateHeader = `UPDATE Ordenes SET status = 'Finalizada', id_status = 3 WHERE codigo_ordenes = '${ordenWms.replace(/'/g, "''")}'`;
+        console.log(`[WMS RECEPCIÓN SQL UPDATE HEADER]: ${sqlUpdateHeader}`);
+        await consultarSqlWMS(sqlUpdateHeader, opts);
+      } catch (sqlErr) {
+        console.warn(`[WMS RECEPCIÓN SQL UPDATE WARN]:`, sqlErr.message);
+      }
+
+      wmsLogs.push({
+        codigoProducto: codigo,
+        cantidadRecibida: cantRecibida,
+        httpStatus: wmsResStatus,
+        wmsResponse: wmsResData
+      });
+
+      // 2. Asegurar existencia del Producto local
+      let productoObj = await Producto.findByPk(codigo, { transaction: t });
+      if (!productoObj) {
+        productoObj = await Producto.create({
+          codigo,
+          nombre: String(item.nombreProducto || `Producto ${codigo}`).trim(),
+          activo: true
+        }, { transaction: t });
+      }
+
+      // 3. Actualizar ProductoStock local en la ubicación seleccionada
+      let [stockObj] = await ProductoStock.findOrCreate({
+        where: {
+          codigo_producto: codigo,
+          id_ubicacion
+        },
+        defaults: {
+          codigo_producto: codigo,
+          id_ubicacion,
+          stock: 0.0000,
+          recorte: 0.000,
+          decomiso: 0.000,
+          kg_fraccionados: 0.000
+        },
+        transaction: t
+      });
+
+      const stockAnterior = parseFloat(stockObj.stock) || 0;
+      const stockNuevo = stockAnterior + cantRecibida;
+      stockObj.stock = stockNuevo;
+
+      await stockObj.save({
+        transaction: t,
+        tipo_movimiento: 'INGRESO_PROVEEDOR',
+        concepto: `Recepción Orden WMS Nº ${ordenWms}${item.lote ? ' (Lote: ' + item.lote + ')' : ''}`,
+        usuario: usuarioEjecutor,
+        cantidad_piezas: item.cantidadPiezas || 0
+      });
+
+      // 4. Registrar fecha de vencimiento/lote si fue provista
+      if (item.fechaVencimiento || item.lote) {
+        const { ProductoVencimiento } = sequelize.models;
+        if (ProductoVencimiento) {
+          const fVenc = item.fechaVencimiento ? new Date(item.fechaVencimiento) : new Date('2099-12-31');
+          await ProductoVencimiento.create({
+            codigo_producto: codigo,
+            id_ubicacion,
+            fecha_vencimiento: fVenc,
+            lote: item.lote || null,
+            piezas: item.cantidadPiezas || 1,
+            kilos: cantRecibida
+          }, { transaction: t });
+        }
+      }
+
+      itemsProcesados++;
+      totalKilosRecepcionados += cantRecibida;
+    }
+
+    await t.commit();
+
+    console.log(`\n=================== [WMS LOG RECEPCIÓN: FINALIZADO CON ÉXITO] ===================\n`);
+
+    return {
+      ok: true,
+      message: `Recepción de Orden WMS Nº ${ordenWms} procesada exitosamente (${itemsProcesados} ítems, ${totalKilosRecepcionados.toFixed(3)} kg/uds cargados).`,
+      itemsProcesados,
+      totalKilosRecepcionados: parseFloat(totalKilosRecepcionados.toFixed(3)),
+      wmsLogs
+    };
+  } catch (error) {
+    await t.rollback();
+    console.error('[procesarRecepcionOrdenWMS] Error al procesar recepción:', error);
+    throw error;
+  }
+};
+
+/**
+ * Obtiene el PDF binario generado directamente por Block WMS (pdf_export.php) usando el código de Orden ERP
+ */
+const obtenerPdfOrdenWMS = async (ordenErpId, opts = {}) => {
+  const config = cargarConfiguracion();
+  const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
+  const siteId = String(opts.siteId || config.siteId || '194326').trim();
+  const codeErpClean = String(ordenErpId || '').trim();
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Cookie': `PHPSESSID=${sessionId}`
+  };
+
+  // 1. Inicializar el motor de reportes de Block WMS en la sesión activa de PHP
+  try {
+    await axios.get(`${host}/reports.php?codigo_reportes=repoordenesingresodiferencias&idm=1957&idotnet=1149&parent_idm=1884`, { headers, timeout: 15000 });
+    await axios.get(`${host}/reports_maker.php?t=repoordenesingresodiferencias`, { headers, timeout: 15000 });
+  } catch (e) {
+    console.warn('[wmsService] Advertencia al inicializar reporte en sesión WMS:', e.message);
+  }
+
+  // 2. Cargar el contexto/filtro de la orden en la sesión PHP ejecutando la consulta específica
+  if (codeErpClean) {
+    const cEscaped = codeErpClean.replace(/'/g, "''");
+    const rawSql = `SELECT * FROM view_CUSTOM_DEPOT_WMS_Rpt_Ordenes_Diferencias_Ingresos WHERE id_entidades_sites = ''${siteId}'' AND id_operaciones_tipos = 1 AND (codigo_ordenes LIKE ''%${cEscaped}%'' OR documento LIKE ''%${cEscaped}%'' OR codigo_ordenes_erp LIKE ''%${cEscaped}%'') ORDER BY codigo_ordenes DESC`;
+
+    const queryPayload = new URLSearchParams({
+      query: rawSql,
+      start: '0',
+      length: '500'
+    });
+
+    try {
+      await axios.post(`${host}/proc_paginado_query.php`, queryPayload, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: 20000
+      });
+    } catch (e) {
+      console.warn('[wmsService] Advertencia al establecer consulta de orden en sesión WMS:', e.message);
+    }
+  }
+
+  // 3. Invocamos pdf_export.php en Block WMS con el Referer correspondiente
+  const pdfExportUrl = `${host}/pdf_export.php?tipo=pdf`;
+  const exportRes = await axios.get(pdfExportUrl, {
+    headers: {
+      ...headers,
+      'Referer': `${host}/reports_maker.php?t=`
+    },
+    timeout: 45000
+  });
+  const html = String(exportRes.data || '');
+
+  // 4. Buscamos la ruta del PDF devuelto en el HTML (<embed src="/temp/export_pdf/export_...pdf">)
+  const match = html.match(/embed\s+src=[\x22\x27](\/temp\/export_pdf\/[^\x22\x27\s>]+)[\x22\x27]/i);
+  if (!match || !match[1]) {
+    throw new Error('Block WMS no devolvió la ubicación del PDF generado para la Orden.');
+  }
+
+  const pdfRelativePath = match[1];
+  const pdfFullUrl = `${host}${pdfRelativePath}`;
+
+  // 5. Descargamos los bytes binarios del PDF original
+  const pdfBinaryRes = await axios.get(pdfFullUrl, {
+    headers,
+    responseType: 'arraybuffer',
+    timeout: 30000
+  });
+
+  return Buffer.from(pdfBinaryRes.data);
+};
+
 module.exports = {
   cargarConfiguracion,
   guardarConfiguracion,
   loginWMS,
+  ensureValidWmsSession,
   obtenerProductosWMS,
   obtenerEntidadesWMS,
   obtenerSitesDisponiblesWMS,
   obtenerStockPorUbicacionWMS,
+  obtenerReporteDiferenciasIngresoWMS,
+  obtenerStockSucursalesWMS,
+  obtenerOrdenesIngresoWMS,
+  obtenerOrdenesIngresoPendientesWMS,
+  procesarRecepcionOrdenWMS,
+  obtenerOrdenesEgresoWMS,
+  obtenerPdfOrdenWMS,
+  obtenerTablasWMS,
+  consultarSqlWMS,
   sincronizarStock,
   obtenerMotivosAjusteWMS,
   ejecutarAjusteCompletoWMS,

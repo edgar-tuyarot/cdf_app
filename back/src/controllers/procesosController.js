@@ -113,23 +113,21 @@ exports.crearProceso = async (req, res) => {
     const valKgASumar = parseFloat(kg_a_sumar) || 0;
     const valKgADescontar = parseFloat(kg_a_desc) || 0;
 
-    if (!valPiezas || valPiezas <= 0) {
+    if (valPesoBruto <= 0 && req.body.pendiente !== true) {
       await transaction.rollback();
-      return res.status(400).json({ error: 'La cantidad de piezas es obligatoria y debe ser mayor a 0.' });
+      return res.status(400).json({ error: 'El peso bruto debe ser mayor a 0 kg.' });
     }
 
     const id_ubicacion = req.ubicacionId;
     let stockActual = 0;
     let pStockRecord = null;
 
-    let piezasActual = 0;
     if (req.body.pendiente !== true) {
       pStockRecord = await ProductoStock.findOne({
         where: { codigo_producto: codigo, id_ubicacion },
         transaction
       });
       stockActual = pStockRecord ? parseFloat(pStockRecord.stock) : 0;
-      piezasActual = pStockRecord ? parseInt(pStockRecord.piezas, 10) : 0;
     }
 
     // Validar stock si no es un proceso pendiente
@@ -141,12 +139,6 @@ exports.crearProceso = async (req, res) => {
           return res.status(400).json({ error: `Stock de kilos insuficiente para el producto ${codigo} (${producto.nombre}). Disponible: ${calculadoActual} kg, Requerido: ${valPesoBruto} kg.` });
         }
       }
-      if (valPiezas > 0 && proceso !== 'Fraccionamiento') {
-        if (piezasActual < valPiezas) {
-          await transaction.rollback();
-          return res.status(400).json({ error: `Stock de piezas insuficiente para el producto ${codigo} (${producto.nombre}). Disponible: ${piezasActual}, Requerido: ${valPiezas}.` });
-        }
-      }
     }
 
     // Crear el proceso
@@ -156,7 +148,7 @@ exports.crearProceso = async (req, res) => {
       proceso,
       fecha: fecha || new Date(),
       codigo,
-      piezas: valPiezas,
+      piezas: 0,
       peso_bruto: valPesoBruto,
       recorte: valRecorte,
       decomiso: valDecomiso,
@@ -221,46 +213,33 @@ exports.crearProceso = async (req, res) => {
         tipo_movimiento: 'PROCESO',
         referencia_id: nuevoProceso.id,
         concepto: `Proceso de ${proceso || 'Producción'} registrado`,
-        cantidad_piezas: valPiezas > 0 ? -valPiezas : 0,
+        cantidad_piezas: 0,
         kg_recorte: valRecorte,
         kg_decomiso: valDecomiso,
         usuario: req.body.usuario || 'Sistema'
       });
 
-      // 3. FIFO deduction on ProductoVencimiento (lotes de vencimiento)
-      if (valPiezas > 0) {
+      // 3. FEFO deduction on ProductoVencimiento (lotes de vencimiento que vencen primero) por PESO
+      if (valPesoBruto > 0) {
         const vencimientos = await ProductoVencimiento.findAll({
           where: { codigo_producto: codigo, id_ubicacion },
           order: [['vencimiento', 'ASC']],
           transaction
         });
 
-        let remainingToDeduct = valPiezas;
+        let remainingWeightToDeduct = valPesoBruto;
         for (const v of vencimientos) {
-          if (remainingToDeduct <= 0) break;
-          const currentPiezas = parseInt(v.piezas, 10) || 0;
-          if (currentPiezas <= remainingToDeduct) {
-            remainingToDeduct -= currentPiezas;
+          if (remainingWeightToDeduct <= 0) break;
+          const currentPeso = parseFloat(v.peso) || 0;
+          if (currentPeso <= remainingWeightToDeduct) {
+            remainingWeightToDeduct -= currentPeso;
             await v.destroy({ transaction });
           } else {
-            v.piezas = currentPiezas - remainingToDeduct;
-            remainingToDeduct = 0;
+            v.peso = parseFloat((currentPeso - remainingWeightToDeduct).toFixed(3));
+            v.piezas = 0;
+            remainingWeightToDeduct = 0;
             await v.save({ transaction });
           }
-        }
-
-        // Si aún restan piezas por descontar (producto sin lotes previos o con piezas insuficientes en lotes)
-        if (remainingToDeduct > 0) {
-          const farFuture = new Date();
-          farFuture.setFullYear(farFuture.getFullYear() + 1);
-          const defaultDateStr = farFuture.toISOString().split('T')[0];
-
-          await ProductoVencimiento.create({
-            codigo_producto: codigo,
-            id_ubicacion,
-            vencimiento: defaultDateStr,
-            piezas: -remainingToDeduct
-          }, { transaction });
         }
       }
 
@@ -490,8 +469,8 @@ exports.eliminarProceso = async (req, res) => {
         concepto: `Proceso de ${proceso.proceso || 'Producción'} eliminado. Reversión de stock.`
       });
 
-      // Restore pieces in ProductoVencimiento
-      if (valPiezas > 0) {
+      // Restore weight in ProductoVencimiento
+      if (valPesoBruto > 0) {
         const oldestVencimiento = await ProductoVencimiento.findOne({
           where: { codigo_producto: proceso.codigo, id_ubicacion: proceso.id_ubicacion },
           order: [['vencimiento', 'ASC']],
@@ -499,7 +478,8 @@ exports.eliminarProceso = async (req, res) => {
         });
 
         if (oldestVencimiento) {
-          oldestVencimiento.piezas = (parseInt(oldestVencimiento.piezas, 10) || 0) + valPiezas;
+          oldestVencimiento.peso = (parseFloat(oldestVencimiento.peso) || 0) + valPesoBruto;
+          oldestVencimiento.piezas = 0;
           await oldestVencimiento.save({ transaction });
         } else {
           // If no batch exists, create a default one expiring in 30 days
@@ -513,7 +493,8 @@ exports.eliminarProceso = async (req, res) => {
           await ProductoVencimiento.create({
             codigo_producto: proceso.codigo,
             vencimiento: formattedDate,
-            piezas: valPiezas,
+            piezas: 0,
+            peso: valPesoBruto,
             id_ubicacion: proceso.id_ubicacion
           }, { transaction });
         }
@@ -607,17 +588,6 @@ exports.confirmarProceso = async (req, res) => {
       }
     }
 
-    const piezasActual = await ProductoVencimiento.sum('piezas', {
-      where: { codigo_producto: proceso.codigo, id_ubicacion: proceso.id_ubicacion },
-      transaction
-    }) || 0;
-    if (valPiezas > 0 && proceso.proceso !== 'Fraccionamiento') {
-      if (piezasActual < valPiezas) {
-        await transaction.rollback();
-        return res.status(400).json({ error: `Stock de piezas insuficiente para confirmar el proceso para el producto ${proceso.codigo} (${producto.nombre}). Disponible: ${piezasActual}, Requerido: ${valPiezas}.` });
-      }
-    }
-
     // 1. Sumar a recorte y decomiso de la ubicación en ProductoStock
     pStockRecord.recorte = (parseFloat(pStockRecord.recorte) || 0) + valRecorte;
     pStockRecord.decomiso = (parseFloat(pStockRecord.decomiso) || 0) + valDecomiso;
@@ -665,40 +635,27 @@ exports.confirmarProceso = async (req, res) => {
       concepto: `Proceso de ${proceso.proceso || 'Producción'} confirmado (peso envasado cargado)`
     });
 
-    // 3. FIFO deduction on ProductoVencimiento (lotes de vencimiento)
-    if (valPiezas > 0) {
+    // 3. FEFO deduction on ProductoVencimiento (lotes de vencimiento que vencen primero) por PESO
+    if (valPesoBruto > 0) {
       const vencimientos = await ProductoVencimiento.findAll({
         where: { codigo_producto: proceso.codigo, id_ubicacion: proceso.id_ubicacion },
         order: [['vencimiento', 'ASC']],
         transaction
       });
 
-      let remainingToDeduct = valPiezas;
+      let remainingWeightToDeduct = valPesoBruto;
       for (const v of vencimientos) {
-        if (remainingToDeduct <= 0) break;
-        const currentPiezas = parseInt(v.piezas, 10) || 0;
-        if (currentPiezas <= remainingToDeduct) {
-          remainingToDeduct -= currentPiezas;
+        if (remainingWeightToDeduct <= 0) break;
+        const currentPeso = parseFloat(v.peso) || 0;
+        if (currentPeso <= remainingWeightToDeduct) {
+          remainingWeightToDeduct -= currentPeso;
           await v.destroy({ transaction });
         } else {
-          v.piezas = currentPiezas - remainingToDeduct;
-          remainingToDeduct = 0;
+          v.peso = parseFloat((currentPeso - remainingWeightToDeduct).toFixed(3));
+          v.piezas = 0;
+          remainingWeightToDeduct = 0;
           await v.save({ transaction });
         }
-      }
-
-      // Si aún restan piezas por descontar (producto sin lotes previos o con piezas insuficientes en lotes)
-      if (remainingToDeduct > 0) {
-        const farFuture = new Date();
-        farFuture.setFullYear(farFuture.getFullYear() + 1);
-        const defaultDateStr = farFuture.toISOString().split('T')[0];
-
-        await ProductoVencimiento.create({
-          codigo_producto: proceso.codigo,
-          id_ubicacion: proceso.id_ubicacion,
-          vencimiento: defaultDateStr,
-          piezas: -remainingToDeduct
-        }, { transaction });
       }
     }
 

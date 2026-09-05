@@ -1,0 +1,227 @@
+<html>
+<head>
+    <title>BlockWMS</title>
+    <meta name="keywords" content="WMS">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">     
+    
+    <!-- Comentado xq el archivo no se encuentra en esa ubicacion  <link rel="stylesheet" type = "text/css" href="css/jquery.notify.css">-->
+    <link rel="stylesheet" type = "text/css" href="css/bootstrap.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/estilos.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/xtree.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/dialog_box.css"/>
+    <!-- <link rel="stylesheet" type = "text/css" href="include/ArbolCSS/simpletree.css"/> -->
+    <link rel="stylesheet" type = "text/css" href="css/jquery.datatables.min.css">    
+    <!--link rel="stylesheet" type = "text/css" href="css/responsive.bootstrap.min.css"/--> 
+    <link rel="stylesheet" type = "text/css" href="../jalert/jquery.alerts.css"/>  
+    <link rel="stylesheet" type = "text/css" href="css/colreorder.datatables.min.css"/> 
+    <!--link rel="stylesheet" type = "text/css" href="css/keyTable.dataTables.min.css"/-->  
+    <link rel="stylesheet" type = "text/css" href="css/block-datatables-custom.css"/> 
+    <link rel="stylesheet" type = "text/css" href="css/block-multiselect-custom.css"/>  
+    <link rel="stylesheet" type = "text/css" href="css/datatables.select.min.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/fixedcolumns.datatables.min.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/block-reportes-custom.css"/> 
+    <link rel="stylesheet" type = "text/css" href="css/buttons.datatables.min.css"/>
+
+    <script language="JavaScript" src="http://192.168.10.2:80/js/strings.js"></script>
+    <script LANGUAGE="JavaScript" SRC="http://192.168.10.2:80/js/xtree.js"></script>
+    <script type="text/javascript" src="http://192.168.10.2:80/js/dialog_box.js"></script>
+
+    <script type = "text/javascript" src = "js/jquery-1.12.4.js"></script>
+    <script type = "text/javascript" src = "js/bootstrap.min.js"></script>
+    <script type = "text/javascript" src = "js/jquery-datatable.js"></script> 
+    <script type = "text/javascript" src = "js/bootstrap-datatable-base.js"></script>
+    <script type = "text/javascript" src = "js/datatables.fixedcolumns.min.js"></script>
+    
+    <script type = "text/javascript" src = "js/jquery.blockUI.js"></script>
+    <script type="text/javascript" src="js/jquery.validate.min.js"></script>    
+    <link rel="stylesheet" href="assets/bootstrap-select/bootstrap-select.css">
+    <script src="assets/bootstrap-select/bootstrap-select.min.js"></script>
+
+    <script type = "text/javascript" src = "js/genera_listado.js"></script>
+    <!--script type = "text/javascript" src = "js/dataTables.responsive.min.js"></script-->
+    <!--script type = "text/javascript" src = "js/responsive.bootstrap.min.js"></script-->
+    <script type = "text/javascript" src = "jalert/jquery.alerts.js"></script>  
+    <!--script type = "text/javascript" src = "js/ColReorderWithResize.js"></script-->  
+    <script type = "text/javascript" src = "js/datatables.colreorder.min.js"></script>
+    <!--script type = "text/javascript" src = "js/dataTables.keyTable.min.js"></script-->
+    <script type = "text/javascript" src = "js/datatables.select.min.js"></script>    
+  <script type = "text/javascript" src = "js/datatables.buttons.min.js"></script>    
+  <script type = "text/javascript" src = "js/buttons.colvis.min.js"></script>    
+  <script type = "text/javascript" src = "js/bootbox.min.js"></script>
+            
+    <!-- <link rel="stylesheet" type="text/css" href="JSCal2/css/jscal2.css"  />
+    <link rel="stylesheet" type="text/css" href="JSCal2/css/border-radius.css" />
+    <script type="text/javascript" src="JSCal2/js/jscal2.js"></script>
+    <script type="text/javascript" src="JSCal2/js/lang/es.js"></script> -->
+    <script type="text/javascript"  src="js/becalendario.js"></script>
+
+    <link href="css/bootstrap-multiselect.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+
+    <script type="text/javascript" src="js/jquery-ui-1.8.23.js"></script>
+    <link rel="stylesheet" type="text/css" href="js/DHTML/jquery-ui.css"/>
+    
+    <script type = "text/javascript" src = "js/http.js?v=1"></script>
+    <script language="JavaScript" src="js/library.js?v=9"></script>
+    <script language="JavaScript" src="js/multilenguaje.js?v=0"></script>
+    <script language="JavaScript" src="js/library_datatable.js"></script>
+    <script language="JavaScript" src="js/library_datatable_advanced.js"></script>    
+    <script language="JavaScript" src="js/globalsdata.js"></script>    
+    <script language="JavaScript" src="js/library_modals.js"></script>
+
+  <!--Referencias jsTree-->
+    <link rel="stylesheet" href="js/jsTree/themes/block/style.css" />
+    <script src="js/jsTree/jstree.js"></script>
+    <script src="js/library_jstree.js?v=8"></script>
+  <!--Referencias jsTree-->
+  
+  <!--Referencias de Moltran     -->
+  <script src="assets/jquery-sparkline/jquery.sparkline.min.js"></script>
+  <script src="assets/jquery-detectmobile/detect.js"></script>
+  <script src="assets/fastclick/fastclick.js"></script>
+  <script src="assets/jquery-slimscroll/jquery.slimscroll.js"></script>
+  <script src="assets/jquery-blockui/jquery.blockui.js"></script> 
+  <script src="assets/notifications/notify.min.js"></script>
+  <script src="assets/notifications/notify-metro.js"></script>
+  <script src="assets/notifications/notifications.js"></script>
+  <script src="js/balanza.js"></script>
+
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="assets/notifications/notification.css" rel="stylesheet" />
+  <link href="assets/font-awesome/css/font-awesome.css" rel="stylesheet" />
+  <!--link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" /-->
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="css/material-design-iconic-font.min.css" rel="stylesheet">
+  <link href="css/helper.css" rel="stylesheet" type="text/css" />
+  <script>
+    gobjBlockMultilenguaje.diccionarioCargar("EdgarTu","1435",1);
+  </script>
+  <!--<link href="css/style-moltran.css" rel="stylesheet" type="text/css" /-->
+    
+  <!-- Font Icons GAUCHO 05072017-->
+  <!--link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="css/material-design-iconic-font.min.css" rel="stylesheet"-->
+  <!-- Font Icons GAUCHO 05072017-->
+  <!--Comentar el siguiente script provoca errores en el menu -->
+  <script>
+    //Comentar esta linea en caso de querer los logs 
+//    console.log=()=>{};
+    const debuggerCode=()=>{
+      //sacar comentario en esta linea en caso de querer el debugger. 
+      //debugger;
+    };
+  </script> 
+
+<style media="print"> .noprint { visibility: hidden; display:none; } </style>
+
+    
+    <script LANGUAGE="JavaScript">
+     
+    window.status="BlockWMS";
+
+    var sepDec='.';
+    var sepMil=',';
+    var tmpSepDecClient = new String(3/2);
+    var sepDecClient = tmpSepDecClient.substr(1,1);
+
+    var ARYextImg = new Array();
+ARYextImg[0] = 'gif';
+ARYextImg[1] = 'jpg';
+ARYextImg[2] = 'jpeg';
+ARYextImg[3] = 'png';
+ARYextImg[4] = 'swf';
+ARYextImg[5] = 'asf';
+ARYextImg[6] = 'bmp';
+ARYextImg[7] = '';
+var ARYextObj = new Array();
+ARYextObj[0] = 'gif';
+ARYextObj[1] = 'jpg';
+ARYextObj[2] = 'jpeg';
+ARYextObj[3] = 'png';
+ARYextObj[4] = 'bmp';
+ARYextObj[5] = 'js';
+ARYextObj[6] = 'css';
+ARYextObj[7] = 'xml';
+ARYextObj[8] = 'xsl';
+ARYextObj[9] = 'swf';
+ARYextObj[10] = 'mid';
+ARYextObj[11] = 'midi';
+ARYextObj[12] = 'wav';
+ARYextObj[13] = 'au';
+ARYextObj[14] = 'mov';
+ARYextObj[15] = 'avi';
+ARYextObj[16] = 'mpg';
+ARYextObj[17] = 'mpeg';
+ARYextObj[18] = 'mp2';
+ARYextObj[19] = 'mp3';
+ARYextObj[20] = 'asx';
+ARYextObj[21] = 'rm';
+ARYextObj[22] = 'ram';
+ARYextObj[23] = 'zip';
+ARYextObj[24] = 'rar';
+ARYextObj[25] = 'tif';
+ARYextObj[26] = 'tiff';
+ARYextObj[27] = 'class';
+ARYextObj[28] = '';
+var ARYextDoc = new Array();
+ARYextDoc[0] = 'txt';
+ARYextDoc[1] = 'rtf';
+ARYextDoc[2] = 'wri';
+ARYextDoc[3] = 'doc';
+ARYextDoc[4] = 'mcw';
+ARYextDoc[5] = 'wps';
+ARYextDoc[6] = 'wpd';
+ARYextDoc[7] = 'pdf';
+ARYextDoc[8] = 'xls';
+ARYextDoc[9] = 'wk1';
+ARYextDoc[10] = 'wk2';
+ARYextDoc[11] = 'wk4';
+ARYextDoc[12] = 'ppt';
+ARYextDoc[13] = 'pps';
+ARYextDoc[14] = 'zip';
+ARYextDoc[15] = 'gif';
+ARYextDoc[16] = 'jpg';
+ARYextDoc[17] = 'jpeg';
+ARYextDoc[18] = 'asf';
+ARYextDoc[19] = 'mpg';
+ARYextDoc[20] = 'mpeg';
+ARYextDoc[21] = 'avi';
+ARYextDoc[22] = 'exe';
+ARYextDoc[23] = 'tif';
+ARYextDoc[24] = 'tiff';
+ARYextDoc[25] = '';
+    var gId_Logins = '1149';
+    </script>
+
+        
+    <title>Connvertia</title>
+
+</head>
+<div id="multilenguaje" style="visibility:hidden;"></div>
+<div id="divHeaderBussy" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true" style="z-index:9999">
+  <div><i id="imgHeaderSpinner" class="fa fa-spin fa-spinner" style="color:white;font-size:55px;position: absolute;top: 47%;left: 47%;"></i></div>
+</div>
+<div id="divPopupFormulario"></div>
+
+  <!-- Comentado, se visualizaba el fondo blanco en Catalogo/Agrupamiento -->
+  <!-- <body id="body_header" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" bgcolor="#FFFFFF"> -->
+  <body id="body_header" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" style="background-color:#CECFBD">
+  
+
+
+
+
+<script language="JavaScript" type="text/javascript">
+	try {
+		 var ax  = new ActiveXObject("AcroPDF.PDF");
+		 document.cookie="adobe=0; expires=Thu, 18 Dec 2098 12:00:00 UTC";
+		}
+	catch(err) {
+		document.cookie="adobe=1; expires=Thu, 18 Dec 2098 12:00:00 UTC";
+	}
+</script>
+    <script>
+			window.location.assign("genera_listado.php")
+		</script>
+		

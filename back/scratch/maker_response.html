@@ -1,0 +1,69 @@
+<html>
+<head>
+<link REL="stylesheet" HREF="/css/estilos.css" TYPE="text/css">
+
+<script language="JavaScript">
+function doGrabar(){   
+
+	document.all.frmPass.submit();
+}
+</script>
+
+<link rel="stylesheet" type = "text/css" href="/css/bootstrap.css"/>
+<script type = "text/javascript" src = "/js/jquery-1.12.4.js"></script>
+<script type = "text/javascript" src = "/js/bootstrap.min.js"></script>
+<script defer language="JavaScript" src="/js/library.js"></script>
+<script defer language="JavaScript" src="/js/strings.js"></script>
+<style>
+body {
+	scrollbar-base-color: #CECFBD;
+	scrollbar-darkshadow-color: #CECFBD;
+	scrollbar-shadow-color: #8C9082;
+	scrollbar-track-color: #EFEBDF;
+	scrollbar-highlight-color: #EFEBDF;
+	scrollbar-3d-light-color: #8C9082;
+	scrollbar-arrow-color: #8C9082;
+
+}
+</style> 
+</head>
+<body leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" class="bodymenu">
+	<form method="post" action="cambiarpass.php" name="frmPass" id="frmPass" >
+	  <input type='hidden' name='accion' value='grabar'>
+	  <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#8C9082">
+	  <tr>
+		  <td>
+		    <table align="center" border="0" cellpadding="0" cellspacing="1" width="100%">
+          <col class="tdmarroncontenido"></col>
+          <col class="tdblancocontenido"></col>
+          <tr height="25">
+            <td class="spantitulocontenido" colspan="2">&nbsp;<b>Datos Generales</b></td>
+          </tr>
+          <tr height="23" class="tdmarroncontenido">
+            <td>&nbsp;Anterior</td>
+            <td><INPUT TYPE="password" name="anterior" class="input" onFocus="this.className='inputSelected';" onBlur="this.className='input';" ></td>
+          </tr>
+          <tr height="23" class="tdmarroncontenido">
+            <td>&nbsp;Nueva</td>
+            <td><INPUT TYPE="password" name="nueva" class="input" onFocus="this.className='inputSelected';" onBlur="this.className='input';" ></td>
+          </tr>
+          <tr height="23" class="tdmarroncontenido">
+            <td>&nbsp;Reingrese</td>
+            <td><INPUT TYPE="password" name="renueva" class="input" onFocus="this.className='inputSelected';" onBlur="this.className='input';" ></td>
+          </tr>
+		   </table>
+		  </td>
+	  </tr>
+	  </table>
+	  <br>
+	  <center>
+		  <input type="button" value="Aceptar" id="btnAceptar" class="botOk" style="width:70px;" onclick="doGrabar();">&nbsp;
+      <input type="button" value="Cancelar" id="btnCancelar" class="botOk" style="width:70px;" onclick="window.parent.closeChangePassword();">
+	  </center>
+  </form>  
+	<br>
+</body>
+</html>
+
+
+

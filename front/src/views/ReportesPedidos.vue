@@ -465,19 +465,19 @@ const allItems = computed(() => {
         const prodObj = productosFullMap.value[code] || it.Producto
         
         let pesoXPieza = 0
-        if (prodObj && prodObj.peso_x_pieza && parseFloat(prodObj.peso_x_pieza) > 0) {
-          pesoXPieza = parseFloat(prodObj.peso_x_pieza)
-        } else if (it.Producto && it.Producto.peso_x_pieza && parseFloat(it.Producto.peso_x_pieza) > 0) {
-          pesoXPieza = parseFloat(it.Producto.peso_x_pieza)
+        if (prodObj && prodObj.peso_pieza && parseFloat(prodObj.peso_pieza) > 0) {
+          pesoXPieza = parseFloat(prodObj.peso_pieza)
+        } else if (it.Producto && it.Producto.peso_pieza && parseFloat(it.Producto.peso_pieza) > 0) {
+          pesoXPieza = parseFloat(it.Producto.peso_pieza)
         } else {
           pesoXPieza = 1
         }
 
         let kgXBolsita = 0
-        if (prodObj && prodObj.kg_x_bolsita && parseFloat(prodObj.kg_x_bolsita) > 0) {
-          kgXBolsita = parseFloat(prodObj.kg_x_bolsita)
-        } else if (it.Producto && it.Producto.kg_x_bolsita && parseFloat(it.Producto.kg_x_bolsita) > 0) {
-          kgXBolsita = parseFloat(it.Producto.kg_x_bolsita)
+        if (prodObj && prodObj.peso_fraccion && parseFloat(prodObj.peso_fraccion) > 0) {
+          kgXBolsita = parseFloat(prodObj.peso_fraccion)
+        } else if (it.Producto && it.Producto.peso_fraccion && parseFloat(it.Producto.peso_fraccion) > 0) {
+          kgXBolsita = parseFloat(it.Producto.peso_fraccion)
         } else {
           kgXBolsita = pesoXPieza
         }
@@ -485,7 +485,7 @@ const allItems = computed(() => {
         const piezasPedidas = Number(it.pieza || 0)
         const fraccionesPedidas = Number(it.fraccion || 0)
 
-        // FÓRMULA DE CONVERSIÓN: (piezas * peso_x_pieza) + (fracciones * kg_x_bolsita)
+        // FÓRMULA DE CONVERSIÓN: (piezas * peso_pieza) + (fracciones * peso_fraccion)
         const kgPiezas = piezasPedidas * pesoXPieza
         const kgFracciones = fraccionesPedidas * kgXBolsita
         const kgSolicitados = kgPiezas + kgFracciones

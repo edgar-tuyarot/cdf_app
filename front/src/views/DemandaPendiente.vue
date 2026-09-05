@@ -81,7 +81,13 @@
         <span class="card-title"><i class="ph ph-clipboard-text" style="margin-right: 0.4rem;"></i>Consolidado de Demanda Pendiente</span>
         
         <!-- Controles Derecha -->
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <!-- Toggle Incluir Conversiones -->
+          <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; cursor: pointer; color: white; user-select: none; background: rgba(255,255,255,0.12); padding: 0.15rem 0.5rem; border-radius: 4px;">
+            <input type="checkbox" v-model="incluirConversiones" style="cursor: pointer;" />
+            <span>Sumar Conversiones Pendientes en Límite</span>
+          </label>
+
           <!-- Buscador -->
           <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
             <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
@@ -89,7 +95,7 @@
               type="text" 
               v-model="searchQuery" 
               placeholder="Buscar código o nombre..." 
-              style="border: none; outline: none; font-size: 0.8rem; background: transparent; width: 180px; color: var(--text-primary);"
+              style="border: none; outline: none; font-size: 0.8rem; background: transparent; width: 170px; color: var(--text-primary);"
             />
             <button v-if="searchQuery" @click="searchQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;" title="Limpiar búsqueda">
               <i class="ph ph-x-circle"></i>
@@ -106,65 +112,94 @@
         <table v-if="!loading && filteredAndSorted.length > 0">
           <thead>
             <tr>
-              <th @click="sortBy('codigo_producto')" class="sortable" style="width: 85px;">
+              <th @click="sortBy('codigo_producto')" class="sortable col-hide-mobile" style="width: 80px;">
                 Código <i v-if="sortKey === 'codigo_producto'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
               <th @click="sortBy('producto_nombre')" class="sortable">
                 Nombre del Producto <i v-if="sortKey === 'producto_nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('total_piezas_pedidas')" class="sortable text-right" style="width: 110px;">
+              <th @click="sortBy('total_piezas_pedidas')" class="sortable text-right col-hide-mobile" style="width: 95px;">
                 Pzas Req <i v-if="sortKey === 'total_piezas_pedidas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('total_fracciones_pedidas')" class="sortable text-right" style="width: 110px;">
+              <th @click="sortBy('total_fracciones_pedidas')" class="sortable text-right col-hide-mobile" style="width: 95px;">
                 Fracc Req <i v-if="sortKey === 'total_fracciones_pedidas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('total_requerido')" class="sortable text-right" style="width: 110px; color: var(--accent-primary);">
+              <th @click="sortBy('total_requerido')" class="sortable text-right col-hide-mobile" style="width: 100px; color: var(--accent-primary);">
                 Total Req <i v-if="sortKey === 'total_requerido'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('stock')" class="sortable text-right" style="width: 100px;">
-                Stock Disp <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              <th @click="sortBy('stock')" class="sortable text-right col-hide-mobile" style="width: 95px;">
+                Stock Físico <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('limite')" class="sortable text-right" style="width: 100px;">
+              <th class="text-right col-hide-mobile" style="width: 100px; color: #0284c7;">
+                A Convertir
+              </th>
+              <th @click="sortBy('stock_proyectado')" class="sortable text-right col-hide-mobile" style="width: 105px; color: #16a34a;">
+                Stk Proyectado <i v-if="sortKey === 'stock_proyectado'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              </th>
+              <th @click="sortBy('limite')" class="sortable text-right" style="width: 105px;">
                 Límite <i v-if="sortKey === 'limite'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in filteredAndSorted" :key="row.codigo_producto">
-              <td>
+              <td class="col-hide-mobile">
                 <strong class="font-mono" style="font-size: 0.8rem;">{{ row.codigo_producto }}</strong>
               </td>
-              <td class="fw-bold" style="font-size: 0.82rem;">{{ row.producto_nombre }}</td>
-              <td class="text-right font-mono fw-bold text-orange" style="font-size: 0.82rem;">
-                <template v-if="parseFloat(row.peso_x_pieza || 0) > 0">
+              <td class="fw-bold" style="font-size: 0.82rem;">
+                {{ row.producto_nombre }}
+                <div class="show-mobile-only text-muted font-mono" style="font-size: 0.72rem; font-weight: normal; margin-top: 2px;">
+                  Cod: {{ row.codigo_producto }}
+                  <span v-if="getNetoAConvertir(row.codigo_producto) !== 0" :style="{ color: getNetoAConvertir(row.codigo_producto) > 0 ? '#16a34a' : '#d97706' }" style="margin-left: 4px; font-weight: bold;">
+                    ({{ getNetoAConvertir(row.codigo_producto) > 0 ? '+' : '' }}{{ getNetoAConvertir(row.codigo_producto).toFixed(2) }} kg conv.)
+                  </span>
+                </div>
+              </td>
+              <td class="text-right font-mono fw-bold text-orange col-hide-mobile" style="font-size: 0.82rem;">
+                <template v-if="parseFloat(row.peso_pieza || 0) > 0">
                   {{ getKilosPiezas(row).toFixed(2) }} kg
                   <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; line-height: 1.1; margin-top: 1px;">
-                    {{ Math.round(row.total_piezas_pedidas) }} pzas × {{ parseFloat(row.peso_x_pieza).toFixed(3) }} kg
+                    {{ Math.round(row.total_piezas_pedidas) }} pzas × {{ parseFloat(row.peso_pieza).toFixed(3) }} kg
                   </div>
                 </template>
                 <template v-else>
                   {{ Math.round(row.total_piezas_pedidas) }}
                 </template>
               </td>
-              <td class="text-right font-mono fw-bold text-blue" style="font-size: 0.82rem;">
-                <template v-if="parseFloat(row.kg_x_bolsita || 0) > 0">
+              <td class="text-right font-mono fw-bold text-blue col-hide-mobile" style="font-size: 0.82rem;">
+                <template v-if="parseFloat(row.peso_fraccion || 0) > 0">
                   {{ getKilosFracciones(row).toFixed(2) }} kg
                   <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; line-height: 1.1; margin-top: 1px;">
-                    {{ Math.round(row.total_fracciones_pedidas) }} u. × {{ parseFloat(row.kg_x_bolsita).toFixed(3) }} kg
+                    {{ Math.round(row.total_fracciones_pedidas) }} u. × {{ parseFloat(row.peso_fraccion).toFixed(3) }} kg
                   </div>
                 </template>
                 <template v-else>
                   {{ Math.round(row.total_fracciones_pedidas) }}
                 </template>
               </td>
-              <td class="text-right font-mono fw-bold" style="font-size: 0.85rem; color: #0284c7;">
+              <td class="text-right font-mono fw-bold col-hide-mobile" style="font-size: 0.85rem; color: #0284c7;">
                 {{ getTotalRequerido(row).toFixed(2) }} kg
               </td>
-              <td class="text-right font-mono fw-bold" style="font-size: 0.82rem;" :style="{ color: parseFloat(row.stock || 0) <= 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }">
+              <td class="text-right font-mono fw-bold col-hide-mobile" style="font-size: 0.82rem;" :style="{ color: parseFloat(row.stock || 0) <= 0 ? 'var(--accent-danger)' : 'var(--text-primary)' }">
                 {{ parseFloat(row.stock || 0).toFixed(2) }}
               </td>
+              <!-- Columna A Convertir -->
+              <td class="text-right font-mono fw-bold col-hide-mobile" style="font-size: 0.82rem;">
+                <span v-if="getNetoAConvertir(row.codigo_producto) !== 0" :style="{ color: getNetoAConvertir(row.codigo_producto) > 0 ? '#16a34a' : '#d97706' }">
+                  {{ getNetoAConvertir(row.codigo_producto) > 0 ? '+' : '' }}{{ getNetoAConvertir(row.codigo_producto).toFixed(2) }} kg
+                </span>
+                <span v-else class="text-muted" style="font-weight: normal;">-</span>
+              </td>
+              <!-- Columna Stock Proyectado -->
+              <td class="text-right font-mono fw-bold col-hide-mobile" style="font-size: 0.85rem; color: #16a34a;">
+                {{ getStockProyectado(row).toFixed(2) }}
+              </td>
+              <!-- Columna Límite -->
               <td class="text-right font-mono fw-bold" style="font-size: 0.85rem;" :style="{ color: getLimite(row) >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }">
                 {{ getLimite(row).toFixed(2) }}
+                <div v-if="incluirConversiones && getNetoAConvertir(row.codigo_producto) !== 0" style="font-size: 0.65rem; color: var(--text-muted); font-weight: normal; line-height: 1.1; margin-top: 1px;">
+                  (S/Conv: {{ getLimiteFisico(row).toFixed(2) }})
+                </div>
               </td>
             </tr>
           </tbody>
@@ -190,6 +225,8 @@
 import { ref, computed, onMounted } from 'vue'
 
 const items = ref([])
+const fraccionados = ref([])
+const incluirConversiones = ref(true) // Toggle para considerar conversiones configuradas
 const loading = ref(true)
 const searchQuery = ref('')
 const sortKey = ref('codigo_producto')
@@ -213,11 +250,18 @@ const sortBy = (key) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await fetch('/api/pedidos/demanda-pendiente')
-    if (!res.ok) {
-      throw new Error('Error al obtener datos de la API')
+    const [resDemanda, resFrac] = await Promise.all([
+      fetch('/api/pedidos/demanda-pendiente'),
+      fetch('/api/fraccionados')
+    ])
+    if (resDemanda.ok) {
+      items.value = await resDemanda.json()
+    } else {
+      throw new Error('Error al obtener datos de demanda')
     }
-    items.value = await res.json()
+    if (resFrac.ok) {
+      fraccionados.value = await resFrac.json()
+    }
   } catch (error) {
     console.error('Error fetching data:', error)
     showAlert('Error de conexión al obtener datos de pedidos pendientes.', 'error')
@@ -242,13 +286,13 @@ const totalRequeridoGeneral = computed(() => {
 // Helpers para cálculos por producto
 const getKilosPiezas = (row) => {
   const pzas = parseFloat(row.total_piezas_pedidas || 0)
-  const peso = parseFloat(row.peso_x_pieza || 0)
+  const peso = parseFloat(row.peso_pieza || 0)
   return peso > 0 ? pzas * peso : pzas
 }
 
 const getKilosFracciones = (row) => {
   const frac = parseFloat(row.total_fracciones_pedidas || 0)
-  const peso = parseFloat(row.kg_x_bolsita || 0)
+  const peso = parseFloat(row.peso_fraccion || 0)
   return peso > 0 ? frac * peso : frac
 }
 
@@ -256,10 +300,47 @@ const getTotalRequerido = (row) => {
   return getKilosPiezas(row) + getKilosFracciones(row)
 }
 
-const getLimite = (row) => {
+// CÁLCULO DE CONVERSIONES CONFIGURADAS (PLANTILLA)
+const getKilosAConvertirDestino = (cod) => {
+  if (!cod || !fraccionados.value.length) return 0
+  return fraccionados.value
+    .filter(f => f.codigo_fraccionado === cod)
+    .reduce((sum, f) => sum + (parseFloat(f.peso_a_fraccionar) || 0), 0)
+}
+
+const getKilosAConvertirOrigen = (cod) => {
+  if (!cod || !fraccionados.value.length) return 0
+  return fraccionados.value
+    .filter(f => f.codigo_producto_original === cod)
+    .reduce((sum, f) => sum + (parseFloat(f.peso_a_descontar) || 0), 0)
+}
+
+const getNetoAConvertir = (cod) => {
+  const ing = getKilosAConvertirDestino(cod)
+  const desc = getKilosAConvertirOrigen(cod)
+  return ing - desc
+}
+
+const getStockProyectado = (row) => {
+  const stockFisico = parseFloat(row.stock || 0)
+  const netoConv = getNetoAConvertir(row.codigo_producto)
+  return stockFisico + netoConv
+}
+
+const getLimiteFisico = (row) => {
   const totalReq = getTotalRequerido(row)
   const stock = parseFloat(row.stock || 0)
   return stock - totalReq
+}
+
+const getLimiteProyectado = (row) => {
+  const totalReq = getTotalRequerido(row)
+  const stockProj = getStockProyectado(row)
+  return stockProj - totalReq
+}
+
+const getLimite = (row) => {
+  return incluirConversiones.value ? getLimiteProyectado(row) : getLimiteFisico(row)
 }
 
 // Filtrado y Ordenamiento
@@ -288,6 +369,9 @@ const filteredAndSorted = computed(() => {
       } else if (sortKey.value === 'total_requerido') {
         valA = getTotalRequerido(a)
         valB = getTotalRequerido(b)
+      } else if (sortKey.value === 'stock_proyectado') {
+        valA = getStockProyectado(a)
+        valB = getStockProyectado(b)
       } else if (sortKey.value === 'limite') {
         valA = getLimite(a)
         valB = getLimite(b)
@@ -310,15 +394,17 @@ const exportCSV = () => {
   if (filteredAndSorted.value.length === 0) return
 
   let csvContent = '\uFEFF' // BOM para Excel
-  csvContent += 'Código Producto;Producto;Piezas (Cant);Piezas Requeridas (Kg);Fracciones (Cant);Fracciones Requeridas (Kg);Total Requerido (Kg);Stock Disponible;Límite (Faltante)\n'
+  csvContent += 'Código Producto;Producto;Piezas (Cant);Piezas Requeridas (Kg);Fracciones (Cant);Fracciones Requeridas (Kg);Total Requerido (Kg);Stock Físico;Neto A Convertir (Kg);Stock Proyectado (Kg);Límite (Faltante/Excedente)\n'
 
   filteredAndSorted.value.forEach(row => {
     const kgPzas = getKilosPiezas(row).toFixed(2)
     const kgFrac = getKilosFracciones(row).toFixed(2)
     const totalReq = getTotalRequerido(row).toFixed(2)
-    const stock = parseFloat(row.stock || 0).toFixed(2)
+    const stockFisico = parseFloat(row.stock || 0).toFixed(2)
+    const netoConv = getNetoAConvertir(row.codigo_producto).toFixed(2)
+    const stockProj = getStockProyectado(row).toFixed(2)
     const limite = getLimite(row).toFixed(2)
-    csvContent += `"${row.codigo_producto}";"${row.producto_nombre}";${row.total_piezas_pedidas};${kgPzas};${row.total_fracciones_pedidas};${kgFrac};${totalReq};${stock};${limite}\n`
+    csvContent += `"${row.codigo_producto}";"${row.producto_nombre}";${row.total_piezas_pedidas};${kgPzas};${row.total_fracciones_pedidas};${kgFrac};${totalReq};${stockFisico};${netoConv};${stockProj};${limite}\n`
   })
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -367,5 +453,21 @@ th i {
   margin-left: 0.25rem;
   font-size: 0.8rem;
   vertical-align: middle;
+}
+
+/* Reglas responsivas para celulares (pantallas pequeñas <= 768px) */
+@media (max-width: 768px) {
+  .col-hide-mobile {
+    display: none !important;
+  }
+  .show-mobile-only {
+    display: block !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-mobile-only {
+    display: none !important;
+  }
 }
 </style>

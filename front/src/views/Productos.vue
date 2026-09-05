@@ -1,391 +1,412 @@
 <template>
   <div class="page-container animate-fade">
-    <div class="page-header">
-      <div class="header-content">
-        <h2 class="page-title">Gestión de Productos</h2>
-        <p class="page-description">Administra el catálogo de productos y sus detalles.</p>
+    <!-- VISTA 1: LISTADO DE PRODUCTOS Y TABLA (Cuando !showModal) -->
+    <div v-if="!showModal">
+      <div class="page-header">
+        <div class="header-content">
+          <h2 class="page-title">Gestión de Productos</h2>
+          <p class="page-description">Administra el catálogo de productos y sus detalles.</p>
+        </div>
+        <div class="header-actions mt-2">
+          <input v-if="isAdmin" type="file" ref="stockFileInput" accept=".xlsx, .xls" style="display: none" @change="handleStockFileUpload" />
+          <button v-if="isAdmin" class="btn btn-secondary" style="background: #1a7f37; color: #fff; border: 1px solid #15692e;" @click="triggerStockFileInput" :disabled="uploadingStock">
+            <i class="ph ph-spinner spinner" v-if="uploadingStock"></i>
+            <i class="ph ph-package" v-else></i> Cargar Stock (Excel)
+          </button>
+          <button v-if="isAdmin" class="btn btn-secondary" style="background: #0284c7; color: #fff; border: 1px solid #0369a1; display: flex; align-items: center; gap: 0.25rem;" @click="runStockSync" :disabled="syncingBlock">
+            <i class="ph ph-spinner spinner" v-if="syncingBlock"></i>
+            <i class="ph ph-arrows-clockwise" v-else></i> Sync Block
+          </button>
+          <button v-if="!isSucursal" class="btn btn-secondary" style="background: #275214; color: #fff; border: 1px solid #1c3d0e; display: flex; align-items: center; gap: 0.25rem;" @click="exportToExcel" :disabled="loading || productos.length === 0">
+            <i class="ph ph-file-xls"></i> Exportar Vencimientos
+          </button>
+          <button class="btn btn-secondary" style="background: #3d85c6; color: #fff; border: 1px solid #2b6194; display: flex; align-items: center; gap: 0.25rem;" @click="exportTableToExcel" :disabled="loading || filteredAndSortedProductos.length === 0">
+            <i class="ph ph-table"></i> Exportar Tabla
+          </button>
+          <button v-if="isAdmin" class="btn btn-primary" @click="openModal()">
+            <i class="ph ph-plus"></i> Nuevo Producto
+          </button>
+        </div>
       </div>
-      <div class="header-actions mt-2" style="display: flex; gap: 0.5rem;">
-        <input v-if="isAdmin" type="file" ref="stockFileInput" accept=".xlsx, .xls" style="display: none" @change="handleStockFileUpload" />
-        <button v-if="isAdmin" class="btn btn-secondary" style="background: #1a7f37; color: #fff; border: 1px solid #15692e;" @click="triggerStockFileInput" :disabled="uploadingStock">
-          <i class="ph ph-spinner spinner" v-if="uploadingStock"></i>
-          <i class="ph ph-package" v-else></i> Cargar Stock (Excel)
-        </button>
-        <button v-if="isAdmin" class="btn btn-secondary" style="background: #0284c7; color: #fff; border: 1px solid #0369a1; display: flex; align-items: center; gap: 0.25rem;" @click="runStockSync" :disabled="syncingBlock">
-          <i class="ph ph-spinner spinner" v-if="syncingBlock"></i>
-          <i class="ph ph-arrows-clockwise" v-else></i> Sync Block
-        </button>
-        <button v-if="!isSucursal" class="btn btn-secondary" style="background: #275214; color: #fff; border: 1px solid #1c3d0e; display: flex; align-items: center; gap: 0.25rem;" @click="exportToExcel" :disabled="loading || productos.length === 0">
-          <i class="ph ph-file-xls"></i> Exportar Vencimientos
-        </button>
-        <button class="btn btn-secondary" style="background: #3d85c6; color: #fff; border: 1px solid #2b6194; display: flex; align-items: center; gap: 0.25rem;" @click="exportTableToExcel" :disabled="loading || filteredAndSortedProductos.length === 0">
-          <i class="ph ph-table"></i> Exportar Tabla
-        </button>
-        <button v-if="isAdmin" class="btn btn-primary" @click="openModal()">
-          <i class="ph ph-plus"></i> Nuevo Producto
-        </button>
+
+      <!-- Mensajes de estado -->
+      <div v-if="alert.show" :class="['alert-box mb-4', alert.type]">
+        {{ alert.message }}
       </div>
-    </div>
 
-    <!-- Mensajes de estado -->
-    <div v-if="alert.show" :class="['alert-box mb-4', alert.type]">
-      {{ alert.message }}
-    </div>
+      <!-- Tabla de Productos -->
+      <div class="card">
+        <div class="card-header responsive-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <span class="card-title">Listado de Productos ({{ filteredAndSortedProductos.length }})</span>
+          <div class="header-filter-bar" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <!-- Filtro de Proveedor -->
+            <div style="display: flex; align-items: center; gap: 0.25rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
+              <i class="ph ph-truck" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
+              <select v-model="filterProveedor" style="border: none; outline: none; font-size: 0.8rem; background: transparent; color: var(--text-primary); cursor: pointer; padding-right: 5px;">
+                <option value="" style="background-color: var(--bg-window); color: var(--text-primary);">Todos los Proveedores</option>
+                <option v-for="prov in proveedores" :key="prov.id" :value="prov.id" style="background-color: var(--bg-window); color: var(--text-primary);">
+                  {{ prov.nombre }}
+                </option>
+              </select>
+            </div>
 
-    <!-- Tabla de Productos -->
-    <div class="card">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-        <span class="card-title">Listado de Productos ({{ filteredAndSortedProductos.length }})</span>
-        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-          <!-- Filtro de Proveedor -->
-          <div style="display: flex; align-items: center; gap: 0.25rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-            <i class="ph ph-truck" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
-            <select v-model="filterProveedor" style="border: none; outline: none; font-size: 0.8rem; background: transparent; color: var(--text-primary); cursor: pointer; padding-right: 5px;">
-              <option value="" style="background-color: var(--bg-window); color: var(--text-primary);">Todos los Proveedores</option>
-              <option v-for="prov in proveedores" :key="prov.id" :value="prov.id" style="background-color: var(--bg-window); color: var(--text-primary);">
-                {{ prov.nombre }}
-              </option>
-            </select>
+            <!-- Filtro por Sucursal Habilitada -->
+            <div style="display: flex; align-items: center; gap: 0.25rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
+              <i class="ph ph-storefront" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
+              <select v-model="filterSucursal" style="border: none; outline: none; font-size: 0.8rem; background: transparent; color: var(--text-primary); cursor: pointer; padding-right: 5px;">
+                <option value="" style="background-color: var(--bg-window); color: var(--text-primary);">Todas las Sucursales</option>
+                <option v-for="suc in sucursales" :key="suc.id" :value="suc.id" style="background-color: var(--bg-window); color: var(--text-primary);">
+                  {{ suc.sucursal }}
+                </option>
+              </select>
+            </div>
+
+            <!-- Buscador -->
+            <div class="search-box" style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
+              <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
+              <input 
+                type="text" 
+                v-model="searchQuery" 
+                placeholder="Buscar por código, nombre..." 
+                style="border: none; outline: none; font-size: 0.8rem; background: transparent; width: 150px; color: var(--text-primary);"
+              />
+            </div>
+
+            <!-- Casilla de Ver Productos Desactivados -->
+            <label style="display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; cursor: pointer; user-select: none; margin-left: 0.25rem; font-weight: 600;">
+              <input type="checkbox" v-model="showTodosProductos" style="width: 14px; height: 14px; cursor: pointer;" />
+              <span>Mostrar desactivados</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="table-container" style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th @click="sortBy('codigo')" class="sortable">
+                  Código 
+                  <i v-if="sortKey === 'codigo'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
+                <th @click="sortBy('nombre')" class="sortable">
+                  Nombre 
+                  <i v-if="sortKey === 'nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
+                <th>Proveedor</th>
+                <th @click="sortBy('stock')" class="sortable text-right">
+                  {{ isSucursal ? 'KG Stock' : 'Stock' }} 
+                  <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
+                <th @click="sortBy('piezas_est')" class="sortable text-right" title="Piezas estimadas calculadas dividiendo Stock / Peso por Pieza">
+                  Piezas Est.
+                  <i v-if="sortKey === 'piezas_est'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
+                <th @click="sortBy('activo')" class="sortable text-center">
+                  Estado 
+                  <i v-if="sortKey === 'activo'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
+                <th v-if="!isSucursal" @click="sortBy('updated_at')" class="sortable text-center">
+                  Última Modificación 
+                  <i v-if="sortKey === 'updated_at'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
+                <th @click="sortBy('cantidad_piezas')" class="sortable text-center">
+                  Piezas 
+                  <i v-if="sortKey === 'cantidad_piezas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="p in filteredAndSortedProductos" 
+                :key="p.codigo" 
+                class="clickable-row" 
+                @click="openModal(p)" 
+                style="cursor: pointer;"
+              >
+                <td><strong>{{ p.codigo }}</strong></td>
+                <td>{{ p.nombre }}</td>
+                <td>
+                  <span v-if="p.Proveedor" style="font-weight: 500; color: var(--text-primary);">{{ p.Proveedor.nombre }}</span>
+                  <span v-else style="color: var(--text-muted); font-size: 0.8rem;">-</span>
+                </td>
+                <td class="text-right">{{ p.stock }} {{ p.tipo_calculo_piezas !== 'unidad' ? 'kg' : 'ud' }}</td>
+                <td class="text-right fw-bold" style="color: #2563eb;">{{ getPiezasEstimadas(p) }}</td>
+                <td class="text-center">
+                  <span :style="p.activo !== false ? { color: '#16a34a', fontWeight: 'bold' } : { color: '#dc2626', fontWeight: 'bold' }">
+                    {{ p.activo !== false ? 'Activo' : 'Desactivado' }}
+                  </span>
+                </td>
+                <td v-if="!isSucursal" class="text-center">{{ formatDateTime(p.updated_at) }}</td>
+                <td class="text-center fw-bold">{{ calcularPiezasProducto(p.stock, p) }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Estado de Carga -->
+          <div v-if="loading" class="loading-state">
+            <i class="ph ph-spinner spinner icon-xl"></i>
+            Cargando productos...
           </div>
 
-          <!-- Buscador -->
-          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-            <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
-            <input 
-              type="text" 
-              v-model="searchQuery" 
-              placeholder="Buscar producto..." 
-              style="border: none; outline: none; font-size: 0.8rem; background: transparent; width: 150px; color: var(--text-primary);"
-            />
-            <button v-if="searchQuery" @click="searchQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
-              <i class="ph ph-x-circle"></i>
+          <!-- Estado Vacío -->
+          <div v-if="!loading && filteredAndSortedProductos.length === 0" class="empty-state">
+            <i class="ph ph-package icon-xl"></i>
+            No hay productos que coincidan con la búsqueda.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA 2: VISTA DE DETALLE DEL PRODUCTO (Cuando showModal está activo) -->
+    <div v-else class="animate-fade">
+      <!-- Botón Superior "Volver a la Tabla de Productos" -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+        <button class="btn btn-secondary" @click="closeModal" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; background: var(--bg-secondary); border: 2px solid var(--bevel-dark); color: var(--text-primary);">
+          <i class="ph ph-arrow-left" style="font-size: 1.1rem; color: #2563eb;"></i> Volver a la Tabla de Productos
+        </button>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <template v-if="isAdmin && !isViewingOnly && isEditing">
+            <button v-if="form.activo !== false" type="button" class="btn btn-danger" @click="handleFormDeactivate">
+              <i class="ph ph-trash me-1"></i> Desactivar Producto
             </button>
-          </div>
+            <button v-else type="button" class="btn btn-success" @click="handleFormReactivate">
+              <i class="ph ph-check me-1"></i> Activar Producto
+            </button>
+          </template>
 
-          <!-- Casilla para mostrar productos desactivados -->
-          <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none; background: var(--bg-window); padding: 0.1rem 0.5rem; box-shadow: var(--inset-shadow); height: 26px;">
-            <input 
-              type="checkbox" 
-              v-model="showTodosProductos" 
-              style="cursor: pointer; accent-color: var(--accent-primary);" 
-            />
-            <span>Ver todos</span>
-          </label>
+          <template v-if="isAdmin && isViewingOnly">
+            <button type="button" class="btn btn-secondary" @click="isViewingOnly = false" style="font-weight: 700;">
+              <i class="ph ph-pencil-simple text-blue me-1"></i> Habilitar Edición
+            </button>
+          </template>
         </div>
       </div>
-      <div class="table-container">
-        <table v-if="!loading && filteredAndSortedProductos.length > 0">
-          <thead>
-            <tr>
-              <th @click="sortBy('codigo')" class="sortable">
-                Código 
-                <i v-if="sortKey === 'codigo'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('nombre')" class="sortable">
-                Nombre 
-                <i v-if="sortKey === 'nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th>Proveedor</th>
-              <th @click="sortBy('stock')" class="sortable text-right">
-                {{ isSucursal ? 'KG Stock' : 'Stock' }} 
-                <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('piezas_est')" class="sortable text-right" title="Piezas estimadas calculadas dividiendo Stock / Peso por Pieza">
-                Piezas Est.
-                <i v-if="sortKey === 'piezas_est'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('activo')" class="sortable text-center">
-                Estado 
-                <i v-if="sortKey === 'activo'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th v-if="!isSucursal" @click="sortBy('updated_at')" class="sortable text-center">
-                Última Modificación 
-                <i v-if="sortKey === 'updated_at'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('cantidad_piezas')" class="sortable text-center">
-                Piezas 
-                <i v-if="sortKey === 'cantidad_piezas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr 
-              v-for="p in filteredAndSortedProductos" 
-              :key="p.codigo" 
-              class="clickable-row" 
-              @click="openModal(p)" 
-              style="cursor: pointer;"
-            >
-              <td><strong>{{ p.codigo }}</strong></td>
-              <td>{{ p.nombre }}</td>
-              <td>
-                <span v-if="p.Proveedor" style="font-weight: 500; color: var(--text-primary);">{{ p.Proveedor.nombre }}</span>
-                <span v-else style="color: var(--text-muted); font-size: 0.8rem;">-</span>
-              </td>
-              <td class="text-right">{{ p.stock }} {{ p.pesable !== false ? 'kg' : 'ud' }}</td>
-              <td class="text-right fw-bold" style="color: #2563eb;">{{ getPiezasEstimadas(p) }}</td>
-              <td class="text-center">
-                <span :style="p.activo !== false ? { color: '#16a34a', fontWeight: 'bold' } : { color: '#dc2626', fontWeight: 'bold' }">
-                  {{ p.activo !== false ? 'Activo' : 'Desactivado' }}
-                </span>
-              </td>
-              <td v-if="!isSucursal" class="text-center">{{ formatDateTime(p.updated_at) }}</td>
-              <td class="text-center">{{ p.cantidad_piezas }}</td>
-            </tr>
-          </tbody>
-        </table>
 
-        <!-- Estado de Carga -->
-        <div v-if="loading" class="loading-state">
-          <i class="ph ph-spinner spinner icon-xl"></i>
-          Cargando productos...
-        </div>
-
-        <!-- Estado Vacío -->
-        <div v-if="!loading && filteredAndSortedProductos.length === 0" class="empty-state">
-          <i class="ph ph-package icon-xl"></i>
-          No hay productos que coincidan con la búsqueda.
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Formulario -->
-    <Teleport to="body">
-      <div v-if="showModal" class="modal-overlay" @mousedown.self="closeModal">
-        <div class="modal-card" style="max-width: 1200px; width: 96vw; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
-          <div class="modal-header">
-            <h3 class="modal-title">
-              <span v-if="!isAdmin">Detalles del Producto</span>
-              <span v-else>{{ isEditing ? 'Editar Producto' : 'Nuevo Producto' }}</span>
+      <!-- Card Banner de Título de la Vista de Detalle -->
+      <div class="card mb-3" style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); padding: 0.85rem 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; gap: 0.5rem;">
+          <div>
+            <h3 style="margin: 0; font-weight: 800; font-size: 1.25rem; color: var(--text-primary);">
+              <span v-if="isViewingOnly"><i class="ph ph-eye text-blue me-1"></i> {{ form.nombre }} - {{ form.codigo }}</span>
+              <span v-else-if="isEditing"><i class="ph ph-pencil-simple text-blue me-1"></i> Editar Producto</span>
+              <span v-else><i class="ph ph-plus-circle text-green me-1"></i> Nuevo Producto</span>
             </h3>
-            <button class="icon-btn" @click="closeModal"><i class="ph ph-x"></i></button>
           </div>
-          <form @submit.prevent="saveProducto">
-            <div class="modal-body" style="overflow-y: auto; flex-grow: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1rem; padding: 1rem; align-items: stretch;">
-              
-              <!-- Columna Izquierda: Información del Producto y Pesos -->
-              <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: 0; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow);">
-                <h4 style="margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.25rem;"><i class="ph ph-package"></i> Datos y Pesos de Stock</h4>
-                
-                <div class="form-group">
-                  <label class="form-label">Nombre del Producto *</label>
-                  <input type="text" v-model="form.nombre" class="form-control" required :disabled="!isAdmin" />
-                </div>
 
-                <div class="form-group">
-                  <label class="form-label">Proveedor</label>
-                  <select v-model="form.proveedor_id" class="form-control" :disabled="!isAdmin">
-                    <option :value="null">-- Ninguno --</option>
-                    <option v-for="prov in proveedores" :key="prov.id" :value="prov.id">
-                      {{ prov.nombre }}
-                    </option>
-                  </select>
-                </div>
-                
-                <div class="form-group">
-                  <label class="form-label">Producto Fraccionado Relacionado</label>
-                  <div style="position: relative; display: flex; align-items: center;">
-                    <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
-                    <input 
-                      type="text" 
-                      v-model="fraccionadoSearchQuery" 
-                      list="catalog-products-list-fraccionado" 
-                      @input="handleFraccionadoProductInput" 
-                      class="form-control" 
-                      placeholder="Escribe código o nombre para buscar..." 
-                      :disabled="!isAdmin"
-                      style="padding-left: 2rem; height: 32px;"
-                    />
-                  </div>
-                  <datalist id="catalog-products-list-fraccionado">
-                    <option 
-                      v-for="p in productos" 
-                      :key="p.codigo" 
-                      :value="p.codigo"
-                      v-show="p.codigo !== form.codigo && p.activo !== false"
-                    >
-                      {{ p.nombre }}
-                    </option>
-                  </datalist>
-                  
-                  <!-- Vista previa del producto seleccionado -->
-                  <div 
-                    v-if="selectedFraccionadoProduct" 
-                    class="selected-product-badge mt-2 animate-fade"
-                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary); border-radius: 0;"
-                  >
-                    <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
-                    <span>
-                      Relacionado con: <strong>{{ selectedFraccionadoProduct.nombre }}</strong>
-                    </span>
-                  </div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                  <div class="form-group">
-                    <label class="form-label">Código *</label>
-                    <input type="text" v-model="form.codigo" class="form-control" :disabled="isEditing || !isAdmin" required />
-                  </div>
-                  
-                  <div class="form-group">
-                    <label class="form-label">Código de barras</label>
-                    <input type="text" v-model="form.codigo_barra" class="form-control" placeholder="EAN / Código Barra" :disabled="!isAdmin" />
-                  </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                  <div class="form-group">
-                    <label class="form-label">Stock</label>
-                    <input type="number" :step="form.pesable ? '0.001' : '1'" v-model="form.stock" class="form-control" :disabled="isEditing || !isAdmin" />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Cant. Piezas (Auto)</label>
-                    <input type="number" :value="formTotalPieces" class="form-control" disabled />
-                  </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                  <div class="form-group">
-                    <label class="form-label">Peso x Pieza</label>
-                    <input type="number" step="0.001" v-model="form.peso_x_pieza" class="form-control" :disabled="!isAdmin" />
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Peso x Bolsita</label>
-                    <input type="number" step="0.001" v-model="form.kg_x_bolsita" class="form-control" :disabled="!isAdmin" />
-                  </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                  <div class="form-group">
-                    <label class="form-label">Stock p/ Decomisar</label>
-                    <input type="number" :step="form.pesable ? '0.001' : '1'" v-model="form.kg_decomiso" class="form-control" :disabled="!isAdmin" />
-                  </div>
-                  
-                  <div class="form-group">
-                    <label class="form-label">Stock p/ Picada</label>
-                    <input type="number" :step="form.pesable ? '0.001' : '1'" v-model="form.kg_recorte" class="form-control" :disabled="!isAdmin" />
-                  </div>
-                </div>
-
-                <div style="border-top: 1px solid var(--bevel-dark); padding-top: 0.5rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; user-select: none; color: var(--text-primary);">
-                    <input type="checkbox" v-model="form.permite_piezas" style="width: 15px; height: 15px; cursor: pointer;" :disabled="!isAdmin" />
-                    <span>Permite Piezas</span>
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; user-select: none; color: var(--text-primary);">
-                    <input type="checkbox" v-model="form.permite_fracciones" style="width: 15px; height: 15px; cursor: pointer;" :disabled="!isAdmin" />
-                    <span>Permite Fraccionados</span>
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; user-select: none; color: var(--text-primary);">
-                    <input type="checkbox" v-model="form.destacado" style="width: 15px; height: 15px; cursor: pointer;" :disabled="!isAdmin" />
-                    <span style="font-weight: bold; color: var(--accent-warning);"><i class="ph ph-star-fill"></i> Destacado</span>
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; user-select: none; color: var(--text-primary);">
-                    <input type="checkbox" v-model="form.pesable" style="width: 15px; height: 15px; cursor: pointer;" :disabled="!isAdmin" />
-                    <span style="font-weight: bold; color: var(--accent-info);"><i class="ph ph-scales"></i> Pesable (kilos)</span>
-                  </label>
-                  <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; user-select: none; color: var(--text-primary); grid-column: span 2;">
-                    <input type="checkbox" v-model="form.activo" style="width: 15px; height: 15px; cursor: pointer;" :disabled="!isAdmin" />
-                    <span style="font-weight: bold; color: var(--accent-success);"><i class="ph ph-check-square"></i> Activo (Habilitado)</span>
-                  </label>
-                </div>
-
-
-              </div>
-
-              <!-- Columna Derecha: Lotes de Vencimiento -->
-              <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: 0; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow); height: 100%;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.25rem;">
-                  <h4 style="margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;"><i class="ph ph-calendar"></i> Lotes de Vencimiento</h4>
-                  <button v-if="isAdmin" type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 0.75rem;" @click="agregarVencimientoRow">
-                    <i class="ph ph-plus"></i> Agregar
-                  </button>
-                </div>
-                
-                <div class="table-container" style="max-height: 280px; overflow-y: auto; border: 1px solid var(--bevel-dark); background: var(--bg-window); flex-grow: 1;">
-                  <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
-                    <thead>
-                      <tr style="background: var(--bg-secondary); position: sticky; top: 0; z-index: 10;">
-                        <th style="padding: 4px; text-align: left; border-bottom: 1px solid var(--bevel-dark);">Fecha de Vencimiento</th>
-                        <th style="padding: 4px; text-align: right; width: 100px; border-bottom: 1px solid var(--bevel-dark);">Piezas</th>
-                        <th v-if="isAdmin" style="padding: 4px; text-align: center; width: 60px; border-bottom: 1px solid var(--bevel-dark);">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(v, index) in form.vencimientosList" :key="index">
-                        <td style="padding: 2px;">
-                          <input type="date" v-model="v.vencimiento" class="form-control" style="padding: 2px 4px; font-size: 0.8rem; height: 26px;" :disabled="!isAdmin" required />
-                        </td>
-                        <td style="padding: 2px;">
-                          <input type="number" min="1" v-model.number="v.piezas" class="form-control text-right" style="padding: 2px 4px; font-size: 0.8rem; height: 26px;" :disabled="!isAdmin" required />
-                        </td>
-                        <td v-if="isAdmin" style="padding: 2px; text-align: center;">
-                          <button type="button" class="icon-btn" style="padding: 2px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;" @click="eliminarVencimientoRow(index)">
-                            <i class="ph ph-trash text-red" style="font-size: 0.9rem;"></i>
-                          </button>
-                        </td>
-                      </tr>
-                      <tr v-if="!form.vencimientosList || form.vencimientosList.length === 0">
-                        <td colspan="3" style="text-align: center; padding: 16px; color: var(--text-muted); font-style: italic;">
-                          Sin vencimientos registrados.<br>Haga clic en Agregar para registrar un lote.
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Sucursales Habilitadas -->
-                <div style="margin-top: 0.5rem; border-top: 2px solid var(--bevel-dark); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                  <h4 style="margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
-                    <i class="ph ph-storefront"></i> Habilitar en Sucursales
-                  </h4>
-                  <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">Selecciona las sucursales donde este producto estará disponible para pedido.</p>
-                  
-                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.25rem;">
-                    <label 
-                      v-for="suc in sucursales" 
-                      :key="suc.id" 
-                      style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; cursor: pointer; user-select: none; color: var(--text-primary);"
-                    >
-                      <input 
-                        type="checkbox" 
-                        :value="suc.id" 
-                        v-model="form.sucursalesHabilitadas" 
-                        :disabled="!isAdmin"
-                        style="width: 14px; height: 14px; cursor: pointer;" 
-                      />
-                      <span>{{ suc.sucursal }}</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-            <div class="modal-footer" style="display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end; width: 100%;">
-              <!-- Botón Desactivar/Activar flotante a la izquierda (solo en edición y admin) -->
-              <template v-if="isAdmin && isEditing">
-                <button v-if="form.activo !== false" type="button" class="btn btn-danger" style="background-color: var(--accent-error); border-color: var(--accent-error); color: white; margin-right: auto;" @click="handleFormDeactivate">
-                  <i class="ph ph-trash"></i> Desactivar Producto
-                </button>
-                <button v-else type="button" class="btn btn-success" style="background-color: var(--accent-success); border-color: var(--accent-success); color: white; margin-right: auto;" @click="handleFormReactivate">
-                  <i class="ph ph-check"></i> Activar Producto
-                </button>
-              </template>
-
-              <button type="button" class="btn btn-secondary" @click="closeModal" style="color: var(--text-primary);">
-                <i class="ph ph-x"></i> {{ isAdmin ? 'Cancelar' : 'Cerrar' }}
-              </button>
-              <button v-if="isAdmin" type="submit" class="btn btn-primary" :disabled="saving">
-                <i class="ph ph-spinner spinner" v-if="saving"></i>
-                <i class="ph ph-floppy-disk" v-else></i> 
-                Guardar
-              </button>
-            </div>
-          </form>
+          <div v-if="isEditing">
+            <span :style="form.activo !== false ? { color: '#16a34a', fontWeight: 'bold' } : { color: '#dc2626', fontWeight: 'bold' }" style="font-size: 0.9rem;">
+              ● {{ form.activo !== false ? 'Producto Activo' : 'Producto Desactivado' }}
+            </span>
+          </div>
         </div>
       </div>
-    </Teleport>
+
+      <!-- Formulario de Campos de Detalle del Producto -->
+      <form @submit.prevent="saveProducto">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1rem; align-items: stretch;">
+          
+          <!-- Columna Izquierda: Información del Producto y Pesos -->
+          <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: 0; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow);">
+            <h4 style="margin: 0; font-weight: bold; font-size: 0.9rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.25rem;"><i class="ph ph-package"></i> Datos y Pesos de Stock</h4>
+            
+            <div class="form-group">
+              <label class="form-label">Nombre del Producto *</label>
+              <input type="text" v-model="form.nombre" class="form-control" required :disabled="isViewingOnly || !isAdmin" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Proveedor</label>
+              <select v-model="form.proveedor_id" class="form-control" :disabled="isViewingOnly || !isAdmin">
+                <option :value="null">-- Ninguno --</option>
+                <option v-for="prov in proveedores" :key="prov.id" :value="prov.id">
+                  {{ prov.nombre }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Producto Fraccionado Relacionado</label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
+                <input 
+                  type="text" 
+                  v-model="fraccionadoSearchQuery" 
+                  list="catalog-products-list-fraccionado" 
+                  @input="handleFraccionadoProductInput" 
+                  class="form-control" 
+                  placeholder="Escribe código o nombre para buscar..." 
+                  :disabled="isViewingOnly || !isAdmin"
+                  style="padding-left: 2rem; height: 32px;"
+                />
+              </div>
+              <datalist id="catalog-products-list-fraccionado">
+                <option 
+                  v-for="p in productos" 
+                  :key="p.codigo" 
+                  :value="p.codigo"
+                  v-show="p.codigo !== form.codigo && p.activo !== false"
+                >
+                  {{ p.nombre }}
+                </option>
+              </datalist>
+              
+              <!-- Vista previa del producto seleccionado -->
+              <div 
+                v-if="selectedFraccionadoProduct" 
+                class="selected-product-badge mt-2 animate-fade"
+                style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary); border-radius: 0;"
+              >
+                <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
+                <span>
+                  Relacionado con: <strong>{{ selectedFraccionadoProduct.nombre }}</strong>
+                </span>
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div class="form-group">
+                <label class="form-label">Código *</label>
+                <input type="text" v-model="form.codigo" class="form-control" :disabled="isEditing || !isAdmin" required />
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Código de barras</label>
+                <input type="text" v-model="form.codigo_barra" class="form-control" placeholder="EAN / Código Barra" :disabled="isViewingOnly || !isAdmin" />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div class="form-group">
+                <label class="form-label">Stock</label>
+                <input type="number" :step="form.tipo_calculo_piezas !== 'unidad' ? '0.001' : '1'" v-model="form.stock" class="form-control" :disabled="isEditing || !isAdmin" />
+              </div>
+            </div>
+
+            <div class="form-group mb-2">
+              <label class="form-label" style="font-weight: bold;">Tipo de Producto / Presentación</label>
+              <select v-model="form.tipo_calculo_piezas" class="form-control" style="font-weight: bold;" :disabled="isViewingOnly || !isAdmin">
+                <option value="normal">Pieza (Horma entera)</option>
+                <option value="fraccionado">Fracción (Feteado / Bolsita)</option>
+                <option value="unidad">Unidad (Bulto / Unidad)</option>
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div v-if="form.tipo_calculo_piezas === 'normal' || !form.tipo_calculo_piezas" class="form-group">
+                <label class="form-label">Peso x Pieza (kg) *</label>
+                <input type="number" step="0.001" v-model="form.peso_pieza" class="form-control" :disabled="isViewingOnly || !isAdmin" required />
+              </div>
+
+              <div v-if="form.tipo_calculo_piezas === 'fraccionado'" class="form-group">
+                <label class="form-label">Peso x Bolsita (kg) *</label>
+                <input type="number" step="0.001" v-model="form.peso_fraccion" class="form-control" :disabled="isViewingOnly || !isAdmin" required />
+              </div>
+
+              <div v-if="form.tipo_calculo_piezas === 'unidad'" class="form-group">
+                <label class="form-label">Peso x Unidad (kg) *</label>
+                <input type="number" step="0.001" v-model="form.peso_unidad" class="form-control" :disabled="isViewingOnly || !isAdmin" required />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Piezas Calculadas (Auto)</label>
+                <input type="number" :value="calcularPiezasProducto(form.stock, form)" class="form-control" disabled style="font-weight: bold; color: #16a34a;" />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div class="form-group">
+                <label class="form-label">Stock p/ Decomisar</label>
+                <input type="number" :step="form.tipo_calculo_piezas !== 'unidad' ? '0.001' : '1'" v-model="form.kg_decomiso" class="form-control" :disabled="isViewingOnly || !isAdmin" />
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Stock p/ Picada</label>
+                <input type="number" :step="form.tipo_calculo_piezas !== 'unidad' ? '0.001' : '1'" v-model="form.kg_recorte" class="form-control" :disabled="isViewingOnly || !isAdmin" />
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--bevel-dark); padding-top: 0.5rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+              <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; user-select: none; color: var(--text-primary);">
+                <input type="checkbox" v-model="form.destacado" style="width: 15px; height: 15px; cursor: pointer;" :disabled="isViewingOnly || !isAdmin" />
+                <span style="font-weight: bold; color: var(--accent-warning);"><i class="ph ph-star-fill"></i> Destacado</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; user-select: none; color: var(--text-primary);">
+                <input type="checkbox" v-model="form.activo" style="width: 15px; height: 15px; cursor: pointer;" :disabled="isViewingOnly || !isAdmin" />
+                <span style="font-weight: bold; color: var(--accent-success);"><i class="ph ph-check-square"></i> Activo (Habilitado)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Sucursales Habilitadas para Pedido -->
+          <div style="background: var(--bg-secondary); border: 2px solid var(--bevel-dark); border-radius: 0; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; box-shadow: var(--inset-shadow); height: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.5rem;">
+              <div>
+                <h4 style="margin: 0; font-weight: bold; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                  <i class="ph ph-storefront" style="color: #2563eb; font-size: 1.2rem;"></i> Sucursales Habilitadas para Pedido
+                </h4>
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 2px 0 0 0;">
+                  Selecciona las sucursales autorizadas a realizar pedidos de este producto.
+                </p>
+              </div>
+              <div v-if="isAdmin && !isViewingOnly" style="display: flex; gap: 0.4rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" @click="form.sucursalesHabilitadas = sucursales.map(s => s.id)">
+                  Marcar Todas
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;" @click="form.sucursalesHabilitadas = []">
+                  Desmarcar
+                </button>
+              </div>
+            </div>
+
+            <div class="table-container" style="flex-grow: 1; max-height: 460px; overflow-y: auto; border: 1px solid var(--bevel-dark); background: var(--bg-window); padding: 0.5rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label 
+                  v-for="suc in sucursales" 
+                  :key="suc.id" 
+                  style="display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem; border: 1px solid var(--bevel-light); border-radius: 0; background: var(--bg-primary); cursor: pointer; user-select: none; transition: background 0.15s;"
+                  :style="form.sucursalesHabilitadas.includes(suc.id) ? { borderColor: '#2563eb', background: '#eff6ff' } : {}"
+                >
+                  <input 
+                    type="checkbox" 
+                    :value="suc.id" 
+                    v-model="form.sucursalesHabilitadas" 
+                    :disabled="isViewingOnly || !isAdmin"
+                    style="width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb;" 
+                  />
+                  <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">
+                    {{ suc.sucursal }}
+                  </span>
+                  <span v-if="form.sucursalesHabilitadas.includes(suc.id)" class="badge badge-success ms-auto" style="font-size: 0.7rem; background: #dcfce7; color: #166534; padding: 0.15rem 0.4rem; border-radius: 4px;">
+                    Habilitada
+                  </span>
+                  <span v-else class="badge badge-secondary ms-auto" style="font-size: 0.7rem; color: var(--text-muted);">
+                    No disponible
+                  </span>
+                </label>
+
+                <div v-if="!sucursales || sucursales.length === 0" style="text-align: center; padding: 1.5rem; color: var(--text-muted); font-style: italic;">
+                  No hay sucursales registradas en la base de datos.
+                </div>
+              </div>
+            </div>
+          </div>        
+        </div>
+
+        <!-- Barra Inferior de Navegación y Guardado -->
+        <div class="card mt-3" style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); border: 2px solid var(--bevel-dark); padding: 0.85rem 1.25rem;">
+          <button type="button" class="btn btn-secondary" @click="closeModal" style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--text-primary);">
+            <i class="ph ph-arrow-left" style="color: #2563eb;"></i> Volver a la Tabla de Productos
+          </button>
+
+          <button v-if="isAdmin && !isViewingOnly" type="submit" class="btn btn-primary btn-lg" style="font-weight: 800; padding: 0.6rem 1.4rem;" :disabled="saving">
+            <i class="ph ph-spinner spinner" v-if="saving"></i>
+            <i class="ph ph-floppy-disk me-1" v-else></i> Guardar Cambios
+          </button>
+        </div>
+      </form>
+    </div>
 
     <!-- Modal Confirmación Eliminar -->
     <Teleport to="body">
@@ -410,7 +431,7 @@
     </Teleport>
 
     <!-- Planilla de Stock para Impresión (Sólo visible al imprimir) -->
-    <div id="print-stock-sheet" class="only-print-layout">
+    <div id="print-stock-sheet" class="only-print-layout" v-if="!showModal">
       <div class="print-sheet-header">
         <h2>PLANILLA DE CONTROL DE STOCK</h2>
         <p>Fecha de Impresión: {{ new Date().toLocaleString('es-ES') }}</p>
@@ -438,8 +459,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { calcularPiezasProducto } from '../utils/calculoPiezas'
 
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.user?.rol?.toLowerCase() === 'admin')
@@ -546,19 +568,12 @@ const sortOrder = ref(1) // 1 = asc, -1 = desc
 
 const getPiezasEstimadasNum = (p) => {
   if (!p) return 0
-  const stockKilos = parseFloat(p.stock) || 0
-  const pesoPieza = parseFloat(p.peso_x_pieza) || 0
-  if (stockKilos <= 0 || pesoPieza <= 0) return 0
-  return Math.max(1, Math.round(stockKilos / pesoPieza))
+  return calcularPiezasProducto(p.stock, p)
 }
 
 const getPiezasEstimadas = (p) => {
-  if (!p) return '-'
-  const stockKilos = parseFloat(p.stock) || 0
-  const pesoPieza = parseFloat(p.peso_x_pieza) || 0
-  if (stockKilos <= 0) return 0
-  if (pesoPieza <= 0) return '-'
-  return Math.max(1, Math.round(stockKilos / pesoPieza))
+  if (!p) return 0
+  return calcularPiezasProducto(p.stock, p)
 }
 
 // Filtro y ordenación reactiva de productos
@@ -655,16 +670,16 @@ const defaultForm = {
   nombre: '',
   stock: 0,
   kilos_calculado: 0,
-  peso_x_pieza: 0,
+  peso_pieza: 0,
+  peso_fraccion: 0,
+  peso_unidad: 1.000,
+  tipo_calculo_piezas: 'normal',
   cantidad_piezas: 0,
   vencimientos: '',
   vencimientosList: [],
-  kg_x_bolsita: 0,
   kg_fraccionados: 0,
   kg_decomiso: 0,
   kg_recorte: 0,
-  permite_piezas: true,
-  permite_fracciones: true,
   destacado: false,
   codigo_barra: '',
   pesable: true,
@@ -691,6 +706,14 @@ const handleFraccionadoProductInput = () => {
     form.value.codigo_fraccionado = ''
   }
 }
+
+watch(() => form.value.tipo_calculo_piezas, (newVal) => {
+  if (newVal === 'normal' || newVal === 'fraccionado') {
+    form.value.pesable = true
+  } else if (newVal === 'unidad') {
+    form.value.pesable = false
+  }
+})
 
 // reactive sum of pieces in the modal list
 const formTotalPieces = computed(() => {
@@ -731,8 +754,11 @@ const fetchProductos = async () => {
   }
 }
 
+const isViewingOnly = ref(false)
+
 const openModal = async (producto = null) => {
   if (producto) {
+    isViewingOnly.value = true
     isEditing.value = true
     form.value = { 
       ...defaultForm,
@@ -752,6 +778,7 @@ const openModal = async (producto = null) => {
       console.error('Error fetching enabled sucursales:', e)
     }
   } else {
+    isViewingOnly.value = false
     isEditing.value = false
     form.value = { 
       ...defaultForm, 
@@ -761,12 +788,14 @@ const openModal = async (producto = null) => {
     fraccionadoSearchQuery.value = ''
   }
   showModal.value = true
+  window.scrollTo(0, 0)
 }
 
 const closeModal = () => {
   showModal.value = false
   form.value = { ...defaultForm, vencimientosList: [], sucursalesHabilitadas: [] }
   fraccionadoSearchQuery.value = ''
+  window.scrollTo(0, 0)
 }
 
 const saveProducto = async () => {
@@ -989,7 +1018,7 @@ const exportTableToExcel = () => {
 
   filteredAndSortedProductos.value.forEach(p => {
     const stockVal = p.stock || 0
-    const unidad = p.pesable !== false ? 'kg' : 'ud'
+    const unidad = p.tipo_calculo_piezas !== 'unidad' ? 'kg' : 'ud'
     const piezasEst = getPiezasEstimadas(p)
     const piezas = p.cantidad_piezas || 0
     
@@ -1045,8 +1074,116 @@ th i {
   vertical-align: middle;
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.clickable-row:hover {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+/* ---- MEDIA QUERIES PARA VISTA MÓVIL EN PRODUCTOS ---- */
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  .page-title {
+    font-size: 1.35rem !important;
+  }
+
+  .page-description {
+    font-size: 0.9rem !important;
+  }
+
+  .header-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.4rem !important;
+    margin-top: 0.5rem !important;
+  }
+
+  .header-actions .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    font-size: 0.82rem !important;
+    padding: 0.45rem 0.4rem !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+
+  /* Si hay un número impar de botones, el último ocupa ambas columnas */
+  .header-actions .btn:last-child:nth-child(odd) {
+    grid-column: span 2 !important;
+  }
+
+  .responsive-card-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .header-filter-bar {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .header-filter-bar > div {
+    width: 100% !important;
+    height: 34px !important;
+  }
+
+  .header-filter-bar select,
+  .header-filter-bar input[type="text"] {
+    width: 100% !important;
+    font-size: 0.88rem !important;
+  }
+
+  .header-filter-bar label {
+    font-size: 0.88rem !important;
+    margin-top: 0.25rem !important;
+  }
+
+  /* EN MÓVIL: MOSTRAR SOLO COLUMNAS 1 (CÓDIGO) Y 2 (NOMBRE) */
+  .data-table th:nth-child(n+3),
+  .data-table td:nth-child(n+3) {
+    display: none !important;
+  }
+
+  .data-table th:nth-child(1),
+  .data-table td:nth-child(1) {
+    width: 30% !important;
+    font-size: 0.95rem !important;
+  }
+
+  .data-table th:nth-child(2),
+  .data-table td:nth-child(2) {
+    width: 70% !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+  }
+
+  .data-table td {
+    padding: 0.75rem 0.6rem !important;
+    font-size: 0.95rem !important;
+  }
+}
+
 .only-print-layout {
-  display: none;
+  display: none !important;
 }
 
 .print-sheet-header {

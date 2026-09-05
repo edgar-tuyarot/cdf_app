@@ -126,20 +126,22 @@ const filteredActivityFeed = computed(() => {
 
 // ─── CARGA DE DATOS ──────────────────────────────────────────────
 const cargarDatosAdmin = async () => {
-  const [resDia, resOp, resMermas, resSemanal, resStock, resAct] = await Promise.all([
-    fetch('/api/dashboard/produccion-dia'),
-    fetch('/api/dashboard/produccion-operador'),
-    fetch('/api/dashboard/mermas-stock'),
-    fetch('/api/dashboard/produccion-semanal'),
-    fetch('/api/feteado/stock-a-fetear'),
-    fetch('/api/dashboard/actividad-reciente')
-  ])
-  if (resDia.ok)     produccionDia.value     = await resDia.json()
-  if (resOp.ok)      produccionOperador.value = await resOp.json()
-  if (resMermas.ok)  mermasStock.value        = await resMermas.json()
-  if (resSemanal.ok) produccionSemanal.value  = await resSemanal.json()
-  if (resStock.ok)   stockAFetear.value       = await resStock.json()
-  if (resAct.ok)     actividadReciente.value = await resAct.json()
+  try {
+    const [resDia, resOp, resMermas, resSemanal, resAct] = await Promise.all([
+      fetch('/api/dashboard/produccion-dia'),
+      fetch('/api/dashboard/produccion-operador'),
+      fetch('/api/dashboard/mermas-stock'),
+      fetch('/api/dashboard/produccion-semanal'),
+      fetch('/api/dashboard/actividad-reciente')
+    ])
+    if (resDia.ok)     produccionDia.value     = await resDia.json()
+    if (resOp.ok)      produccionOperador.value = await resOp.json()
+    if (resMermas.ok)  mermasStock.value        = await resMermas.json()
+    if (resSemanal.ok) produccionSemanal.value  = await resSemanal.json()
+    if (resAct.ok)     actividadReciente.value = await resAct.json()
+  } catch (err) {
+    console.error('Error cargando dashboard admin:', err)
+  }
 }
 
 const cargarDatosOperario = async () => {

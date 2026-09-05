@@ -72,29 +72,31 @@
         <table v-if="!loading && filteredLogs.length > 0">
           <thead>
             <tr>
-              <th @click="sortBy('fecha')" class="sortable text-center" style="width: 130px;">
+              <th @click="sortBy('fecha')" class="sortable text-center" style="width: 140px;">
                 Fecha <i v-if="sortKey === 'fecha'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('codigo_producto')" class="sortable text-center" style="width: 80px;">
+              <th @click="sortBy('codigo_producto')" class="sortable text-center" style="width: 100px;">
                 Código <i v-if="sortKey === 'codigo_producto'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('Producto.nombre')" class="sortable" style="min-width: 150px;">
+              <th @click="sortBy('Producto.nombre')" class="sortable" style="min-width: 200px;">
                 Producto <i v-if="sortKey === 'Producto.nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th @click="sortBy('tipo_movimiento')" class="sortable text-center" style="width: 100px;">
-                Tipo <i v-if="sortKey === 'tipo_movimiento'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              <th @click="sortBy('tipo_movimiento')" class="sortable text-center" style="width: 140px;">
+                Tipo Movimiento <i v-if="sortKey === 'tipo_movimiento'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
-              <th style="min-width: 180px;">Concepto / Detalle</th>
-              <th @click="sortBy('cantidad_piezas')" class="sortable text-right" style="width: 80px;">
-                Pzas <i v-if="sortKey === 'cantidad_piezas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
-              </th>
-              <th @click="sortBy('kilos_calculado')" class="sortable text-right" style="width: 110px;">
-                Cantidad <i v-if="sortKey === 'kilos_calculado'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+              <th @click="sortBy('kilos_calculado')" class="sortable text-right" style="width: 130px;">
+                Kilos <i v-if="sortKey === 'kilos_calculado'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="log in filteredLogs" :key="log.id">
+            <tr 
+              v-for="log in filteredLogs" 
+              :key="log.id" 
+              @click="selectedLog = log" 
+              style="cursor: pointer;"
+              title="Haga clic para ver el detalle de este movimiento"
+            >
               <!-- Fecha -->
               <td class="text-center font-mono text-xs">
                 {{ formatDateTime(log.fecha) }}
@@ -113,16 +115,6 @@
               <!-- Tipo Movimiento (Texto Plano) -->
               <td class="text-center font-bold text-xs" style="color: var(--text-primary);">
                 {{ formatMovType(log.tipo_movimiento) }}
-              </td>
-
-              <!-- Concepto -->
-              <td class="text-xs" style="line-height: 1.35;">
-                {{ log.concepto }}
-              </td>
-
-              <!-- Delta Piezas -->
-              <td class="text-right font-bold" :class="getColorClass(log.cantidad_piezas)">
-                {{ formatNumber(log.cantidad_piezas, true, 0) }}
               </td>
 
               <!-- Cantidad (Kilos Movimiento) -->
@@ -146,6 +138,70 @@
       <i class="ph ph-spinner spinner icon-xl"></i>
       Cargando historial de auditoría de stock...
     </div>
+
+    <!-- MODAL POPUP PARA VER DETALLE DEL MOVIMIENTO -->
+    <Teleport to="body">
+      <div v-if="selectedLog" class="win-dialog-overlay" @mousedown.self="selectedLog = null">
+        <div class="win-dialog" style="max-width: 500px; width: 90%;">
+          <div class="win-dialog-titlebar" style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; color: white; padding: 0.6rem 0.85rem;">
+            <span class="win-dialog-titlebar-text" style="font-weight: bold; font-size: 0.9rem;">
+              Detalle de Movimiento #{{ selectedLog.id }}
+            </span>
+            <button class="win-dialog-close" @click="selectedLog = null" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.1rem;">
+              <i class="ph ph-x"></i>
+            </button>
+          </div>
+
+          <div class="win-dialog-body" style="padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; background: var(--bg-secondary);">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background: var(--bg-window); padding: 0.75rem; border: 1px solid var(--bevel-dark);">
+              <div>
+                <span style="font-size: 0.72rem; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: bold;">Fecha / Hora</span>
+                <span style="font-weight: bold; font-size: 0.85rem;">{{ formatDateTime(selectedLog.fecha) }}</span>
+              </div>
+              <div>
+                <span style="font-size: 0.72rem; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: bold;">Tipo Movimiento</span>
+                <span style="font-weight: bold; font-size: 0.85rem;">{{ formatMovType(selectedLog.tipo_movimiento) }}</span>
+              </div>
+            </div>
+
+            <div style="background: var(--bg-window); padding: 0.75rem; border: 1px solid var(--bevel-dark);">
+              <span style="font-size: 0.72rem; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: bold;">Producto</span>
+              <span style="font-weight: bold; font-size: 0.9rem;">
+                [{{ selectedLog.codigo_producto }}] {{ selectedLog.Producto?.nombre || 'Desconocido' }}
+              </span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; background: var(--bg-window); padding: 0.75rem; border: 1px solid var(--bevel-dark);">
+              <div>
+                <span style="font-size: 0.72rem; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: bold;">Variación Kilos</span>
+                <span :class="['font-semibold', getColorClass(selectedLog.kilos_calculado || selectedLog.stock)]" style="font-size: 1rem; font-weight: 800;">
+                  {{ formatNumber(selectedLog.kilos_calculado || selectedLog.stock, true, 3) }} kg
+                </span>
+              </div>
+              <div>
+                <span style="font-size: 0.72rem; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: bold;">Usuario Registró</span>
+                <span style="font-weight: bold; font-size: 0.85rem;">{{ selectedLog.usuario || 'Sistema' }}</span>
+              </div>
+            </div>
+
+            <div style="background: white; padding: 0.85rem; border: 1.5px solid var(--bevel-dark);">
+              <span style="font-size: 0.72rem; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: bold; margin-bottom: 0.35rem;">Concepto / Detalle Completo</span>
+              <p style="margin: 0; font-size: 0.88rem; font-weight: 600; color: var(--text-primary); line-height: 1.45; white-space: pre-wrap; word-break: break-word;">
+                {{ selectedLog.concepto || 'Sin detalle de concepto registrado' }}
+              </p>
+            </div>
+
+          </div>
+
+          <div class="win-dialog-footer" style="padding: 0.65rem 1rem; background: var(--bg-window); border-top: 1px solid var(--bevel-dark); display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary" @click="selectedLog = null" style="padding: 0.4rem 1.25rem;">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -158,6 +214,7 @@ const filterType = ref('ALL')
 const sortKey = ref('fecha')
 const sortOrder = ref(-1) // Mayor a menor (fecha más reciente primero)
 const loading = ref(true)
+const selectedLog = ref(null)
 
 const fetchLogs = async () => {
   loading.value = true
@@ -313,13 +370,13 @@ const getBadgeClass = (type) => {
 // Exportar a CSV
 const exportToCSV = () => {
   let csvContent = "data:text/csv;charset=utf-8,\uFEFF"
-  csvContent += "Fecha;Codigo;Producto;Tipo Movimiento;Concepto;Piezas;Cantidad\n"
+  csvContent += "Fecha;Codigo;Producto;Tipo Movimiento;Concepto;Kilos\n"
   
   filteredLogs.value.forEach(log => {
     const pName = log.Producto?.nombre || 'Autocreado'
     const formattedDate = formatDateTime(log.fecha)
     const kgMov = log.kilos_calculado || log.stock || 0
-    csvContent += `"${formattedDate}";"${log.codigo_producto}";"${pName}";"${log.tipo_movimiento}";"${log.concepto}";${log.cantidad_piezas};${kgMov}\n`
+    csvContent += `"${formattedDate}";"${log.codigo_producto}";"${pName}";"${log.tipo_movimiento}";"${log.concepto}";${kgMov}\n`
   })
 
   const encodedUri = encodeURI(csvContent)

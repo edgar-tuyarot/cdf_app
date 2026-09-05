@@ -180,12 +180,12 @@
                             type="text" 
                             inputmode="numeric"
                             pattern="[0-9]*"
-                            :placeholder="p.permite_piezas === false || (selectedSucursal && selectedSucursal.tipo === 'express') ? 'N/A' : '0'"
+                            :placeholder="p.tipo_calculo_piezas === 'fraccionado' || (selectedSucursal && selectedSucursal.tipo === 'express') ? 'N/A' : '0'"
                             v-model="basket[p.codigo].piezaValue" 
                             @input="basket[p.codigo].piezaValue = String(basket[p.codigo].piezaValue).replace(/[^0-9]/g, '')"
                             class="access-input-cell"
-                            :disabled="p.permite_piezas === false || isFractionedProduct(p) || (selectedSucursal && selectedSucursal.tipo === 'express')"
-                            :title="p.permite_piezas === false ? 'El producto no permite piezas' : (selectedSucursal && selectedSucursal.tipo === 'express' ? 'Sucursales Express no pueden pedir piezas' : (isFractionedProduct(p) ? 'No se permiten piezas para productos fraccionados' : ''))"
+                            :disabled="p.tipo_calculo_piezas === 'fraccionado' || (selectedSucursal && selectedSucursal.tipo === 'express')"
+                            :title="p.tipo_calculo_piezas === 'fraccionado' ? 'Producto fraccionado' : (selectedSucursal && selectedSucursal.tipo === 'express' ? 'Sucursales Express no pueden pedir piezas' : '')"
                           />
                         </td>
                         <td class="col-input">
@@ -193,12 +193,12 @@
                             type="text" 
                             inputmode="numeric"
                             pattern="[0-9]*"
-                            :placeholder="p.permite_fracciones === false || (selectedSucursal && selectedSucursal.tipo === 'con_sector') ? 'N/A' : '0'"
+                            :placeholder="p.tipo_calculo_piezas === 'normal' || (selectedSucursal && selectedSucursal.tipo === 'con_sector') ? 'N/A' : '0'"
                             v-model="basket[p.codigo].fraccionValue" 
                             @input="basket[p.codigo].fraccionValue = String(basket[p.codigo].fraccionValue).replace(/[^0-9]/g, '')"
                             class="access-input-cell font-bold text-green"
-                            :disabled="p.permite_fracciones === false || (selectedSucursal && selectedSucursal.tipo === 'con_sector')"
-                            :title="p.permite_fracciones === false ? 'El producto no permite fraccionados' : (selectedSucursal && selectedSucursal.tipo === 'con_sector' ? 'Sucursales con Sector no pueden pedir fraccionados' : '')"
+                            :disabled="p.tipo_calculo_piezas === 'normal' || (selectedSucursal && selectedSucursal.tipo === 'con_sector')"
+                            :title="p.tipo_calculo_piezas === 'normal' ? 'Producto de horma entera' : (selectedSucursal && selectedSucursal.tipo === 'con_sector' ? 'Sucursales con Sector no pueden pedir fraccionados' : '')"
                           />
                         </td>
                       </tr>
@@ -461,8 +461,8 @@ const filteredProductos = computed(() => {
   // Excluir productos que tengan ambas opciones deshabilitadas para la sucursal seleccionada
   if (selectedSucursal.value) {
     list = list.filter(p => {
-      const piezasDisabled = p.permite_piezas === false || isFractionedProduct(p) || selectedSucursal.value.tipo === 'express'
-      const fraccionesDisabled = p.permite_fracciones === false || selectedSucursal.value.tipo === 'con_sector'
+      const piezasDisabled = p.tipo_calculo_piezas === 'fraccionado' || selectedSucursal.value.tipo === 'express'
+      const fraccionesDisabled = p.tipo_calculo_piezas === 'normal' || selectedSucursal.value.tipo === 'con_sector'
       return !(piezasDisabled && fraccionesDisabled)
     })
   }
@@ -495,8 +495,8 @@ const destacadosProductos = computed(() => {
   // Excluir productos que tengan ambas opciones deshabilitadas para la sucursal seleccionada
   if (selectedSucursal.value) {
     list = list.filter(p => {
-      const piezasDisabled = p.permite_piezas === false || isFractionedProduct(p) || selectedSucursal.value.tipo === 'express'
-      const fraccionesDisabled = p.permite_fracciones === false || selectedSucursal.value.tipo === 'con_sector'
+      const piezasDisabled = p.tipo_calculo_piezas === 'fraccionado' || selectedSucursal.value.tipo === 'express'
+      const fraccionesDisabled = p.tipo_calculo_piezas === 'normal' || selectedSucursal.value.tipo === 'con_sector'
       return !(piezasDisabled && fraccionesDisabled)
     })
   }
@@ -557,8 +557,8 @@ const printCatalog = () => {
   let tableRows = ''
   listToPrint.forEach(p => {
     const isFrac = isFractionedProduct(p)
-    const piezasDisabled = p.permite_piezas === false || isFrac || (selectedSucursal.value && selectedSucursal.value.tipo === 'express')
-    const fraccionesDisabled = p.permite_fracciones === false || (selectedSucursal.value && selectedSucursal.value.tipo === 'con_sector')
+    const piezasDisabled = p.tipo_calculo_piezas === 'fraccionado' || (selectedSucursal.value && selectedSucursal.value.tipo === 'express')
+    const fraccionesDisabled = p.tipo_calculo_piezas === 'normal' || (selectedSucursal.value && selectedSucursal.value.tipo === 'con_sector')
 
     const piezasContent = piezasDisabled ? 'No' : ''
     const fraccionesContent = fraccionesDisabled ? 'No' : ''

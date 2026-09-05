@@ -1,16 +1,18 @@
-const { IngresoSucursal, Producto, Sucursal, ProductoVencimiento, MovimientoStock, ProductoStock, sequelize } = require('../models');
+const { IngresoSucursal, IngresosSucursal, Producto, Sucursal, ProductoVencimiento, MovimientoStock, ProductoStock, sequelize } = require('../models');
+
+const ModelIngresoSucursal = IngresoSucursal || IngresosSucursal;
 
 // 1. Listar ingresos desde sucursales
 exports.list = async (req, res) => {
   try {
     const id_ubicacion = req.ubicacionId;
-    const ingresos = await IngresoSucursal.findAll({
+    const ingresos = await ModelIngresoSucursal.findAll({
       where: { id_ubicacion },
       include: [
         {
           model: Producto,
           as: 'Producto',
-          attributes: ['codigo', 'nombre', 'peso_x_pieza']
+          attributes: ['codigo', 'nombre', 'peso_pieza']
         },
         {
           model: Sucursal,
@@ -35,16 +37,13 @@ exports.create = async (req, res) => {
     const id_ubicacion = req.ubicacionId;
 
     // Validaciones básicas
-    if (!codigo_producto || !piezas || !peso || !sucursal_id || !vencimiento) {
-      return res.status(400).json({ error: 'Todos los campos son obligatorios: codigo_producto, piezas, peso, sucursal_id, vencimiento.' });
+    if (!codigo_producto || !peso || !sucursal_id || !vencimiento) {
+      return res.status(400).json({ error: 'Campos obligatorios: codigo_producto, peso, sucursal_id, vencimiento.' });
     }
 
-    const cantPiezas = parseInt(piezas, 10);
+    const cantPiezas = parseInt(piezas, 10) || 0;
     const pesoKilos = parseFloat(peso);
 
-    if (isNaN(cantPiezas) || cantPiezas <= 0) {
-      return res.status(400).json({ error: 'La cantidad de piezas debe ser un número entero mayor a cero.' });
-    }
     if (isNaN(pesoKilos) || pesoKilos <= 0) {
       return res.status(400).json({ error: 'El peso ingresado debe ser un número decimal mayor a cero.' });
     }
@@ -64,10 +63,10 @@ exports.create = async (req, res) => {
     }
 
     // A. Registrar el ingreso de sucursal
-    const ingresoSucursal = await IngresoSucursal.create({
+    const ingresoSucursal = await ModelIngresoSucursal.create({
       id_ubicacion,
       codigo_producto,
-      piezas: cantPiezas,
+      piezas: 0,
       peso: pesoKilos,
       sucursal_id,
       vencimiento,
@@ -85,8 +84,8 @@ exports.create = async (req, res) => {
     });
 
     if (lote) {
-      // Sumar piezas y peso al lote existente
-      lote.piezas += cantPiezas;
+      // Sumar peso al lote existente
+      lote.piezas = 0;
       lote.peso = (parseFloat(lote.peso) || 0) + pesoKilos;
       await lote.save({ transaction: t });
     } else {
@@ -94,7 +93,7 @@ exports.create = async (req, res) => {
       lote = await ProductoVencimiento.create({
         codigo_producto,
         vencimiento,
-        piezas: cantPiezas,
+        piezas: 0,
         peso: pesoKilos,
         id_ubicacion
       }, { transaction: t });
@@ -106,12 +105,15 @@ exports.create = async (req, res) => {
       defaults: { stock: 0.0000, recorte: 0.000, decomiso: 0.000, kg_fraccionados: 0.000 },
       transaction: t
     });
-    pStockRecord.stock = parseFloat(pStockRecord.stock) + pesoKilos;
-    await pStockRecord.save({ transaction: t, skipAuditLog: true });
+    pStockRecord.stock = (parseFloat(pStockRecord.stock) || 0) + pesoKilos;
+    await pStockRecord.save({
+      transaction: t,
+      skipAuditLog: true
+    });
 
-    // D. Registrar la auditoría detallada del movimiento en movimiento_stocks
-    const nombreSucursal = sucursal.numero 
-      ? `Sucursal ${sucursal.numero} - ${sucursal.sucursal}` 
+    // D. Registrar el movimiento de stock en la tabla de auditoría
+    const nombreSucursal = sucursal.nombre 
+      ? sucursal.nombre 
       : sucursal.sucursal;
 
     await MovimientoStock.create({
@@ -119,8 +121,8 @@ exports.create = async (req, res) => {
       id_ubicacion,
       tipo_movimiento: 'INGRESO_SUCURSAL',
       referencia_id: ingresoSucursal.id,
-      concepto: `Ingreso de ${cantPiezas} piezas (${pesoKilos.toFixed(3)} kg) devueltas de ${nombreSucursal}`,
-      cantidad_piezas: cantPiezas,
+      concepto: `Ingreso de ${cantPiezas} piezas aprox (${pesoKilos.toFixed(3)} kg) devueltas de ${nombreSucursal}`,
+      cantidad_piezas: 0,
       kilos_calculado: pesoKilos,
       usuario: usuario || 'Sistema',
       fecha: new Date()

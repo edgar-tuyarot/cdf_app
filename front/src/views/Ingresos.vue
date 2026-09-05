@@ -70,12 +70,12 @@
             <table class="access-table" style="width: 100%; border-collapse: collapse;">
               <thead style="position: sticky; top: 0; z-index: 20; background: var(--bg-window);">
                 <tr>
-                  <th style="width: 120px;">Código</th>
-                  <th style="min-width: 230px;">Nombre del Producto</th>
-                  <th style="width: 80px;" class="text-right">Cajas</th>
-                  <th style="width: 100px;" class="text-right">Piezas (Est.)</th>
+                  <th style="width: 110px;">Código</th>
+                  <th style="min-width: 220px;">Nombre del Producto</th>
+                  <th style="width: 75px;" class="text-right">Cajas</th>
+                  <th style="width: 140px;" class="text-center">Peso Caja</th>
                   <th style="width: 110px;" class="text-right">Peso Bruto</th>
-                  <th style="width: 130px;">Vencimiento</th>
+                  <th style="width: 130px;" class="text-center">Vencimiento</th>
                   <th style="width: 110px;" class="text-right">Peso Neto</th>
                   <th style="width: 90px;" class="text-center">Acción</th>
                 </tr>
@@ -95,11 +95,13 @@
                     <div style="font-weight: 700; font-size: 0.85rem;">{{ item.nombre }}</div>
                   </td>
                   <td class="text-right fw-bold">{{ item.cajas }}</td>
-                  <td class="text-right fw-bold text-blue">{{ item.piezas }}</td>
+                  <td class="text-center fw-bold" style="color: var(--accent-error);">
+                    {{ ((item.cajas || 0) * (item.tara_unidad || 0)).toFixed(3) }} kg
+                  </td>
                   <td class="text-right fw-bold text-muted">
                     {{ parseFloat(item.peso_bruto).toFixed(3) }} kg
                   </td>
-                  <td>
+                  <td class="text-center">
                     <span class="badge-date">{{ item.vencimiento }}</span>
                   </td>
                   <td class="text-right fw-bold text-green">
@@ -138,29 +140,19 @@
                     </datalist>
                   </td>
 
-                  <!-- Nombre del Producto + Botón de Crear Bulto Inline -->
-                  <td style="padding: 4px;">
-                    <div v-if="draftSelectedProduct" class="d-flex align-center justify-content-between">
+                  <!-- Nombre del Producto -->
+                  <td style="padding: 4px; vertical-align: middle;">
+                    <div v-if="draftSelectedProduct">
                       <span class="fw-bold" style="font-size: 0.85rem; color: var(--text-primary);">
                         {{ draftSelectedProduct.nombre }}
                       </span>
-                      <!-- Botón Inline para Crear Nuevo Bulto sin salir -->
-                      <button 
-                        v-if="tipoIngreso === 'lote_proveedor'"
-                        type="button" 
-                        class="btn-inline-bulto"
-                        @click="abrirCrearBultoInline"
-                        title="Crear un nuevo formato de caja para este producto"
-                      >
-                        <i class="ph ph-plus-circle"></i> + Bulto
-                      </button>
                     </div>
                     <span v-else class="text-xs text-muted" style="font-style: italic;">
                       Ingrese un código de producto...
                     </span>
                   </td>
 
-                  <!-- Cajas (0 = piezas sueltas, 1+ = formato caja) -->
+                  <!-- Cajas -->
                   <td style="padding: 4px;">
                     <input 
                       type="number" 
@@ -174,18 +166,27 @@
                     />
                   </td>
 
-                  <!-- Piezas (Se autosugieren / estiman según los kilos) -->
-                  <td style="padding: 4px;">
-                    <input 
-                      type="number" 
-                      min="1" 
-                      ref="piezasInputRef"
-                      v-model.number="draftRow.piezas" 
-                      @keydown.enter.prevent="onPiezasEnter"
-                      class="grid-input text-right fw-bold text-blue" 
-                      style="width: 100%;"
-                      title="Piezas estimadas calculadas a partir del peso y kg/pieza"
-                    />
+                  <!-- Peso Caja (Solamente el peso de la caja vacía multiplicado por la cantidad, o el botón para agregar una) -->
+                  <td style="padding: 4px; text-align: center; vertical-align: middle;">
+                    <template v-if="draftSelectedProduct">
+                      <!-- Si el producto TIENE bulto relacionado -->
+                      <div v-if="draftBultoList.length > 0" class="fw-bold" style="font-size: 0.85rem; color: var(--accent-error);">
+                        {{ ((draftRow.cajas || 0) * (draftSelectedBulto?.peso_caja_vacia || 0)).toFixed(3) }} kg
+                      </div>
+
+                      <!-- Si el producto NO TIENE bulto relacionado -->
+                      <div v-else>
+                        <button 
+                          type="button" 
+                          class="btn btn-sm" 
+                          style="background: #2563eb; color: white; border: none; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;"
+                          @click="abrirCrearBultoInline"
+                        >
+                          <i class="ph ph-plus-circle"></i> + Agregar Bulto
+                        </button>
+                      </div>
+                    </template>
+                    <span v-else class="text-xs text-muted">-</span>
                   </td>
 
                   <!-- Peso Bruto -->
@@ -536,7 +537,7 @@ const fetchInitialData = async () => {
       fetch('/api/bultos'),
       fetch('/api/sucursales'),
       fetch('/api/productos/ingresos-proveedores'),
-      fetch('/api/ingresos-sucursales')
+      fetch('/api/ingreso-sucursales')
     ])
 
     if (resProv.ok) proveedores.value = await resProv.json()
@@ -795,11 +796,11 @@ const onDraftPesoInput = () => {
     return
   }
 
-  if (prod && pesoVal > 0 && parseFloat(prod.peso_x_pieza) > 0) {
-    const pxp = parseFloat(prod.peso_x_pieza)
-    draftRow.value.piezas = Math.max(1, Math.round(pesoVal / pxp))
+  if (prod && pesoVal > 0 && parseFloat(prod.peso_pieza) > 0) {
+    const pxp = parseFloat(prod.peso_pieza)
+    draftRow.value.piezas = pesoVal < pxp ? 0 : Math.round(pesoVal / pxp)
   } else if (!draftRow.value.piezas || draftRow.value.piezas <= 0) {
-    draftRow.value.piezas = 1
+    draftRow.value.piezas = 0
   }
 }
 
@@ -850,10 +851,11 @@ const confirmarFilaDraft = () => {
   let valPiezas = parseInt(draftRow.value.piezas, 10) || 0
 
   if (valPiezas <= 0) {
-    if (p && parseFloat(p.peso_x_pieza) > 0) {
-      valPiezas = Math.max(1, Math.round(valPesoBruto / parseFloat(p.peso_x_pieza)))
+    if (p && parseFloat(p.peso_pieza) > 0) {
+      const pxp = parseFloat(p.peso_pieza)
+      valPiezas = valPesoBruto < pxp ? 0 : Math.round(valPesoBruto / pxp)
     } else {
-      valPiezas = 1
+      valPiezas = 0
     }
   }
 

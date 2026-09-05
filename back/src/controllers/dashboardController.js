@@ -1,4 +1,4 @@
-const { Proceso, Producto, Colaborador, Sucursal, Proveedor, Generador, ProductoVencimiento, MovimientoStock, IngresoProveedor, sequelize } = require('../models');
+const { Proceso, Producto, ProductoStock, Colaborador, Sucursal, Proveedor, Generador, ProductoVencimiento, MovimientoStock, IngresoProveedor, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // 1. Obtener la producción del día (para feteado y envasado)

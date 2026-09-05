@@ -255,14 +255,9 @@
                 </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Piezas *</label>
-                <input type="number" min="1" v-model.number="form.piezas" class="form-control" required style="height: 38px; font-size: 0.9rem;" placeholder="Ej: 1" />
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Peso Bruto (kg)</label>
-                <input type="number" step="0.001" min="0" v-model.number="form.peso_bruto" class="form-control" style="height: 38px; font-size: 0.9rem;" />
+              <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label">Peso Bruto (kg) *</label>
+                <input type="number" step="0.001" min="0.001" v-model.number="form.peso_bruto" class="form-control" required style="height: 38px; font-size: 0.9rem;" placeholder="Ej: 12.500" />
               </div>
             </div>
           </div>
@@ -355,6 +350,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { calcularPiezasProducto } from '../utils/calculoPiezas'
 
 const authStore = useAuthStore()
 
@@ -554,8 +550,8 @@ const submitForm = async () => {
     showAlert('Debe seleccionar un origen válido', 'error')
     return
   }
-  if (!form.value.piezas || form.value.piezas <= 0) {
-    showAlert('La cantidad de piezas es obligatoria (mínimo 1)', 'error')
+  if (!form.value.peso_bruto || form.value.peso_bruto <= 0) {
+    showAlert('El Peso Bruto es obligatorio y debe ser mayor a 0 kg', 'error')
     return
   }
 

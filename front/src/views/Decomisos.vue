@@ -103,7 +103,7 @@
               </td>
               <td><strong>{{ p.codigo }}</strong></td>
               <td>{{ p.nombre }}</td>
-              <td class="text-right fw-bold">{{ p.stock !== undefined ? (p.pesable !== false ? p.stock.toFixed(3) + ' kg' : p.stock.toFixed(0) + ' ud') : '0.000 kg' }}</td>
+              <td class="text-right fw-bold">{{ p.stock !== undefined ? (p.tipo_calculo_piezas !== 'unidad' ? p.stock.toFixed(3) + ' kg' : p.stock.toFixed(0) + ' ud') : '0.000 kg' }}</td>
               <td class="text-right fw-bold text-red">{{ p.kilos.toFixed(3) }} kg</td>
               <td>
                 <div style="display: flex; gap: 0.25rem; justify-content: center;">

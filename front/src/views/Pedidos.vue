@@ -1,8 +1,26 @@
 <template>
   <div class="page-container animate-fade">
     
+    <!-- PESTAÑAS PRINCIPALES DE NAVEGACIÓN -->
+    <div v-if="!selectedPedido" class="card-tabs no-print mb-3" style="display: flex; gap: 0.25rem; position: relative; z-index: 2;">
+      <button 
+        :class="['btn', activeMainTab === 'pedidos' ? 'btn-primary' : 'btn-secondary']" 
+        @click="activeMainTab = 'pedidos'"
+        style="padding: 0.5rem 1rem; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;"
+      >
+        <i class="ph ph-shopping-cart"></i> Gestión de Pedidos
+      </button>
+      <button 
+        :class="['btn', activeMainTab === 'detalles' ? 'btn-primary' : 'btn-secondary']" 
+        @click="activeMainTab = 'detalles'"
+        style="padding: 0.5rem 1rem; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;"
+      >
+        <i class="ph ph-table"></i> Detalles Requeridos (Matriz)
+      </button>
+    </div>
+
     <!-- VISTA 1: LISTADO PRINCIPAL DE PEDIDOS (Cuando NO hay un pedido seleccionado) -->
-    <div v-if="!selectedPedido">
+    <div v-if="!selectedPedido && activeMainTab === 'pedidos'">
       <!-- Header de Página -->
       <div class="page-header">
         <div class="header-content">
@@ -160,7 +178,7 @@
     </div>
 
     <!-- VISTA 2: DETALLE COMPLETO DEL PEDIDO (PÁGINA DEDICADA) -->
-    <div v-else class="animate-fade">
+    <div v-else-if="selectedPedido" class="animate-fade">
       <!-- Encabezado de la vista con Botón de Regreso -->
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
         <div style="display: flex; align-items: center; gap: 1rem;">
@@ -202,6 +220,9 @@
 
           <button class="btn btn-secondary" @click="openControlModal(selectedPedido)" style="display: flex; align-items: center; gap: 0.3rem;">
             <i class="ph ph-check-square" style="font-size: 1rem; color: var(--accent-primary);"></i> Control de Piezas
+          </button>
+          <button class="btn btn-secondary" @click="printPedidoPdf(selectedPedido)" title="Generar PDF con Código, Nombre, Kilos y Código de Barras" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; background: #ef4444; color: #fff; border-color: #dc2626;">
+            <i class="ph ph-file-pdf" style="font-size: 1.1rem;"></i> Generar PDF (Barras)
           </button>
           <button class="btn btn-secondary" @click="printPedido(selectedPedido)" title="Imprimir Remito de Preparación" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 600;">
             <i class="ph ph-printer" style="font-size: 1.1rem; color: #0b5394;"></i> Imprimir Remito
@@ -826,31 +847,35 @@
       <div v-if="showControlModal" class="win-dialog-overlay" @mousedown.self="closeControlModal">
         <div class="win-dialog" style="max-width: 480px; width: 95%;">
           <div class="win-dialog-titlebar">
-            <span class="win-dialog-titlebar-text">Control de Ítems Enviados</span>
+            <span class="win-dialog-titlebar-text">Pre Despacho</span>
             <button class="win-dialog-close" @click="closeControlModal"><i class="ph ph-x"></i></button>
           </div>
           <div class="win-dialog-body" style="padding: 1.25rem;">
             <!-- Barra de Progreso y Porcentaje -->
-            <div style="margin-bottom: 1.25rem;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; margin-bottom: 0.4rem; color: var(--text-primary);">
-                <span>Avance del Control</span>
-                <span>{{ controlProgressPercentage }}% ({{ controlCheckedCount }} de {{ controlItems.length }})</span>
-              </div>
-              <div style="width: 100%; height: 16px; background: var(--bg-secondary); border: 2px solid var(--bevel-dark); padding: 1px; box-shadow: var(--inset-shadow); box-sizing: border-box; position: relative;">
-                <div :style="{ width: controlProgressPercentage + '%' }" style="height: 100%; background: #1a7f37; transition: width 0.2s ease;"></div>
-              </div>
-            </div>
-
+            
             <!-- Card del Ítem Actual -->
             <div v-if="currentControlItem" class="card" style="padding: 1.25rem; border: 2px solid var(--bevel-dark); background: var(--bg-window); min-height: 140px; display: flex; flex-direction: column; justify-content: space-between;">
               <div>
-                <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: bold; color: var(--text-secondary); line-height: 1.3;">
+                <h4 style="margin: 0 0 0.6rem 0; font-size: 1rem; font-weight: bold; color: var(--text-secondary); line-height: 1.3;">
                   {{ currentControlItem.Producto?.nombre || 'Sin nombre' }}
                 </h4>
 
+                <!-- Bloque de Código de Barras (Número e Imagen SVG) -->
+                <div style="background: #ffffff; border: 1.5px solid var(--bevel-dark); padding: 0.6rem; margin-bottom: 0.85rem; text-align: center; border-radius: 0;">
+                  <div style="font-size: 0.85rem; font-weight: 800; font-family: monospace; color: var(--text-secondary); margin-bottom: 0.25rem; letter-spacing: 0.5px;">
+                    <i class="ph ph-barcode" style="font-size: 1.1rem; margin-right: 0.25rem; vertical-align: middle; color: var(--accent-primary);"></i>
+                    CÓDIGO BARRAS: {{ currentControlItem.Producto?.codigo_barra || currentControlItem.codigo_producto }}
+                  </div>
+                  
+                  <div 
+                    v-html="generateBarcodeSVG(currentControlItem.Producto?.codigo_barra || currentControlItem.codigo_producto)" 
+                    style="margin-top: 0.35rem; display: flex; justify-content: center;"
+                  ></div>
+                </div>
+
                 <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-secondary); border: 2px solid var(--bevel-dark); padding: 0.75rem 1rem; border-radius: 0; box-shadow: var(--inset-shadow); margin-bottom: 0.75rem;">
                   <div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Código</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Código Interno</span>
                     <span style="font-size: 1.8rem; font-weight: 800; color: var(--accent-primary);">
                       {{ currentControlItem.codigo_producto }}
                     </span>
@@ -861,17 +886,12 @@
                       {{ parseFloat(currentControlWeight).toFixed(3) }} kg
                     </span>
                   </div>
+
                 </div>
               </div>
-
-              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--bevel-light); padding-top: 0.5rem; font-size: 0.8rem;">
-                <span style="color: var(--text-secondary); font-weight: bold;">Cantidades:</span>
-                <span style="font-weight: bold; color: var(--text-primary);">
-                  {{ currentControlItem.cantidad_enviada || 0 }} pzas / {{ parseFloat(currentControlItem.fraccion_enviada || 0).toFixed(3) }} frac
-                </span>
-              </div>
+              
             </div>
-
+            
             <!-- Estado Finalizado -->
             <div v-else class="card" style="padding: 1.5rem; border: 2px solid var(--bevel-dark); background: var(--bg-window); text-align: center;">
               <i class="ph ph-check-circle" style="font-size: 3rem; color: #1a7f37; margin-bottom: 0.5rem;"></i>
@@ -882,8 +902,13 @@
                 Se han verificado todos los ítems con peso en este pedido de forma exitosa.
               </p>
             </div>
+            <div style="margin-bottom: 1.25rem;">
+              <div style="width: 100%; height: 16px; background: var(--bg-secondary); border: 2px solid var(--bevel-dark); padding: 1px; box-shadow: var(--inset-shadow); box-sizing: border-box; position: relative;">
+                <div :style="{ width: controlProgressPercentage + '%' }" style="height: 100%; background: #1a7f37; transition: width 0.2s ease;"></div>
+              </div>
+            </div>
           </div>
-
+          
           <div class="win-dialog-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem;">
             <div>
               <button 
@@ -977,15 +1002,413 @@
       </table>
     </div>
   </div>
+
+    <!-- VISTA 2: DETALLES REQUERIDOS (MATRIZ POR SUCURSALES Y PRODUCTOS) -->
+    <div v-if="!selectedPedido && activeMainTab === 'detalles'" class="animate-fade">
+      
+      <!-- Header de la Vista -->
+      <div class="page-header">
+        <div class="header-content">
+          <h2 class="page-title"><i class="ph ph-table text-blue"></i> Detalles Requeridos</h2>
+          <p class="page-description">Matriz consolidada de cantidades solicitadas por sucursal en pedidos Pendientes o En Preparación.</p>
+        </div>
+        <div class="header-actions mt-2" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button class="btn btn-secondary" @click="exportarDetallesRequeridosExcel" :disabled="matrizDetallesRequeridos.length === 0" style="display: flex; align-items: center; gap: 0.35rem;">
+            <i class="ph ph-file-xls text-green" style="font-size: 1.1rem;"></i> Exportar Excel
+          </button>
+          <button class="btn btn-secondary" @click="fetchPedidos" :disabled="loading" style="display: flex; align-items: center; gap: 0.35rem;">
+            <i class="ph ph-spinner spinner" v-if="loading"></i>
+            <i class="ph ph-arrows-clockwise" v-else></i> Actualizar Datos
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjetas de Resumen KPI -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+        <div class="status-card info">
+          <div class="status-card-body">
+            <div class="status-card-info">
+              <span class="status-card-title">Productos Requeridos</span>
+              <span class="status-card-value text-blue">{{ matrizDetallesRequeridos.length }}</span>
+            </div>
+            <i class="ph ph-package status-card-icon"></i>
+          </div>
+        </div>
+
+        <div class="status-card warning">
+          <div class="status-card-body">
+            <div class="status-card-info">
+              <span class="status-card-title">Sucursales Solicitantes</span>
+              <span class="status-card-value text-orange">{{ sucursalesRequeridas.length }}</span>
+            </div>
+            <i class="ph ph-storefront status-card-icon"></i>
+          </div>
+        </div>
+
+        <div class="status-card success">
+          <div class="status-card-body">
+            <div class="status-card-info">
+              <span class="status-card-title">Total Solicitado</span>
+              <span class="status-card-value text-green">{{ totalesPorSucursal.granTotal.toFixed(3) }}</span>
+            </div>
+            <i class="ph ph-scales status-card-icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Matriz en Card -->
+      <div class="card" style="padding: 0; border: 2px solid var(--bevel-dark); background: var(--bg-window); overflow: hidden;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; background-color: #0b5394; padding: 0.6rem 0.85rem;">
+          <span class="card-title" style="color: white; font-weight: bold; margin: 0; font-size: 0.9rem;">
+            Cantidades Pedidas por Sucursal (Pedidos Pendientes y En Preparación)
+          </span>
+
+          <!-- Buscador Predictivo -->
+          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.15rem 0.4rem; height: 28px; width: 220px;">
+            <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
+            <input 
+              type="text" 
+              v-model="searchQueryDetalles" 
+              placeholder="Buscar producto o código..." 
+              style="border: none; outline: none; font-size: 0.78rem; background: transparent; width: 100%; color: var(--text-primary);"
+            />
+            <button v-if="searchQueryDetalles" @click="searchQueryDetalles = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
+              <i class="ph ph-x-circle"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla Matriz Requeridos -->
+        <div class="table-container" style="max-height: calc(100vh - 280px); overflow-x: auto; overflow-y: auto;">
+          <table class="access-table" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+            <thead>
+              <tr style="background: var(--bg-secondary); position: sticky; top: 0; z-index: 2; border-bottom: 2px solid var(--bevel-dark);">
+                <th style="padding: 10px 12px; text-align: center; font-weight: 900; width: 90px; border-right: 1px solid var(--bevel-dark);">Cod</th>
+                <th style="padding: 10px 12px; text-align: left; font-weight: 900; min-width: 220px; border-right: 1.5px solid var(--bevel-dark);">Nombre</th>
+                
+                <!-- Columnas por Cada Sucursal -->
+                <th 
+                  v-for="suc in sucursalesRequeridas" 
+                  :key="suc" 
+                  style="padding: 10px 12px; text-align: right; font-weight: 800; min-width: 110px; background: #e0f2fe; color: #0369a1; border-right: 1px solid var(--bevel-light);"
+                >
+                  {{ suc }}
+                </th>
+
+                <!-- Columna Total Horizontal -->
+                <th style="padding: 10px 12px; text-align: right; font-weight: 900; width: 120px; background: #dcfce7; color: #15803d; border-left: 2px solid var(--bevel-dark);">
+                  TOTAL
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="(row, idx) in matrizDetallesRequeridos" 
+                :key="row.codigo"
+                :style="{ background: idx % 2 === 0 ? 'var(--bg-window)' : 'var(--bg-secondary)' }"
+                style="border-bottom: 1px solid var(--bevel-light);"
+              >
+                <td style="padding: 8px 12px; text-align: center; font-weight: 900; font-family: monospace; border-right: 1px solid var(--bevel-dark);">
+                  {{ row.codigo }}
+                </td>
+                <td style="padding: 8px 12px; font-weight: 700; color: var(--text-primary); border-right: 1.5px solid var(--bevel-dark);">
+                  {{ row.nombre }}
+                </td>
+
+                <!-- Celdas por Sucursal -->
+                <td 
+                  v-for="suc in sucursalesRequeridas" 
+                  :key="suc"
+                  style="padding: 8px 12px; text-align: right; font-weight: 700; border-right: 1px solid var(--bevel-light);"
+                  :style="{ color: row.sucursales[suc] > 0 ? '#0284c7' : 'var(--text-muted)' }"
+                >
+                  {{ row.sucursales[suc] > 0 ? row.sucursales[suc].toFixed(3) : '-' }}
+                </td>
+
+                <!-- Total Fila -->
+                <td style="padding: 8px 12px; text-align: right; font-weight: 900; color: #16a34a; background: rgba(22, 163, 74, 0.05); border-left: 2px solid var(--bevel-dark);">
+                  {{ row.total.toFixed(3) }}
+                </td>
+              </tr>
+
+              <!-- Estado Vacío -->
+              <tr v-if="matrizDetallesRequeridos.length === 0">
+                <td :colspan="sucursalesRequeridas.length + 3" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                  <i class="ph ph-info" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+                  No se encontraron pedidos en estado 'Pendiente' o 'En preparación' para generar la matriz de detalles requeridos.
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- Footer con Totales Verticales -->
+            <tfoot v-if="matrizDetallesRequeridos.length > 0" style="position: sticky; bottom: 0; z-index: 2; background: var(--bg-secondary); border-top: 2.5px solid var(--bevel-dark);">
+              <tr style="font-weight: 900;">
+                <td style="padding: 10px 12px; text-align: center; border-right: 1px solid var(--bevel-dark);">TOTALES</td>
+                <td style="padding: 10px 12px; text-align: left; border-right: 1.5px solid var(--bevel-dark);">Resumen acumulado por columna</td>
+                
+                <!-- Totales por Sucursal -->
+                <td 
+                  v-for="suc in sucursalesRequeridas" 
+                  :key="suc"
+                  style="padding: 10px 12px; text-align: right; color: #0284c7; border-right: 1px solid var(--bevel-light);"
+                >
+                  {{ (totalesPorSucursal.sucursales[suc] || 0).toFixed(3) }}
+                </td>
+
+                <!-- Gran Total -->
+                <td style="padding: 10px 12px; text-align: right; color: #16a34a; background: #dcfce7; border-left: 2px solid var(--bevel-dark);">
+                  {{ totalesPorSucursal.granTotal.toFixed(3) }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useWinDialog } from '../composables/useWinDialog'
+import { calcularPiezasProducto } from '../utils/calculoPiezas'
+import * as XLSX from 'xlsx'
 
 const authStore = useAuthStore()
 const { winConfirm } = useWinDialog()
+
+// Pestaña activa principal
+const activeMainTab = ref('pedidos') // 'pedidos' | 'detalles'
+const searchQueryDetalles = ref('')
+
+// Pedidos filtrados para Detalles Requeridos (solo Pendiente o Preparando/En preparación)
+const pedidosRequeridos = computed(() => {
+  return pedidos.value.filter(p => {
+    const est = (p.estado || '').toLowerCase()
+    return est.includes('pendien') || est.includes('prepar')
+  })
+})
+
+// Lista única de sucursales que tienen pedidos requeridos
+const sucursalesRequeridas = computed(() => {
+  const set = new Set()
+  pedidosRequeridos.value.forEach(p => {
+    if (p.sucursal && p.sucursal.trim()) {
+      set.add(p.sucursal.trim())
+    }
+  })
+  return Array.from(set).sort()
+})
+
+// Matriz consolidada: Producto x Sucursales
+const matrizDetallesRequeridos = computed(() => {
+  const mapProd = new Map()
+
+  pedidosRequeridos.value.forEach(p => {
+    const sucName = (p.sucursal || 'Sin Sucursal').trim()
+    const items = p.items || []
+
+    items.forEach(item => {
+      const cod = String(item.codigo_producto || item.Producto?.codigo || '-').trim()
+      if (!cod || cod === '-') return
+
+      const nom = item.Producto?.nombre || item.nombre || 'Desconocido'
+      
+      const cantFrac = parseFloat(item.fraccion || 0)
+      const cantPieza = parseFloat(item.pieza || 0)
+      const cantEnviada = parseFloat(item.peso_enviado || item.fraccion_enviada || 0)
+      const cantReq = cantFrac > 0 ? cantFrac : (cantPieza > 0 ? cantPieza : cantEnviada)
+
+      if (!mapProd.has(cod)) {
+        mapProd.set(cod, {
+          codigo: cod,
+          nombre: nom,
+          sucursales: {},
+          total: 0
+        })
+      }
+
+      const prodRow = mapProd.get(cod)
+      if (!prodRow.sucursales[sucName]) {
+        prodRow.sucursales[sucName] = 0
+      }
+      prodRow.sucursales[sucName] += cantReq
+      prodRow.total += cantReq
+    })
+  })
+
+  let list = Array.from(mapProd.values())
+
+  if (searchQueryDetalles.value.trim()) {
+    const q = searchQueryDetalles.value.trim().toLowerCase()
+    list = list.filter(r => r.codigo.toLowerCase().includes(q) || r.nombre.toLowerCase().includes(q))
+  }
+
+  list.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+
+  return list
+})
+
+// Totales verticales por sucursal y gran total acumulado
+const totalesPorSucursal = computed(() => {
+  const totMap = {}
+  let granTotal = 0
+
+  sucursalesRequeridas.value.forEach(suc => {
+    totMap[suc] = 0
+  })
+
+  matrizDetallesRequeridos.value.forEach(row => {
+    sucursalesRequeridas.value.forEach(suc => {
+      const cant = row.sucursales[suc] || 0
+      totMap[suc] += cant
+    })
+    granTotal += row.total
+  })
+
+  return {
+    sucursales: totMap,
+    granTotal
+  }
+})
+
+// Exportar matriz Detalles Requeridos a Excel
+const exportarDetallesRequeridosExcel = () => {
+  if (matrizDetallesRequeridos.value.length === 0) return
+
+  const sucs = sucursalesRequeridas.value
+
+  const dataExport = matrizDetallesRequeridos.value.map(row => {
+    const obj = {
+      'Cod': row.codigo,
+      'Nombre': row.nombre
+    }
+    sucs.forEach(suc => {
+      obj[suc] = row.sucursales[suc] ? parseFloat(row.sucursales[suc].toFixed(3)) : 0
+    })
+    obj['TOTAL'] = parseFloat(row.total.toFixed(3))
+    return obj
+  })
+
+  // Fila resumen de totales
+  const totObj = {
+    'Cod': 'TOTALES',
+    'Nombre': 'Totales Generales'
+  }
+  sucs.forEach(suc => {
+    totObj[suc] = parseFloat((totalesPorSucursal.value.sucursales[suc] || 0).toFixed(3))
+  })
+  totObj['TOTAL'] = parseFloat(totalesPorSucursal.value.granTotal.toFixed(3))
+  dataExport.push(totObj)
+
+  const worksheet = XLSX.utils.json_to_sheet(dataExport)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Detalles Requeridos')
+
+  const fileName = `Detalles_Requeridos_${new Date().toISOString().split('T')[0]}.xlsx`
+  XLSX.writeFile(workbook, fileName)
+}
+
+// Generador SVG de Código de Barras EAN-13 (Oficial para pistolas y escáneres EAN-13)
+const generateBarcodeSVG = (text, options = {}) => {
+  if (!text) return ''
+  let rawDigits = String(text).replace(/\D/g, '')
+  if (!rawDigits) rawDigits = '0'
+
+  let digits12 = ''
+  if (rawDigits.length >= 13) {
+    digits12 = rawDigits.slice(0, 12)
+  } else {
+    digits12 = rawDigits.padStart(12, '0')
+  }
+
+  let sumOdd = 0
+  let sumEven = 0
+  for (let i = 0; i < 12; i++) {
+    const val = parseInt(digits12[i], 10)
+    if (i % 2 === 0) {
+      sumOdd += val
+    } else {
+      sumEven += val
+    }
+  }
+  const total = sumOdd + (sumEven * 3)
+  const checksum = (10 - (total % 10)) % 10
+  const ean13Str = digits12 + checksum
+
+  const L_CODES = [
+    "0001101", "0011001", "0010011", "0111101", "0100011",
+    "0110001", "0101111", "0111011", "0110111", "0001011"
+  ]
+  const G_CODES = [
+    "0100111", "0110011", "0011011", "0100001", "0011101",
+    "0111001", "0000101", "0010001", "0001001", "0010111"
+  ]
+  const R_CODES = [
+    "1110010", "1100110", "1101100", "1000010", "1011100",
+    "1001110", "1010000", "1000100", "1001000", "1110100"
+  ]
+
+  const PARITY_PATTERNS = [
+    "LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
+    "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL"
+  ]
+
+  const firstDigit = parseInt(ean13Str[0], 10)
+  const parity = PARITY_PATTERNS[firstDigit]
+
+  let bits = "101"
+
+  for (let i = 0; i < 6; i++) {
+    const digit = parseInt(ean13Str[i + 1], 10)
+    bits += (parity[i] === 'L') ? L_CODES[digit] : G_CODES[digit]
+  }
+
+  bits += "01010"
+
+  for (let i = 0; i < 6; i++) {
+    const digit = parseInt(ean13Str[i + 7], 10)
+    bits += R_CODES[digit]
+  }
+
+  bits += "101"
+
+  const scale = options.scale || 2.5
+  const height = options.height || 60
+  const guardExtraHeight = 10
+  const fontSize = options.fontSize || 14
+  const quietZone = 14
+
+  let x = quietZone
+  let rects = ""
+
+  for (let i = 0; i < bits.length; i++) {
+    const bit = bits[i]
+    const isGuard = (i < 3) || (i >= 45 && i < 50) || (i >= 92)
+    const barHeight = isGuard ? (height + guardExtraHeight) : height
+
+    if (bit === '1') {
+      rects += `<rect x="${x}" y="3" width="${scale}" height="${barHeight}" fill="#000000"/>`
+    }
+    x += scale
+  }
+
+  const totalWidth = x + quietZone
+  const svgHeight = height + guardExtraHeight + fontSize + 10
+
+  const formattedText = `${ean13Str[0]}  ${ean13Str.slice(1, 7)}  ${ean13Str.slice(7)}`
+  const showText = options.showText !== false
+  const textHtml = showText ? `<text x="${totalWidth / 2}" y="${height + guardExtraHeight + fontSize + 4}" font-family="monospace" font-size="${fontSize}" font-weight="900" text-anchor="middle" fill="#000000">${formattedText}</text>` : ''
+
+  const maxWidthCss = options.maxWidth || '280px'
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${svgHeight}" style="width: 100%; max-width: ${maxWidthCss}; height: auto; display: block; margin: 0 auto;">
+    <rect width="100%" height="100%" fill="#ffffff"/>
+    ${rects}
+    ${textHtml}
+  </svg>`
+}
 
 // Estados reactivos
 const pedidos = ref([])
@@ -1018,59 +1441,43 @@ const fetchSucursalStockForPedido = async (pedido) => {
       } catch (e) {}
     }
 
-    // 2. Obtener EXCLUSIVAMENTE el id de BBDD MariaDB de la sucursal (sucursal.id)
-    let mariadbSucursalId = null
+    // 2. Determinar la sucursal del pedido y sus datos de coincidencia
+    const targetSucName = String(pedido.sucursal || '').trim()
+    const foundSuc = listSucursales.value.find(s => 
+      String(s.id) === targetSucName || 
+      String(s.sucursal || '').trim().toLowerCase() === targetSucName.toLowerCase() ||
+      String(s.numero) === targetSucName
+    )
 
-    if (pedido.id_sucursal) {
-      mariadbSucursalId = pedido.id_sucursal
-    } else if (pedido.sucursal_id) {
-      mariadbSucursalId = pedido.sucursal_id
-    }
+    const numPadded = foundSuc ? String(foundSuc.numero).padStart(2, '0') : ''
+    const siteIdStr = foundSuc ? String(foundSuc.id) : ''
 
-    if (!mariadbSucursalId && pedido.sucursal) {
-      const sucursalStr = String(pedido.sucursal).trim().toLowerCase()
-      const foundSuc = listSucursales.value.find(s => 
-        String(s.id) === sucursalStr || 
-        String(s.sucursal || '').trim().toLowerCase() === sucursalStr ||
-        String(s.numero) === sucursalStr
-      )
-      if (foundSuc) {
-        mariadbSucursalId = foundSuc.id // ID de BBDD MariaDB (Primary Key: sucursal.id)
-      }
-    }
+    console.log(`[Pedidos] Consultando stock vía /api/wms/stock-sucursales para sucursal "${targetSucName}" (num: ${numPadded}, id: ${siteIdStr})`)
 
-    if (!mariadbSucursalId && !isNaN(parseInt(pedido.sucursal, 10))) {
-      mariadbSucursalId = parseInt(pedido.sucursal, 10)
-    }
+    // 3. Consultar stock invocando el endpoint POST /api/wms/stock-sucursales (el mismo endpoint que /wms-stock-ubicaciones)
+    const res = await fetch('/api/wms/stock-sucursales', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        codigoProducto: ''
+      })
+    })
 
-    // Fallback a ID 1 si no se determina la sucursal
-    if (!mariadbSucursalId) mariadbSucursalId = 1
-
-    console.log(`[Pedidos] Consultando stock con el ID de BBDD MariaDB sucursal.id = ${mariadbSucursalId} para el pedido ${pedido.codigo}`)
-
-    // 3. Consultar stock llamando al endpoint con el ID de MariaDB de la sucursal
-    let wmsHeaders = {}
-    const savedSession = localStorage.getItem('wms_session')
-    if (savedSession) {
-      try {
-        const sess = JSON.parse(savedSession)
-        if (sess.sessionId) {
-          wmsHeaders = {
-            'X-WMS-Session-Id': sess.sessionId,
-            'X-WMS-Site-Id': sess.siteId || '194326',
-            'X-WMS-Host': sess.host || 'http://192.168.10.2'
-          }
-        }
-      } catch (e) {}
-    }
-
-    const res = await fetch(`/api/wms/stock-site/${mariadbSucursalId}`, { headers: wmsHeaders })
     if (res.ok) {
       const data = await res.json()
-      if (data.ok && Array.isArray(data.productos)) {
+      if (data.ok && Array.isArray(data.items)) {
         const map = {}
-        data.productos.forEach(prod => {
-          map[prod.codigo] = parseFloat(prod.stockFisico) || 0
+        data.items.forEach(i => {
+          const siteStr = String(i.sucursal || '').toLowerCase()
+          const isMatch = (targetSucName && siteStr.includes(targetSucName.toLowerCase())) ||
+                          (numPadded && siteStr.includes(numPadded)) ||
+                          (siteIdStr && siteStr.includes(siteIdStr))
+
+          if (isMatch && i.codigo) {
+            map[i.codigo] = parseFloat(i.stock) || 0
+          }
         })
         sucursalStockMap.value = map
       }
@@ -1355,6 +1762,183 @@ const getPrintArmadoPiezas = (codigo_producto) => {
   return arm.piezas > 0 ? arm.piezas : '-'
 }
 
+const generateCode128SVG = (text, options = {}) => {
+  const str = String(text || '').trim()
+  if (!str) return ''
+
+  const patterns = [
+    "212222", "222122", "222221", "121223", "121322", "131222", "122213", "122312", "132212", "221213",
+    "221312", "231212", "112232", "122132", "122231", "113222", "123122", "123221", "223211", "221132",
+    "221231", "213212", "223112", "312131", "311222", "321122", "321221", "312212", "322112", "322211",
+    "212123", "212321", "232121", "111323", "131123", "131321", "112313", "132113", "132311", "211313",
+    "231113", "231311", "112133", "112331", "132131", "113123", "113321", "133121", "313121", "211331",
+    "231131", "213113", "213311", "213131", "311123", "311321", "331121", "312113", "312311", "332111",
+    "314111", "221411", "431111", "111224", "111422", "121124", "121421", "141122", "141221", "112214",
+    "112412", "122114", "122411", "142112", "142411", "241211", "221114", "411122", "411221", "421112",
+    "421221", "212141", "214121", "412121", "111143", "111341", "131141", "114113", "114311", "411113",
+    "411311", "113141", "114131", "311141", "411131", "211412", "211214", "211232", "233111"
+  ]
+  const startB = 104
+  const stopPattern = "2331112"
+
+  const codes = [startB]
+  let checksum = startB
+
+  for (let i = 0; i < str.length; i++) {
+    const charCode = str.charCodeAt(i)
+    let val = charCode >= 32 && charCode <= 126 ? charCode - 32 : 0
+    codes.push(val)
+    checksum += val * (i + 1)
+  }
+
+  const checkVal = checksum % 103
+  codes.push(checkVal)
+
+  const quietZoneModules = 10
+  const moduleWidth = options.moduleWidth || 1.8
+  const barHeight = options.height || 45
+
+  let rects = []
+  let x = quietZoneModules * moduleWidth
+
+  const renderPattern = (patStr) => {
+    let isBar = true
+    for (let j = 0; j < patStr.length; j++) {
+      const w = parseInt(patStr[j], 10) * moduleWidth
+      if (isBar) {
+        rects.push(`<rect x="${x.toFixed(2)}" y="0" width="${w.toFixed(2)}" height="${barHeight}" fill="#000000"/>`)
+      }
+      x += w
+      isBar = !isBar
+    }
+  }
+
+  for (const c of codes) {
+    if (patterns[c]) renderPattern(patterns[c])
+  }
+  renderPattern(stopPattern)
+
+  x += quietZoneModules * moduleWidth
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${x.toFixed(0)}" height="${barHeight + 20}" viewBox="0 0 ${x.toFixed(0)} ${barHeight + 20}">
+    <rect width="100%" height="100%" fill="#ffffff"/>
+    <g>${rects.join('')}</g>
+    <text x="${(x / 2).toFixed(2)}" y="${barHeight + 14}" font-family="monospace" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">${str}</text>
+  </svg>`
+}
+
+const printPedidoPdf = (pedido) => {
+  if (!pedido || !pedido.items || pedido.items.length === 0) {
+    showAlert('El pedido no contiene ítems para generar el PDF.', 'error')
+    return
+  }
+
+  // Filtrar únicamente los productos que tengan peso o cantidad enviada cargada (> 0) y no tengan no_envia / sin_stock
+  const itemsEnviadosFilter = pedido.items.filter(item => {
+    if (item.no_envia || item.sin_stock) return false
+    const peso = parseFloat(item.peso_enviado || 0)
+    const frac = parseFloat(item.fraccion_enviada || 0)
+    const pzas = parseInt(item.cantidad_enviada || 0, 10)
+    return peso > 0 || frac > 0 || pzas > 0
+  })
+
+  if (itemsEnviadosFilter.length === 0) {
+    showAlert('El pedido no posee ningún producto con peso/cantidad enviada cargada para generar etiquetas PDF.', 'error')
+    return
+  }
+
+  const win = window.open('', '_blank', 'width=950,height=800')
+  if (!win) {
+    showAlert('Por favor permita las ventanas emergentes (pop-ups) en el navegador para ver el PDF.', 'error')
+    return
+  }
+
+  const sucursal = pedido.sucursal || 'Sin Sucursal'
+  const fechaStr = formatDate(pedido.fecha)
+  const codigoPedido = pedido.codigo || 'S/N'
+
+  const itemsHtml = itemsEnviadosFilter.map(item => {
+    const cod = item.codigo_producto || '-'
+    const nombre = item.Producto?.nombre || item.codigo_producto || 'Sin descripción'
+    const barCodeText = item.Producto?.codigo_barra || item.codigo_producto || cod
+    
+    const pesoVal = parseFloat(item.peso_enviado || 0)
+    const fracVal = parseFloat(item.fraccion_enviada || 0)
+    const pzasVal = parseInt(item.cantidad_enviada || 0, 10)
+    const kilosFinal = pesoVal > 0 ? pesoVal : fracVal
+    
+    let kilosDisplay = kilosFinal > 0 ? `${kilosFinal.toFixed(3)} kg` : (pzasVal > 0 ? `${pzasVal} pz` : '0.000 kg')
+
+    const svgBarcode = generateBarcodeSVG(barCodeText, { scale: 1.6, height: 38 })
+
+    return `
+      <div class="product-card">
+        <div class="product-header">
+          <span class="product-code">CÓD: ${cod}</span>
+          <span class="product-kilos">${kilosDisplay}</span>
+        </div>
+        <div class="product-name">${nombre}</div>
+        <div class="barcode-container">
+          ${svgBarcode}
+        </div>
+      </div>
+    `
+  }).join('')
+
+  const fullContent = [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+    '<meta charset="utf-8">',
+    `<title>Etiquetas PDF - Pedido ${codigoPedido} (${sucursal})</title>`,
+    '<style>',
+    '@page { size: A4; margin: 8mm; }',
+    '* { box-sizing: border-box; }',
+    'body { font-family: "Nunito", Arial, sans-serif; margin: 0; padding: 10px; color: #0f172a; background: #ffffff; }',
+    '.header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 10px; }',
+    '.title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; }',
+    '.subtitle { font-size: 12px; color: #64748b; margin-top: 2px; font-weight: 600; }',
+    '.meta-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 4px; font-size: 12px; display: flex; gap: 20px; margin-bottom: 12px; }',
+    '.meta-item strong { color: #0f172a; }',
+    '.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }',
+    '.product-card { border: 1.5px solid #0f172a; border-radius: 4px; padding: 6px 8px; background: #ffffff; page-break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; }',
+    '.product-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 4px; }',
+    '.product-code { font-weight: 800; font-size: 11px; color: #ef4444; font-family: monospace; }',
+    '.product-kilos { font-weight: 800; font-size: 12px; color: #16a34a; background: #f0fdf4; padding: 1px 6px; border-radius: 3px; border: 1px solid #bbf7d0; }',
+    '.product-name { font-weight: 700; font-size: 11px; color: #0f172a; margin-bottom: 4px; line-height: 1.2; }',
+    '.barcode-container { text-align: center; margin-top: auto; padding-top: 2px; }',
+    '.barcode-container svg { max-width: 100%; height: auto; }',
+    '.btn-print { padding: 6px 14px; background: #ef4444; color: white; border: none; border-radius: 4px; font-weight: 800; cursor: pointer; font-size: 13px; }',
+    '@media print { body { padding: 0; } .no-print { display: none !important; } }',
+    '</style>',
+    '</head>',
+    '<body>',
+    '<div class="header">',
+    '<div>',
+    '<h1 class="title">REMITO / ETIQUETAS CON CÓDIGO DE BARRAS</h1>',
+    `<div class="subtitle">Orden de Pedido Nº ${codigoPedido} — Sucursal ${sucursal}</div>`,
+    '</div>',
+    '<div class="no-print">',
+    '<button class="btn-print" onclick="window.print()">📄 Imprimir / Guardar como PDF</button>',
+    '</div>',
+    '</div>',
+    '<div class="meta-box">',
+    `<div class="meta-item"><strong>Sucursal Destino:</strong> ${sucursal}</div>`,
+    `<div class="meta-item"><strong>Fecha Emisión:</strong> ${fechaStr}</div>`,
+    `<div class="meta-item"><strong>Total Ítems Enviados:</strong> ${itemsEnviadosFilter.length}</div>`,
+    '</div>',
+    `<div class="grid">${itemsHtml}</div>`,
+    '<' + 'script>',
+    'window.onload = () => { setTimeout(() => { window.print(); }, 300); };',
+    '<' + '/script>',
+    '</body>',
+    '</html>'
+  ].join('\n')
+
+  win.document.write(fullContent)
+  win.document.close()
+}
+
 const printPedido = (pedido) => {
   activePrintPedido.value = pedido
   setTimeout(() => {
@@ -1396,8 +1980,8 @@ const getPedidoPorcentajeCompleto = (p) => {
     const fracEnv = parseFloat(item.fraccion_enviada || 0)
     const pesoEnv = parseFloat(item.peso_enviado || 0)
 
-    const pesoPieza = parseFloat(item.Producto?.peso_x_pieza || 0)
-    const pesoFrac = parseFloat(item.Producto?.kg_x_bolsita || 0)
+    const pesoPieza = parseFloat(item.Producto?.peso_pieza || 0)
+    const pesoFrac = parseFloat(item.Producto?.peso_fraccion || 0)
 
     let req = 0
     if (pesoPieza > 0 || pesoFrac > 0) {
@@ -1554,6 +2138,7 @@ const fetchCatalogProducts = async () => {
     const res = await fetch('/api/productos')
     if (res.ok) {
       catalogProducts.value = await res.json()
+      
     }
   } catch (error) {
     console.error('Error fetching catalog products:', error)

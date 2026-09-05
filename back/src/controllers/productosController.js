@@ -1,5 +1,6 @@
 const { Producto, ProductoVencimiento, IngresoProveedor, Proveedor, Generador, Sucursal, Proceso, LogConversion, Bulto, Fraccionado, SucursalProductoPermiso, Ubicacion, ProductoStock, MovimientoStock, sequelize } = require('../models');
 const wmsService = require('../services/wmsService');
+const { calcularPiezasProducto } = require('../utils/calculoPiezas');
 
 // Helper to sync Fraccionado template mapping
 const syncFraccionadoTemplate = async (codigoProductoOriginal, codigoFraccionado, id_ubicacion, transaction) => {
@@ -117,9 +118,8 @@ exports.obtenerProductos = async (req, res) => {
       json.kg_decomiso = stockObj ? parseFloat(stockObj.decomiso) : 0.000;
       json.kg_fraccionados = stockObj ? parseFloat(stockObj.kg_fraccionados) : 0.000;
       
-      // Piezas localizadas (calculadas dinámicamente sumando los lotes activos de esta ubicación)
-      const vencimientos = json.vencimientosList || [];
-      json.cantidad_piezas = vencimientos.reduce((sum, v) => sum + (parseInt(v.piezas, 10) || 0), 0);
+      // Piezas localizadas (calculadas dinámicamente según stock y tipo_calculo_piezas)
+      json.cantidad_piezas = calcularPiezasProducto(json.stock, json);
 
       // Determinar la fecha de última modificación según el último log de stock o la fecha de edición del producto
       const maxLogDate = logDateMap[p.codigo];
@@ -144,9 +144,9 @@ exports.crearProducto = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { 
-      codigo, nombre, stock, peso_x_pieza, cantidad_piezas, 
-      vencimientos, kg_x_bolsita, kg_fraccionados, kg_decomiso, kg_recorte,
-      permite_piezas, permite_fracciones, vencimientosList, destacado, codigo_barra, pesable, activo,
+      codigo, nombre, stock, peso_pieza, cantidad_piezas, 
+      vencimientos, peso_fraccion, peso_unidad, tipo_calculo_piezas, kg_fraccionados, kg_decomiso, kg_recorte,
+      vencimientosList, destacado, codigo_barra, pesable, activo,
       codigo_fraccionado, sucursalesHabilitadas, proveedor_id
     } = req.body;
 
@@ -155,25 +155,42 @@ exports.crearProducto = async (req, res) => {
       return res.status(400).json({ error: 'codigo y nombre son obligatorios' });
     }
 
+    const tipoCalc = tipo_calculo_piezas || 'normal';
+    if (!['normal', 'fraccionado', 'unidad'].includes(tipoCalc)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El tipo_calculo_piezas debe ser "normal", "fraccionado" o "unidad".' });
+    }
+
+    const pesoP = parseFloat(peso_pieza) || 0;
+    const kgB = parseFloat(peso_fraccion) || 0;
+    const pesoU = parseFloat(peso_unidad) || 1.000;
+
+    if (tipoCalc === 'normal' && pesoP <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Para productos normales, el peso por pieza debe ser mayor a 0.' });
+    }
+    if (tipoCalc === 'fraccionado' && kgB <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Para productos fraccionados, el peso por fraccion (peso_fraccion) debe ser mayor a 0.' });
+    }
+    if (tipoCalc === 'unidad' && pesoU <= 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Para productos por unidad, el peso por unidad debe ser mayor a 0.' });
+    }
+
     const existe = await Producto.findByPk(codigo, { transaction });
     if (existe) {
       await transaction.rollback();
       return res.status(400).json({ error: 'Ya existe un producto con ese código' });
     }
 
-    // Sum pieces across vencimientosList if provided
-    let calculatedPieces = cantidad_piezas || 0;
-    if (Array.isArray(vencimientosList) && vencimientosList.length > 0) {
-      calculatedPieces = vencimientosList.reduce((acc, curr) => acc + (parseInt(curr.piezas, 10) || 0), 0);
-    }
-
     const nuevoProducto = await Producto.create({
       codigo,
       nombre,
-      peso_x_pieza,
-      kg_x_bolsita,
-      permite_piezas: permite_piezas !== undefined ? permite_piezas : true,
-      permite_fracciones: permite_fracciones !== undefined ? permite_fracciones : true,
+      peso_pieza: pesoP,
+      peso_fraccion: kgB,
+      peso_unidad: pesoU,
+      tipo_calculo_piezas: tipoCalc,
       destacado: destacado !== undefined ? destacado : false,
       codigo_barra,
       pesable: pesable !== undefined ? pesable : true,
@@ -202,14 +219,20 @@ exports.crearProducto = async (req, res) => {
     }
 
     if (Array.isArray(vencimientosList) && vencimientosList.length > 0) {
+      const pesoXP = parseFloat(peso_pieza) || 0;
       const activeVencimientos = vencimientosList
-        .filter(v => v.vencimiento && (parseInt(v.piezas, 10) || 0) > 0)
-        .map(v => ({
-          codigo_producto: codigo,
-          vencimiento: v.vencimiento,
-          piezas: parseInt(v.piezas, 10) || 0,
-          id_ubicacion: activeUbicacionId
-        }));
+        .filter(v => v.vencimiento && ((parseInt(v.piezas, 10) || 0) > 0 || parseFloat(v.peso) > 0))
+        .map(v => {
+          const piezasCount = parseInt(v.piezas, 10) || 0;
+          const pesoVal = parseFloat(v.peso) || (piezasCount * pesoXP);
+          return {
+            codigo_producto: codigo,
+            vencimiento: v.vencimiento,
+            piezas: 0,
+            peso: pesoVal,
+            id_ubicacion: activeUbicacionId
+          };
+        });
       if (activeVencimientos.length > 0) {
         await ProductoVencimiento.bulkCreate(activeVencimientos, { transaction });
       }
@@ -274,6 +297,29 @@ exports.actualizarProducto = async (req, res) => {
     const { vencimientosList, sucursalesHabilitadas, ...otherFields } = req.body;
     otherFields.updated_at = new Date();
 
+    const targetTipoCalc = otherFields.tipo_calculo_piezas !== undefined ? otherFields.tipo_calculo_piezas : producto.tipo_calculo_piezas;
+    if (!['normal', 'fraccionado', 'unidad'].includes(targetTipoCalc)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El tipo_calculo_piezas debe ser "normal", "fraccionado" o "unidad".' });
+    }
+
+    const targetPesoP = otherFields.peso_pieza !== undefined ? parseFloat(otherFields.peso_pieza) : (otherFields.peso_pieza !== undefined ? parseFloat(otherFields.peso_pieza) : parseFloat(producto.peso_pieza));
+    const targetKgB = otherFields.peso_fraccion !== undefined ? parseFloat(otherFields.peso_fraccion) : (otherFields.peso_fraccion !== undefined ? parseFloat(otherFields.peso_fraccion) : parseFloat(producto.peso_fraccion));
+    const targetPesoU = otherFields.peso_unidad !== undefined ? parseFloat(otherFields.peso_unidad) : (otherFields.peso_unidad !== undefined ? parseFloat(otherFields.peso_unidad) : parseFloat(producto.peso_unidad));
+
+    if (targetTipoCalc === 'normal' && (isNaN(targetPesoP) || targetPesoP <= 0)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Para productos normales, el peso por pieza debe ser mayor a 0.' });
+    }
+    if (targetTipoCalc === 'fraccionado' && (isNaN(targetKgB) || targetKgB <= 0)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Para productos fraccionados, el peso por fraccion (peso_fraccion) debe ser mayor a 0.' });
+    }
+    if (targetTipoCalc === 'unidad' && (isNaN(targetPesoU) || targetPesoU <= 0)) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Para productos por unidad, el peso por unidad debe ser mayor a 0.' });
+    }
+
     const id_ubicacion = req.ubicacionId;
     if (otherFields.stock !== undefined) {
       const stockVal = parseFloat(otherFields.stock) || 0;
@@ -311,17 +357,18 @@ exports.actualizarProducto = async (req, res) => {
       // Filter and insert new vencimientos
       let calculatedPieces = 0;
       if (Array.isArray(vencimientosList) && vencimientosList.length > 0) {
-        const pesoXP = parseFloat(producto.peso_x_pieza) || 0;
+        const pesoXP = parseFloat(producto.peso_pieza) || 0;
         const activeVencimientos = vencimientosList
-          .filter(v => v.vencimiento && (parseInt(v.piezas, 10) || 0) > 0)
+          .filter(v => v.vencimiento && ((parseInt(v.piezas, 10) || 0) > 0 || parseFloat(v.peso) > 0))
           .map(v => {
             const piezasCount = parseInt(v.piezas, 10) || 0;
             calculatedPieces += piezasCount;
+            const pesoVal = parseFloat(v.peso) || (piezasCount * pesoXP);
             return {
               codigo_producto: id,
               vencimiento: v.vencimiento,
-              piezas: piezasCount,
-              peso: piezasCount * pesoXP,
+              piezas: 0,
+              peso: pesoVal,
               id_ubicacion
             };
           });
@@ -338,10 +385,10 @@ exports.actualizarProducto = async (req, res) => {
           codigo_producto: id,
           id_ubicacion,
           tipo_movimiento: 'AUDITORIA_PIEZAS',
-          concepto: `Modificación de lotes de vencimiento desde edición de producto (piezas: ${oldPiecesTotal} -> ${calculatedPieces})`,
-          cantidad_piezas: deltaPieces,
-          stock: 0,
-          kilos_calculado: 0,
+          concepto: `Modificación de lotes de vencimiento desde edición de producto (piezas aprox: ${oldPiecesTotal} -> ${calculatedPieces})`,
+          cantidad_piezas: 0,
+          stock: deltaPieces * (parseFloat(producto.peso_pieza) || 0),
+          kilos_calculado: deltaPieces * (parseFloat(producto.peso_pieza) || 0),
           usuario: req.usuario?.nombre || 'Sistema',
           fecha: new Date()
         }, { transaction });
@@ -445,10 +492,10 @@ exports.uploadExcel = async (req, res) => {
           nombre: row['Nombre'] || row['nombre'],
           stock: kb,
           kilos_calculado: kb,
-          peso_x_pieza: parseFloat(row['Peso x Pieza'] || row['peso_x_pieza'] || 0),
+          peso_pieza: parseFloat(row['Peso x Pieza'] || row['peso_pieza'] || row['peso_pieza'] || 0),
           cantidad_piezas: parseInt(row['Cantidad Piezas'] || row['cantidad_piezas'] || 0, 10),
           vencimientos: row['Vencimientos'] || row['vencimientos'] || null,
-          kg_x_bolsita: parseFloat(row['Kg x bolsita'] || row['kg_x_bolsita'] || 0),
+          peso_fraccion: parseFloat(row['Kg x bolsita'] || row['peso_fraccion'] || row['peso_fraccion'] || 0),
           kg_fraccionados: parseFloat(row['Kg Fraccionados'] || row['kg_fraccionados'] || 0),
           kg_decomiso: parseFloat(row['Kg Decomiso'] || row['kg_decomiso'] || 0),
           kg_recorte: parseFloat(row['Kg Recorte'] || row['kg_recorte'] || 0),
@@ -473,8 +520,8 @@ exports.uploadExcel = async (req, res) => {
     // Insertar masivamente (ignorar o actualizar duplicados)
     await Producto.bulkCreate(productosData, {
       updateOnDuplicate: [
-        'nombre', 'stock', 'kilos_calculado', 'peso_x_pieza', 'cantidad_piezas', 
-        'vencimientos', 'kg_x_bolsita', 'kg_fraccionados', 'kg_decomiso', 'kg_recorte',
+        'nombre', 'stock', 'kilos_calculado', 'peso_pieza', 'cantidad_piezas', 
+        'vencimientos', 'peso_fraccion', 'kg_fraccionados', 'kg_decomiso', 'kg_recorte',
         'codigo_barra', 'destacado', 'pesable', 'proveedor_id'
       ]
     });
@@ -1083,7 +1130,7 @@ exports.obtenerVencimientosCercanos = async (req, res) => {
         {
           model: Producto,
           as: 'producto',
-          attributes: ['nombre', 'peso_x_pieza'],
+          attributes: ['nombre', 'peso_pieza'],
           include: [{
             model: ProductoStock,
             as: 'Stocks',
@@ -1179,12 +1226,12 @@ exports.ingresarProveedor = async (req, res) => {
     // Peso ingresado manualmente o calculado como fallback si no se provee
     let kilosASumar = parseFloat(peso);
     if (isNaN(kilosASumar) || kilosASumar < 0) {
-      kilosASumar = valorPiezas * (parseFloat(producto.peso_x_pieza) || 0);
+      kilosASumar = valorPiezas * (parseFloat(producto.peso_pieza) || 0);
     }
 
     if (isNaN(valorPiezas) || valorPiezas <= 0) {
-      const pxp = parseFloat(producto.peso_x_pieza) || 0;
-      valorPiezas = (pxp > 0 && kilosASumar > 0) ? Math.max(1, Math.round(kilosASumar / pxp)) : 1;
+      const pxp = parseFloat(producto.peso_pieza) || 0;
+      valorPiezas = (pxp > 0 && kilosASumar >= pxp) ? Math.round(kilosASumar / pxp) : 0;
     }
 
     const id_ubicacion = req.ubicacionId;
@@ -1194,7 +1241,7 @@ exports.ingresarProveedor = async (req, res) => {
       id_ubicacion,
       proveedor_id: proveedor_id,
       codigo_producto: codigo,
-      piezas: valorPiezas,
+      piezas: 0,
       vencimiento: vencimiento,
       peso_calculado: kilosASumar,
       bulto_id: bulto_id || null,
@@ -1213,14 +1260,14 @@ exports.ingresarProveedor = async (req, res) => {
     });
 
     if (prodVencimiento) {
-      prodVencimiento.piezas = (parseInt(prodVencimiento.piezas, 10) || 0) + valorPiezas;
+      prodVencimiento.piezas = 0;
       prodVencimiento.peso = (parseFloat(prodVencimiento.peso) || 0) + kilosASumar;
       await prodVencimiento.save({ transaction });
     } else {
       prodVencimiento = await ProductoVencimiento.create({
         codigo_producto: codigo,
         vencimiento: vencimiento,
-        piezas: valorPiezas,
+        piezas: 0,
         peso: kilosASumar,
         id_ubicacion
       }, { transaction });
@@ -1245,7 +1292,7 @@ exports.ingresarProveedor = async (req, res) => {
       conceptoMovimiento = `Ingreso por Bultos (${cantidad_bultos} bulto/s "${bultoNombre}", total ${valorPiezas} pz, ${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento})`;
     }
 
-    // 5. Crear manualmente el registro en MovimientoStock con el delta real (+valorPiezas and +kilosASumar)
+    // 5. Crear manualmente el registro en MovimientoStock con el delta real
     const { MovimientoStock } = sequelize.models;
     await MovimientoStock.create({
       codigo_producto: codigo,
@@ -1253,7 +1300,7 @@ exports.ingresarProveedor = async (req, res) => {
       tipo_movimiento: 'INGRESO_PROVEEDOR',
       referencia_id: nuevoIngreso.id,
       concepto: conceptoMovimiento,
-      cantidad_piezas: valorPiezas,
+      cantidad_piezas: 0,
       stock: kilosASumar,
       kilos_calculado: kilosASumar,
       kg_fraccionados: 0,
@@ -1270,7 +1317,7 @@ exports.ingresarProveedor = async (req, res) => {
       proceso: 'Ingreso Proveedor',
       fecha: new Date(),
       codigo: codigo,
-      piezas: valorPiezas,
+      piezas: 0,
       peso_bruto: kilosASumar,
       recorte: 0,
       decomiso: 0,
@@ -1375,12 +1422,12 @@ exports.ingresarProveedorLote = async (req, res) => {
         }
       }
 
-      if (!codigo || piezas === undefined || piezas === null || !vencimiento) {
+      if (!codigo || !vencimiento) {
         if (!transaction.finished) await transaction.rollback();
-        return res.status(400).json({ error: 'El código del producto, la cantidad y la fecha de vencimiento son obligatorios para todos los ítems.' });
+        return res.status(400).json({ error: 'El código del producto y la fecha de vencimiento son obligatorios para todos los ítems.' });
       }
 
-      let valorPiezas = parseInt(piezas, 10);
+      let valorPiezas = parseInt(piezas, 10) || 0;
 
       // Buscar el producto
       const producto = await Producto.findByPk(codigo, { transaction });
@@ -1391,12 +1438,12 @@ exports.ingresarProveedorLote = async (req, res) => {
 
       let kilosASumar = parseFloat(peso);
       if (isNaN(kilosASumar) || kilosASumar < 0) {
-        kilosASumar = (!isNaN(valorPiezas) && valorPiezas > 0) ? valorPiezas * (parseFloat(producto.peso_x_pieza) || 0) : 0;
+        kilosASumar = (!isNaN(valorPiezas) && valorPiezas > 0) ? valorPiezas * (parseFloat(producto.peso_pieza) || 0) : 0;
       }
 
       if (isNaN(valorPiezas) || valorPiezas <= 0) {
-        const pxp = parseFloat(producto.peso_x_pieza) || 0;
-        valorPiezas = (pxp > 0 && kilosASumar > 0) ? Math.max(1, Math.round(kilosASumar / pxp)) : 1;
+        const pxp = parseFloat(producto.peso_pieza) || 0;
+        valorPiezas = (pxp > 0 && kilosASumar >= pxp) ? Math.round(kilosASumar / pxp) : 0;
       }
 
       if (!codigo || !vencimiento) {
@@ -1411,7 +1458,7 @@ exports.ingresarProveedorLote = async (req, res) => {
         id_ubicacion,
         proveedor_id: proveedor_id,
         codigo_producto: codigo,
-        piezas: valorPiezas,
+        piezas: 0,
         vencimiento: vencimiento,
         peso_calculado: kilosASumar,
         bulto_id: tipo === 'bulto' ? bulto_id : null,
@@ -1431,14 +1478,14 @@ exports.ingresarProveedorLote = async (req, res) => {
       });
 
       if (prodVencimiento) {
-        prodVencimiento.piezas = (parseInt(prodVencimiento.piezas, 10) || 0) + valorPiezas;
+        prodVencimiento.piezas = 0;
         prodVencimiento.peso = (parseFloat(prodVencimiento.peso) || 0) + kilosASumar;
         await prodVencimiento.save({ transaction });
       } else {
         prodVencimiento = await ProductoVencimiento.create({
           codigo_producto: codigo,
           vencimiento: vencimiento,
-          piezas: valorPiezas,
+          piezas: 0,
           peso: kilosASumar,
           id_ubicacion
         }, { transaction });
@@ -1468,7 +1515,7 @@ exports.ingresarProveedorLote = async (req, res) => {
         tipo_movimiento: 'INGRESO_PROVEEDOR',
         referencia_id: nuevoIngreso.id,
         concepto: conceptoMovimiento,
-        cantidad_piezas: valorPiezas,
+        cantidad_piezas: 0,
         stock: kilosASumar,
         kilos_calculado: kilosASumar,
         kg_fraccionados: 0,
@@ -1485,7 +1532,7 @@ exports.ingresarProveedorLote = async (req, res) => {
         proceso: 'Ingreso Proveedor',
         fecha: new Date(),
         codigo: codigo,
-        piezas: valorPiezas,
+        piezas: 0,
         peso_bruto: kilosASumar,
         recorte: 0,
         decomiso: 0,
@@ -1595,6 +1642,20 @@ exports.obtenerMovimientosPorProducto = async (req, res) => {
   }
 };
 
+// Obtener todos los snapshots de stock
+exports.obtenerSnapshots = async (req, res) => {
+  try {
+    const { StockSnapshot } = require('../models');
+    const snapshots = await StockSnapshot.findAll({
+      order: [['fecha_corte', 'DESC'], ['id', 'DESC']]
+    });
+    res.json(snapshots);
+  } catch (error) {
+    console.error('Error al obtener snapshots de stock:', error);
+    res.status(500).json({ error: 'Error interno al obtener snapshots de stock' });
+  }
+};
+
 // Obtener sucursales habilitadas para un producto
 exports.obtenerSucursalesHabilitadas = async (req, res) => {
   try {
@@ -1625,9 +1686,7 @@ const syncSucursalesHabilitadas = async (codigoProducto, sucursalIds, transactio
   if (Array.isArray(sucursalIds) && sucursalIds.length > 0) {
     const records = sucursalIds.map(id_sucursal => ({
       id_sucursal,
-      codigo_producto: codigoProducto,
-      permite_piezas: true,
-      permite_fracciones: true
+      codigo_producto: codigoProducto
     }));
     await SucursalProductoPermiso.bulkCreate(records, { transaction });
   }
@@ -1671,22 +1730,28 @@ exports.controlPiezas = async (req, res) => {
         transaction
       });
 
-      const originalPiecesTotal = currentVencimientos.reduce((sum, v) => sum + (parseInt(v.piezas, 10) || 0), 0);
+      const pesoXPieza = parseFloat(producto.peso_pieza) || 0;
+
+      const originalPiecesTotal = currentVencimientos.reduce((sum, v) => {
+        const pL = parseFloat(v.peso) || 0;
+        const est = (pL <= 0 || pesoXPieza <= 0 || pL < pesoXPieza) ? 0 : Math.round(pL / pesoXPieza);
+        return sum + est;
+      }, 0);
 
       // Eliminar lotes actuales que NO vienen en la auditoría (o que vienen con piezas = 0)
       for (const curV of currentVencimientos) {
         const matchingIncoming = lotes.find(l => l.id && parseInt(l.id, 10) === curV.id);
         if (!matchingIncoming || (parseInt(matchingIncoming.piezas, 10) || 0) <= 0) {
-          const oldPieces = parseInt(curV.piezas, 10) || 0;
-          if (oldPieces > 0) {
+          const oldPeso = parseFloat(curV.peso) || 0;
+          if (oldPeso > 0) {
             await MovimientoStock.create({
               codigo_producto,
               id_ubicacion,
               tipo_movimiento: 'AUDITORIA_PIEZAS',
               concepto: `Auditoría: Eliminación de lote vencimiento ${curV.vencimiento}`,
-              cantidad_piezas: -oldPieces,
-              stock: 0,
-              kilos_calculado: 0,
+              cantidad_piezas: 0,
+              stock: -oldPeso,
+              kilos_calculado: -oldPeso,
               usuario
             }, { transaction });
           }
@@ -1696,7 +1761,6 @@ exports.controlPiezas = async (req, res) => {
 
       // Actualizar o crear los lotes entrantes
       let auditedPiecesTotal = 0;
-      const pesoXPieza = parseFloat(producto.peso_x_pieza) || 0;
 
       for (const incomingL of lotes) {
         const incomingPieces = parseInt(incomingL.piezas, 10) || 0;
@@ -1708,12 +1772,12 @@ exports.controlPiezas = async (req, res) => {
         if (incomingL.id) {
           const existingV = currentVencimientos.find(v => v.id === parseInt(incomingL.id, 10));
           if (existingV) {
-            const oldPieces = parseInt(existingV.piezas, 10) || 0;
+            const oldPeso = parseFloat(existingV.peso) || 0;
             const oldDate = existingV.vencimiento;
-            const hasChanges = oldPieces !== incomingPieces || oldDate !== incomingL.vencimiento;
+            const hasChanges = oldPeso !== pesoLote || oldDate !== incomingL.vencimiento;
 
             if (hasChanges) {
-              existingV.piezas = incomingPieces;
+              existingV.piezas = 0;
               existingV.peso = pesoLote;
               existingV.vencimiento = incomingL.vencimiento;
               await existingV.save({ transaction });
@@ -1722,10 +1786,10 @@ exports.controlPiezas = async (req, res) => {
                 codigo_producto,
                 id_ubicacion,
                 tipo_movimiento: 'AUDITORIA_PIEZAS',
-                concepto: `Auditoría: Lote modificado (${oldDate} -> ${incomingL.vencimiento}, piezas: ${oldPieces} -> ${incomingPieces}, peso: ${pesoLote.toFixed(3)} kg)`,
-                cantidad_piezas: incomingPieces - oldPieces,
-                stock: (incomingPieces - oldPieces) * pesoXPieza,
-                kilos_calculado: (incomingPieces - oldPieces) * pesoXPieza,
+                concepto: `Auditoría: Lote modificado (${oldDate} -> ${incomingL.vencimiento}, peso: ${oldPeso.toFixed(3)} -> ${pesoLote.toFixed(3)} kg)`,
+                cantidad_piezas: 0,
+                stock: pesoLote - oldPeso,
+                kilos_calculado: pesoLote - oldPeso,
                 usuario
               }, { transaction });
             }
@@ -1735,7 +1799,7 @@ exports.controlPiezas = async (req, res) => {
             codigo_producto,
             id_ubicacion,
             vencimiento: incomingL.vencimiento,
-            piezas: incomingPieces,
+            piezas: 0,
             peso: pesoLote
           }, { transaction });
 
@@ -1743,8 +1807,8 @@ exports.controlPiezas = async (req, res) => {
             codigo_producto,
             id_ubicacion,
             tipo_movimiento: 'AUDITORIA_PIEZAS',
-            concepto: `Auditoría: Nuevo lote vencimiento ${incomingL.vencimiento} con ${incomingPieces} piezas (${pesoLote.toFixed(3)} kg)`,
-            cantidad_piezas: incomingPieces,
+            concepto: `Auditoría: Nuevo lote vencimiento ${incomingL.vencimiento} (${incomingPieces} pzs aprox -> ${pesoLote.toFixed(3)} kg)`,
+            cantidad_piezas: 0,
             stock: pesoLote,
             kilos_calculado: pesoLote,
             usuario
@@ -1756,7 +1820,6 @@ exports.controlPiezas = async (req, res) => {
       let deltaKilos = 0;
 
       if (deltaPiezas !== 0) {
-        const pesoXPieza = parseFloat(producto.peso_x_pieza) || 0;
         if (pesoXPieza > 0) {
           deltaKilos = deltaPiezas * pesoXPieza;
           const originalStock = parseFloat(pStockRecord.stock) || 0;
@@ -1802,6 +1865,103 @@ exports.controlPiezas = async (req, res) => {
     }
     console.error('Error en controlPiezas:', error);
     res.status(500).json({ error: 'Error interno al guardar la auditoría de piezas.' });
+  }
+};
+
+// Actualizar un lote de vencimiento (codigo_producto, peso, vencimiento)
+exports.actualizarVencimiento = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const { codigo_producto, peso, vencimiento } = req.body;
+    const id_ubicacion = req.ubicacionId;
+
+    const lote = await ProductoVencimiento.findOne({
+      where: { id, id_ubicacion },
+      transaction
+    });
+
+    if (!lote) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Lote de vencimiento no encontrado.' });
+    }
+
+    const prodCode = codigo_producto || lote.codigo_producto;
+    const producto = await Producto.findByPk(prodCode, { transaction });
+    if (!producto) {
+      await transaction.rollback();
+      return res.status(404).json({ error: `El producto ${prodCode} no existe en el catálogo.` });
+    }
+
+    const pesoVal = parseFloat(peso !== undefined ? peso : lote.peso) || 0;
+    const pxp = parseFloat(producto.peso_pieza) || 0;
+    const valPiezas = (pesoVal > 0 && pxp > 0 && pesoVal >= pxp) ? Math.round(pesoVal / pxp) : 0;
+
+    lote.codigo_producto = prodCode;
+    lote.peso = pesoVal;
+    lote.piezas = valPiezas;
+    if (vencimiento) {
+      lote.vencimiento = vencimiento;
+    }
+
+    await lote.save({ transaction });
+    await transaction.commit();
+
+    const loteActualizado = await ProductoVencimiento.findByPk(id, {
+      include: [{
+        model: Producto,
+        as: 'producto',
+        attributes: ['nombre', 'peso_pieza'],
+        include: [{
+          model: ProductoStock,
+          as: 'Stocks',
+          where: { id_ubicacion },
+          required: false
+        }]
+      }]
+    });
+
+    if (loteActualizado && loteActualizado.producto) {
+      const stockObj = loteActualizado.producto.Stocks && loteActualizado.producto.Stocks[0] ? loteActualizado.producto.Stocks[0] : null;
+      loteActualizado.producto.stock = stockObj ? parseFloat(stockObj.stock) : 0.0000;
+    }
+
+    res.json({
+      mensaje: 'Lote de vencimiento actualizado correctamente.',
+      vencimiento: loteActualizado
+    });
+  } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
+    console.error('Error al actualizar vencimiento:', error);
+    res.status(500).json({ error: 'Error interno al actualizar lote de vencimiento.' });
+  }
+};
+
+// Eliminar un lote de vencimiento
+exports.eliminarVencimiento = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const id_ubicacion = req.ubicacionId;
+
+    const lote = await ProductoVencimiento.findOne({
+      where: { id, id_ubicacion },
+      transaction
+    });
+
+    if (!lote) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Lote de vencimiento no encontrado.' });
+    }
+
+    await lote.destroy({ transaction });
+    await transaction.commit();
+
+    res.json({ mensaje: 'Lote de vencimiento eliminado correctamente.' });
+  } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
+    console.error('Error al eliminar vencimiento:', error);
+    res.status(500).json({ error: 'Error interno al eliminar lote de vencimiento.' });
   }
 };
 

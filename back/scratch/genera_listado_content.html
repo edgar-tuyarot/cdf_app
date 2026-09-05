@@ -1,0 +1,163 @@
+<html>
+<head>
+    <title>BlockWMS</title>
+    <meta name="keywords" content="WMS">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">     
+    
+    <!-- Comentado xq el archivo no se encuentra en esa ubicacion  <link rel="stylesheet" type = "text/css" href="css/jquery.notify.css">-->
+    <link rel="stylesheet" type = "text/css" href="css/bootstrap.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/estilos.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/xtree.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/dialog_box.css"/>
+    <!-- <link rel="stylesheet" type = "text/css" href="include/ArbolCSS/simpletree.css"/> -->
+    <link rel="stylesheet" type = "text/css" href="css/jquery.datatables.min.css">    
+    <!--link rel="stylesheet" type = "text/css" href="css/responsive.bootstrap.min.css"/--> 
+    <link rel="stylesheet" type = "text/css" href="../jalert/jquery.alerts.css"/>  
+    <link rel="stylesheet" type = "text/css" href="css/colreorder.datatables.min.css"/> 
+    <!--link rel="stylesheet" type = "text/css" href="css/keyTable.dataTables.min.css"/-->  
+    <link rel="stylesheet" type = "text/css" href="css/block-datatables-custom.css"/> 
+    <link rel="stylesheet" type = "text/css" href="css/block-multiselect-custom.css"/>  
+    <link rel="stylesheet" type = "text/css" href="css/datatables.select.min.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/fixedcolumns.datatables.min.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/block-reportes-custom.css"/> 
+    <link rel="stylesheet" type = "text/css" href="css/buttons.datatables.min.css"/>
+
+    <script language="JavaScript" src="http://192.168.10.2:80/js/strings.js"></script>
+    <script LANGUAGE="JavaScript" SRC="http://192.168.10.2:80/js/xtree.js"></script>
+    <script type="text/javascript" src="http://192.168.10.2:80/js/dialog_box.js"></script>
+
+    <script type = "text/javascript" src = "js/jquery-1.12.4.js"></script>
+    <script type = "text/javascript" src = "js/bootstrap.min.js"></script>
+    <script type = "text/javascript" src = "js/jquery-datatable.js"></script> 
+    <script type = "text/javascript" src = "js/bootstrap-datatable-base.js"></script>
+    <script type = "text/javascript" src = "js/datatables.fixedcolumns.min.js"></script>
+    
+    <script type = "text/javascript" src = "js/jquery.blockUI.js"></script>
+    <script type="text/javascript" src="js/jquery.validate.min.js"></script>    
+    <link rel="stylesheet" href="assets/bootstrap-select/bootstrap-select.css">
+    <script src="assets/bootstrap-select/bootstrap-select.min.js"></script>
+
+    <script type = "text/javascript" src = "js/genera_listado.js"></script>
+    <!--script type = "text/javascript" src = "js/dataTables.responsive.min.js"></script-->
+    <!--script type = "text/javascript" src = "js/responsive.bootstrap.min.js"></script-->
+    <script type = "text/javascript" src = "jalert/jquery.alerts.js"></script>  
+    <!--script type = "text/javascript" src = "js/ColReorderWithResize.js"></script-->  
+    <script type = "text/javascript" src = "js/datatables.colreorder.min.js"></script>
+    <!--script type = "text/javascript" src = "js/dataTables.keyTable.min.js"></script-->
+    <script type = "text/javascript" src = "js/datatables.select.min.js"></script>    
+  <script type = "text/javascript" src = "js/datatables.buttons.min.js"></script>    
+  <script type = "text/javascript" src = "js/buttons.colvis.min.js"></script>    
+  <script type = "text/javascript" src = "js/bootbox.min.js"></script>
+            
+    <!-- <link rel="stylesheet" type="text/css" href="JSCal2/css/jscal2.css"  />
+    <link rel="stylesheet" type="text/css" href="JSCal2/css/border-radius.css" />
+    <script type="text/javascript" src="JSCal2/js/jscal2.js"></script>
+    <script type="text/javascript" src="JSCal2/js/lang/es.js"></script> -->
+    <script type="text/javascript"  src="js/becalendario.js"></script>
+
+    <link href="css/bootstrap-multiselect.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+
+    <script type="text/javascript" src="js/jquery-ui-1.8.23.js"></script>
+    <link rel="stylesheet" type="text/css" href="js/DHTML/jquery-ui.css"/>
+    
+    <script type = "text/javascript" src = "js/http.js?v=1"></script>
+    <script language="JavaScript" src="js/library.js?v=9"></script>
+    <script language="JavaScript" src="js/multilenguaje.js?v=0"></script>
+    <script language="JavaScript" src="js/library_datatable.js"></script>
+    <script language="JavaScript" src="js/library_datatable_advanced.js"></script>    
+    <script language="JavaScript" src="js/globalsdata.js"></script>    
+    <script language="JavaScript" src="js/library_modals.js"></script>
+
+  <!--Referencias jsTree-->
+    <link rel="stylesheet" href="js/jsTree/themes/block/style.css" />
+    <script src="js/jsTree/jstree.js"></script>
+    <script src="js/library_jstree.js?v=8"></script>
+  <!--Referencias jsTree-->
+  
+  <!--Referencias de Moltran     -->
+  <script src="assets/jquery-sparkline/jquery.sparkline.min.js"></script>
+  <script src="assets/jquery-detectmobile/detect.js"></script>
+  <script src="assets/fastclick/fastclick.js"></script>
+  <script src="assets/jquery-slimscroll/jquery.slimscroll.js"></script>
+  <script src="assets/jquery-blockui/jquery.blockui.js"></script> 
+  <script src="assets/notifications/notify.min.js"></script>
+  <script src="assets/notifications/notify-metro.js"></script>
+  <script src="assets/notifications/notifications.js"></script>
+  <script src="js/balanza.js"></script>
+
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="assets/notifications/notification.css" rel="stylesheet" />
+  <link href="assets/font-awesome/css/font-awesome.css" rel="stylesheet" />
+  <!--link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" /-->
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="css/material-design-iconic-font.min.css" rel="stylesheet">
+  <link href="css/helper.css" rel="stylesheet" type="text/css" />
+  <script>
+    gobjBlockMultilenguaje.diccionarioCargar("EdgarTu","1435",1);
+  </script>
+  <!--<link href="css/style-moltran.css" rel="stylesheet" type="text/css" /-->
+    
+  <!-- Font Icons GAUCHO 05072017-->
+  <!--link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="css/material-design-iconic-font.min.css" rel="stylesheet"-->
+  <!-- Font Icons GAUCHO 05072017-->
+  <!--Comentar el siguiente script provoca errores en el menu -->
+  <script>
+    //Comentar esta linea en caso de querer los logs 
+//    console.log=()=>{};
+    const debuggerCode=()=>{
+      //sacar comentario en esta linea en caso de querer el debugger. 
+      //debugger;
+    };
+  </script> 
+
+<style media="print"> .noprint { visibility: hidden; display:none; } </style>
+
+    
+    <script LANGUAGE="JavaScript">
+     
+    window.status="BlockWMS";
+
+    var sepDec='.';
+    var sepMil=',';
+    var tmpSepDecClient = new String(3/2);
+    var sepDecClient = tmpSepDecClient.substr(1,1);
+
+        var gId_Logins = '1149';
+    </script>
+
+        
+    <title>Connvertia</title>
+
+</head>
+<div id="multilenguaje" style="visibility:hidden;"></div>
+<div id="divHeaderBussy" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true" style="z-index:9999">
+  <div><i id="imgHeaderSpinner" class="fa fa-spin fa-spinner" style="color:white;font-size:55px;position: absolute;top: 47%;left: 47%;"></i></div>
+</div>
+<div id="divPopupFormulario"></div>
+
+  <!-- Comentado, se visualizaba el fondo blanco en Catalogo/Agrupamiento -->
+  <!-- <body id="body_header" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" bgcolor="#FFFFFF"> -->
+  <body id="body_header" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" style="background-color:#CECFBD">
+  
+
+
+
+
+<html>
+<head>
+</head>	
+<body style="background-color:#cecfbd">
+	<table id = "table" class="table table-bordered" cellspacing="0"></table>
+    
+		<script type="text/javascript">
+		var vista = "view_CUSTOM_DEPOT_WMS_Rpt_Ordenes_Diferencias_Ingresos";
+		var sql = "select * from view_CUSTOM_DEPOT_WMS_Rpt_Ordenes_Diferencias_Ingresos WHERE 1=1   id_entidades_sites'194326'  and id_operaciones_tipos = 1 order by [asn],wave,[CODIGO_ORDENES],OPERACION,CODIGO_PRODUCTOS";
+		createTable(vista, sql);
+	</script>
+</body>
+</html>
+	
+

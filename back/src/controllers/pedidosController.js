@@ -42,7 +42,7 @@ exports.obtenerPedidos = async (req, res) => {
           include: [{
             model: Producto,
             as: 'Producto',
-            attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
+            attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion', 'peso_unidad', 'tipo_calculo_piezas', 'pesable', 'codigo_barra'],
             include: [{
               model: ProductoStock,
               as: 'Stocks',
@@ -94,7 +94,7 @@ exports.obtenerPedidoPorId = async (req, res) => {
           include: [{
             model: Producto,
             as: 'Producto',
-            attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
+            attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion', 'peso_unidad', 'tipo_calculo_piezas', 'pesable', 'codigo_barra'],
             include: [{
               model: ProductoStock,
               as: 'Stocks',
@@ -193,21 +193,11 @@ exports.crearPedido = async (req, res) => {
           await Producto.create({
             codigo: codigo_producto,
             nombre: `PRODUCTO AUTOCREADO (${codigo_producto})`,
-            peso_x_pieza: 0,
+            peso_pieza: 0,
             cantidad_piezas: 0,
             vencimientos: null,
-            kg_x_bolsita: 0
+            peso_fraccion: 0
           }, { transaction });
-        } else {
-          // Validar permisos del producto
-          if (productoExiste.permite_piezas === false && pieza && parseInt(pieza, 10) > 0) {
-            await transaction.rollback();
-            return res.status(400).json({ error: `El producto "${productoExiste.nombre || codigo_producto}" no permite pedidos por piezas.` });
-          }
-          if (productoExiste.permite_fracciones === false && fraccion && parseFloat(fraccion) > 0) {
-            await transaction.rollback();
-            return res.status(400).json({ error: `El producto "${productoExiste.nombre || codigo_producto}" no permite pedidos fraccionados.` });
-          }
         }
 
         // Crear la relación en la tabla intermedia
@@ -234,7 +224,7 @@ exports.crearPedido = async (req, res) => {
         include: [{
           model: Producto,
           as: 'Producto',
-          attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
+          attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion', 'peso_unidad', 'tipo_calculo_piezas', 'pesable', 'codigo_barra'],
           include: [{
             model: ProductoStock,
             as: 'Stocks',
@@ -380,21 +370,11 @@ exports.actualizarPedido = async (req, res) => {
           await Producto.create({
             codigo: codigo_producto,
             nombre: `PRODUCTO AUTOCREADO (${codigo_producto})`,
-            peso_x_pieza: 0,
+            peso_pieza: 0,
             cantidad_piezas: 0,
             vencimientos: null,
-            kg_x_bolsita: 0
+            peso_fraccion: 0
           }, { transaction });
-        } else {
-          // Validar permisos del producto
-          if (productoExiste.permite_piezas === false && pieza && parseInt(pieza, 10) > 0) {
-            await transaction.rollback();
-            return res.status(400).json({ error: `El producto "${productoExiste.nombre || codigo_producto}" no permite pedidos por piezas.` });
-          }
-          if (productoExiste.permite_fracciones === false && fraccion && parseFloat(fraccion) > 0) {
-            await transaction.rollback();
-            return res.status(400).json({ error: `El producto "${productoExiste.nombre || codigo_producto}" no permite pedidos fraccionados.` });
-          }
         }
       }
 
@@ -439,7 +419,7 @@ exports.actualizarPedido = async (req, res) => {
         include: [{
           model: Producto,
           as: 'Producto',
-          attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
+          attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion', 'peso_unidad', 'tipo_calculo_piezas', 'pesable', 'codigo_barra'],
           include: [{
             model: ProductoStock,
             as: 'Stocks',
@@ -674,19 +654,11 @@ exports.uploadExcel = async (req, res) => {
             await Producto.create({
               codigo: item.codigo_producto,
               nombre: `PRODUCTO AUTOCREADO (${item.codigo_producto})`,
-              peso_x_pieza: 0,
+              peso_pieza: 0,
               cantidad_piezas: 0,
               vencimientos: null,
-              kg_x_bolsita: 0
+              peso_fraccion: 0
             }, { transaction });
-          } else {
-            // Limpiar si el producto no permite el tipo
-            if (productoExiste.permite_piezas === false) {
-              piezaFinal = 0;
-            }
-            if (productoExiste.permite_fracciones === false) {
-              fraccionFinal = 0;
-            }
           }
 
           // Crear ProductoPedido
@@ -730,8 +702,8 @@ exports.obtenerPendientesStock = async (req, res) => {
       attributes: [
         'codigo',
         'nombre',
-        'peso_x_pieza',
-        'kg_x_bolsita'
+        'peso_pieza',
+        'peso_fraccion'
       ],
       include: [
         {
@@ -782,8 +754,8 @@ exports.obtenerPendientesStock = async (req, res) => {
         });
       }
 
-      const pesoXPieza = parseFloat(p.peso_x_pieza || 0);
-      const kgXBolsita = parseFloat(p.kg_x_bolsita || 0);
+      const pesoXPieza = parseFloat(p.peso_pieza || 0);
+      const kgXBolsita = parseFloat(p.peso_fraccion || 0);
 
       const piezasPendientesKg = piezasPendientes * pesoXPieza;
       const fraccionesPendientesKg = fraccionesPendientes * kgXBolsita;
@@ -806,8 +778,8 @@ exports.obtenerPendientesStock = async (req, res) => {
         stock_kilos_calculado: stockKilos,
         stock_fraccionados: stockFrac,
         stock_recorte: stockRec,
-        peso_x_pieza: pesoXPieza,
-        kg_x_bolsita: kgXBolsita,
+        peso_pieza: pesoXPieza,
+        peso_fraccion: kgXBolsita,
         piezas_pendientes: piezasPendientes,
         piezas_pendientes_kg: piezasPendientesKg,
         fracciones_pendientes: fraccionesPendientes,
@@ -911,10 +883,10 @@ const procesarDescuentoStockEnviado = async (pedido, transaction, id_ubicacion =
 
     const fuePedidoPorPiezas = (parseInt(item.pieza, 10) || 0) > 0;
 
-    // Si fue pedido por piezas, y piezas = 0 pero hay peso > 0, autocalcular piezas con peso_x_pieza
+    // Si fue pedido por piezas, y piezas = 0 pero hay peso > 0, autocalcular piezas con peso_pieza
     if (fuePedidoPorPiezas && valPiezas === 0 && valPeso > 0 && prod) {
-      const pUnit = parseFloat(prod.peso_x_pieza) || 0;
-      valPiezas = pUnit > 0 ? Math.max(1, Math.round(valPeso / pUnit)) : 1;
+      const pUnit = parseFloat(prod.peso_pieza) || 0;
+      valPiezas = (pUnit > 0 && valPeso >= pUnit) ? Math.round(valPeso / pUnit) : 0;
       item.cantidad_enviada = valPiezas;
       await item.save({ transaction });
     } else if (!fuePedidoPorPiezas) {
@@ -1033,12 +1005,12 @@ const confirmarPedidoCore = async (pedido, items, usuario, transaction, omitirVa
         throw new Error(`La cantidad de kilos a enviar para el producto ${codigo} (${prodObj ? prodObj.nombre : ''}) es obligatoria y debe ser mayor a 0.`);
       }
 
-      // REGLA: Si piezas = 0 y valorPeso > 0, autocalcular con peso_x_pieza
+      // REGLA: Si piezas = 0 y valorPeso > 0, autocalcular con peso_pieza
       if (valorPiezas === 0 && valorPeso > 0) {
         const prodObj = await Producto.findByPk(codigo, { transaction });
-        const pUnit = parseFloat(prodObj?.peso_x_pieza) || 0;
+        const pUnit = parseFloat(prodObj?.peso_pieza) || 0;
         if (pUnit > 0) {
-          valorPiezas = Math.max(1, Math.round(valorPeso / pUnit));
+          valorPiezas = valorPeso < pUnit ? 0 : Math.round(valorPeso / pUnit);
         }
       }
     }
@@ -1075,7 +1047,7 @@ const confirmarPedidoCore = async (pedido, items, usuario, transaction, omitirVa
   return [];
 };
 
-// Confirmar pedido (remoto/manual): descontar stock y cambiar estado a "Enviado"
+// Confirmar preparación del pedido por el preparador: pasa el pedido a estado "Listo" (NO a "Enviado")
 exports.confirmarPedido = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
@@ -1095,15 +1067,14 @@ exports.confirmarPedido = async (req, res) => {
 
     const descuentos = await confirmarPedidoCore(pedido, items, usuario || 'Sistema', transaction, false, req.ubicacionId);
 
-    // Ejecutar deducción real de stock y cambiar estado a Enviado
-    await procesarDescuentoStockEnviado(pedido, transaction, req.ubicacionId || 1, usuario || 'Sistema');
-    pedido.estado = 'Enviado';
+    // El pedido pasa a estado "Listo" al finalizar la preparación
+    pedido.estado = 'Listo';
     await pedido.save({ transaction });
 
     await transaction.commit();
 
     res.json({
-      mensaje: 'Pedido confirmado y stock descontado exitosamente.',
+      mensaje: 'Pedido preparado exitosamente y marcado como "Listo".',
       pedido: {
         id: pedido.id,
         codigo: pedido.codigo,
@@ -1115,9 +1086,9 @@ exports.confirmarPedido = async (req, res) => {
     if (!transaction.finished) {
       await transaction.rollback();
     }
-    console.error('Error al confirmar pedido:', error);
+    console.error('Error al confirmar preparación de pedido:', error);
     const status = error.message && error.message.includes('insuficiente') ? 400 : 500;
-    res.status(status).json({ error: error.message || 'Error interno al confirmar el pedido y descontar stock.' });
+    res.status(status).json({ error: error.message || 'Error interno al preparar el pedido.' });
   }
 };
 
@@ -1261,10 +1232,10 @@ exports.confirmarPedidosDesdeExcel = async (req, res) => {
           prod = await Producto.create({
             codigo: prodCode,
             nombre: `PRODUCTO AUTOCREADO (${prodCode})`,
-            peso_x_pieza: 0,
+            peso_pieza: 0,
             cantidad_piezas: 0,
             vencimientos: null,
-            kg_x_bolsita: 0,
+            peso_fraccion: 0,
             pesable: true
           }, { transaction });
         }
@@ -1370,8 +1341,8 @@ exports.obtenerDemandaUltimoPedido = async (req, res) => {
       SELECT 
           pp.codigo_producto,
           prod.nombre AS producto_nombre,
-          COALESCE(prod.peso_x_pieza, 0) AS peso_x_pieza,
-          COALESCE(prod.kg_x_bolsita, 0) AS kg_x_bolsita,
+          COALESCE(prod.peso_pieza, 0) AS peso_pieza,
+          COALESCE(prod.peso_fraccion, 0) AS peso_fraccion,
           SUM(COALESCE(pp.pieza, 0)) AS total_piezas_pedidas,
           SUM(COALESCE(pp.fraccion, 0)) AS total_fracciones_pedidas,
           COALESCE(MAX(ps.stock), 0) AS stock
@@ -1380,7 +1351,7 @@ exports.obtenerDemandaUltimoPedido = async (req, res) => {
       LEFT JOIN productos prod ON pp.codigo_producto = prod.codigo
       LEFT JOIN productos_stock ps ON pp.codigo_producto = ps.codigo_producto AND ps.id_ubicacion = :id_ubicacion
       WHERE ped.estado = 'Pendiente'
-      GROUP BY pp.codigo_producto, prod.nombre, prod.peso_x_pieza, prod.kg_x_bolsita
+      GROUP BY pp.codigo_producto, prod.nombre, prod.peso_pieza, prod.peso_fraccion
       HAVING total_piezas_pedidas > 0 OR total_fracciones_pedidas > 0
       ORDER BY pp.codigo_producto;
     `;
@@ -1554,7 +1525,7 @@ exports.obtenerArmadoItems = async (req, res) => {
       include: [{
         model: Producto,
         as: 'Producto',
-        attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita', 'permite_piezas', 'permite_fracciones', 'pesable'],
+        attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion', 'peso_unidad', 'tipo_calculo_piezas', 'pesable'],
         include: [{
           model: ProductoStock,
           as: 'Stocks',

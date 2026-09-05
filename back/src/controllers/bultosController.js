@@ -31,8 +31,9 @@ exports.crearBulto = async (req, res) => {
     let piezEst = parseInt(cantidad_piezas, 10);
     if (!piezEst || isNaN(piezEst) || piezEst <= 0) {
       const prod = await Producto.findByPk(codigo_producto);
-      if (prod && prod.peso_x_pieza && parseFloat(prod.peso_x_pieza) > 0) {
-        piezEst = Math.round(pNeto / parseFloat(prod.peso_x_pieza));
+      if (prod && prod.peso_pieza && parseFloat(prod.peso_pieza) > 0) {
+        const pxp = parseFloat(prod.peso_pieza);
+        piezEst = pNeto < pxp ? 0 : Math.round(pNeto / pxp);
       } else {
         piezEst = 0;
       }
@@ -75,8 +76,9 @@ exports.actualizarBulto = async (req, res) => {
     let piezEst = parseInt(cantidad_piezas, 10);
     if (piezEst === undefined || isNaN(piezEst) || piezEst <= 0) {
       const prod = await Producto.findByPk(bulto.codigo_producto);
-      if (prod && prod.peso_x_pieza && parseFloat(prod.peso_x_pieza) > 0) {
-        piezEst = Math.round(pNeto / parseFloat(prod.peso_x_pieza));
+      if (prod && prod.peso_pieza && parseFloat(prod.peso_pieza) > 0) {
+        const pxp = parseFloat(prod.peso_pieza);
+        piezEst = pNeto < pxp ? 0 : Math.round(pNeto / pxp);
       } else {
         piezEst = bulto.cantidad_piezas || 0;
       }

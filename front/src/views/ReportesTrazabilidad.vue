@@ -61,25 +61,33 @@
           </datalist>
         </div>
 
-        <!-- Selector de Unidad de Medida (Piezas / Kilos) -->
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="font-weight: bold;">Unidad de Medida *</label>
-          <div class="unit-toggle-group">
+        <!-- Selector de Producto (Buscador / Autocomplete) -->
+        <div class="form-group" style="margin-bottom: 0; grid-column: span 2;">
+          <label class="form-label" style="font-weight: bold;">Seleccionar Producto *</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.75rem; color: var(--text-muted); font-size: 1.1rem; pointer-events: none;"></i>
+            <input 
+              type="text" 
+              v-model="productSearchText" 
+              list="catalog-products-list-trazabilidad" 
+              @input="handleProductSelect" 
+              class="form-control" 
+              placeholder="Buscar por código o nombre de producto..." 
+              style="padding-left: 2.3rem; height: 40px; font-weight: 600; font-size: 0.9rem;"
+            />
             <button 
-              type="button" 
-              :class="['unit-toggle-btn', unitMode === 'piezas' ? 'active' : '']" 
-              @click="setUnitMode('piezas')"
+              v-if="productSearchText" 
+              @click="clearProductSelection" 
+              style="position: absolute; right: 0.6rem; background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;"
             >
-              <i class="ph ph-package"></i> Piezas (uds)
-            </button>
-            <button 
-              type="button" 
-              :class="['unit-toggle-btn', unitMode === 'kilos' ? 'active' : '']" 
-              @click="setUnitMode('kilos')"
-            >
-              <i class="ph ph-scales"></i> Kilos (kg)
+              <i class="ph ph-x-circle" style="font-size: 1.1rem;"></i>
             </button>
           </div>
+          <datalist id="catalog-products-list-trazabilidad">
+            <option v-for="p in productos" :key="p.codigo" :value="p.codigo">
+              {{ p.nombre }}
+            </option>
+          </datalist>
         </div>
 
         <!-- Filtros de Fechas -->
@@ -115,16 +123,15 @@
               {{ selectedProduct.nombre }}
             </h3>
             <div style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.82rem; margin-top: 0.4rem; color: var(--text-secondary);">
-              <span>⚖️ Peso x pieza (Conversión): <strong>{{ pesoXPieza > 0 ? `${pesoXPieza.toFixed(3)} kg` : 'Sin peso asignado (0.000 kg)' }}</strong></span>
-              <span>📦 Stock en piezas: <strong>{{ stockPiezasTotal }} uds</strong></span>
-              <span>⚖️ Stock en kilos: <strong>{{ stockKilosTotal.toFixed(3) }} kg</strong></span>
+              <span>⚖️ Stock Total: <strong>{{ stockKilosTotal.toFixed(3) }} kg</strong></span>
+              <span>⚖️ Peso x pieza: <strong>{{ pesoXPieza > 0 ? `${pesoXPieza.toFixed(3)} kg` : 'Sin peso asignado (0.000 kg)' }}</strong></span>
             </div>
           </div>
           
           <div style="text-align: right;" class="d-none-mobile">
-            <span class="text-xs text-muted block uppercase font-bold">Unidad activa:</span>
+            <span class="text-xs text-muted block uppercase font-bold">Unidad de Medida:</span>
             <span class="badge" style="background: var(--accent-primary); color: white; font-size: 0.85rem; font-weight: bold; margin-top: 0.2rem;">
-              {{ unitMode === 'piezas' ? 'Piezas (Unidades)' : 'Kilogramos (Stock)' }}
+              Kilogramos (kg)
             </span>
           </div>
         </div>
@@ -137,7 +144,7 @@
             <div class="status-card-info">
               <span class="status-card-title">Total Ingresos</span>
               <span class="status-card-value text-blue">
-                +{{ kpis.totalIngresos.toFixed(unitMode === 'piezas' ? 0 : 3) }} {{ unitSuffix }}
+                +{{ kpis.totalIngresos.toFixed(3) }} kg
               </span>
               <span class="status-card-desc">Proveedores / Producción</span>
             </div>
@@ -150,7 +157,7 @@
             <div class="status-card-info">
               <span class="status-card-title">Total Egresos</span>
               <span class="status-card-value text-red">
-                -{{ kpis.totalEgresos.toFixed(unitMode === 'piezas' ? 0 : 3) }} {{ unitSuffix }}
+                -{{ kpis.totalEgresos.toFixed(3) }} kg
               </span>
               <span class="status-card-desc">Pedidos / Descartes</span>
             </div>
@@ -163,7 +170,7 @@
             <div class="status-card-info">
               <span class="status-card-title">Variación Neta</span>
               <span :class="['status-card-value', kpis.variacionNeta >= 0 ? 'text-green' : 'text-red']">
-                {{ kpis.variacionNeta >= 0 ? '+' : '' }}{{ kpis.variacionNeta.toFixed(unitMode === 'piezas' ? 0 : 3) }} {{ unitSuffix }}
+                {{ kpis.variacionNeta >= 0 ? '+' : '' }}{{ kpis.variacionNeta.toFixed(3) }} kg
               </span>
               <span class="status-card-desc">Período consultado</span>
             </div>
@@ -187,10 +194,10 @@
       <div class="card mb-4">
         <div class="card-header" style="background: #0f172a; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
           <span class="card-title" style="color: white; font-weight: bold;">
-            <i class="ph ph-chart-line-up" style="margin-right: 0.4rem; color: #60a5fa;"></i> Evolución del Stock en {{ unitMode === 'piezas' ? 'Piezas' : 'Kilogramos' }}
+            <i class="ph ph-chart-line-up" style="margin-right: 0.4rem; color: #60a5fa;"></i> Evolución del Stock en Kilogramos (kg)
           </span>
           <span class="text-xs" style="color: #94a3b8; font-weight: bold;">
-            Conversión basada en {{ pesoXPieza.toFixed(3) }} kg/pieza
+            Trazabilidad por Peso Total
           </span>
         </div>
         <div class="card-body" style="padding: 1rem;">
@@ -218,9 +225,8 @@
                 <th style="width: 140px;" class="text-center">Fecha y Hora</th>
                 <th style="width: 130px;" class="text-center">Tipo</th>
                 <th>Concepto / Detalle</th>
-                <th style="width: 110px;" class="text-right">Piezas</th>
-                <th style="width: 130px;" class="text-right">Kilos ({{ pesoXPieza.toFixed(3) }} kg/u)</th>
-                <th style="width: 130px;" class="text-right">Balance Acum.</th>
+                <th style="width: 140px;" class="text-right">Variación (kg)</th>
+                <th style="width: 140px;" class="text-right">Stock Acum. (kg)</th>
               </tr>
             </thead>
             <tbody>
@@ -232,14 +238,11 @@
                   </span>
                 </td>
                 <td class="text-xs">{{ log.concepto || log.detalle || '-' }}</td>
-                <td class="text-right font-mono" :class="getDeltaClass(log.cantidad_piezas)">
-                  {{ log.cantidad_piezas > 0 ? '+' : '' }}{{ log.cantidad_piezas }} uds
-                </td>
                 <td class="text-right font-mono font-bold" :class="getDeltaClass(calcularKilosLog(log))">
                   {{ calcularKilosLog(log) > 0 ? '+' : '' }}{{ calcularKilosLog(log).toFixed(3) }} kg
                 </td>
                 <td class="text-right font-mono font-bold text-blue">
-                  {{ log.balanceAcumulado.toFixed(unitMode === 'piezas' ? 0 : 3) }} {{ unitSuffix }}
+                  {{ log.balanceAcumulado.toFixed(3) }} kg
                 </td>
               </tr>
             </tbody>
@@ -264,12 +267,13 @@ import Chart from 'chart.js/auto'
 // Estado principal
 const productos = ref([])
 const rawLogs = ref([])
+const snapshots = ref([])
 const loading = ref(true)
 const productSearchText = ref('')
 const selectedProduct = ref(null)
 
-// Unidad de Medida (piezas | kilos)
-const unitMode = ref('piezas')
+// Unidad de Medida fija en Kilos
+const unitMode = ref('kilos')
 
 // Chart.js Canvas & Instance
 const chartCanvas = ref(null)
@@ -287,18 +291,11 @@ const showAlert = (msg, type = 'success') => {
   setTimeout(() => { alert.value.show = false }, 3500)
 }
 
-const setUnitMode = (mode) => {
-  unitMode.value = mode
-  nextTick(() => {
-    renderChart()
-  })
-}
-
-const unitSuffix = computed(() => unitMode.value === 'piezas' ? 'uds' : 'kg')
+const unitSuffix = computed(() => 'kg')
 
 const pesoXPieza = computed(() => {
   if (!selectedProduct.value) return 0
-  return parseFloat(selectedProduct.value.peso_x_pieza) || 0
+  return parseFloat(selectedProduct.value.peso_pieza) || 0
 })
 
 const stockPiezasTotal = computed(() => {
@@ -311,12 +308,14 @@ const stockPiezasTotal = computed(() => {
 
 const stockKilosTotal = computed(() => {
   if (!selectedProduct.value) return 0
+  const realStock = parseFloat(selectedProduct.value.stock) || 0
+  if (realStock > 0) return realStock
   const kilosBlock = parseFloat(selectedProduct.value.kilos_block) || 0
   if (kilosBlock > 0) return kilosBlock
   return stockPiezasTotal.value * pesoXPieza.value
 })
 
-// Cargar catálogo de productos y movimientos de stock
+// Cargar catálogo de productos, movimientos y snapshots de stock
 const fetchInitialData = async () => {
   loading.value = true
   try {
@@ -325,13 +324,11 @@ const fetchInitialData = async () => {
     if (!resLogs.ok) {
       resLogs = await fetch('/api/movimientos-stock')
     }
+    const resSnaps = await fetch('/api/productos/snapshots')
 
-    if (resProd.ok) {
-      productos.value = await resProd.json()
-    }
-    if (resLogs.ok) {
-      rawLogs.value = await resLogs.json()
-    }
+    if (resProd.ok) productos.value = await resProd.json()
+    if (resLogs.ok) rawLogs.value = await resLogs.json()
+    if (resSnaps.ok) snapshots.value = await resSnaps.json()
 
     // Auto-seleccionar primer producto si no hay uno seleccionado
     if (!selectedProduct.value && productos.value.length > 0) {
@@ -379,22 +376,30 @@ const clearProductSelection = () => {
 
 // Cálculo exacto de kilos por movimiento usando el peso del producto
 const calcularKilosLog = (log) => {
-  const pzas = parseFloat(log.cantidad_piezas) || 0
-  // Si el log ya tiene kilos calculados específicos, usarlos
-  const kilosExplicit = parseFloat(log.kilos_calculado || log.kilos || log.peso) || 0
+  if (log.isTodayCurrentStock || log.isSnapshot) return 0
+  const kilosExplicit = parseFloat(log.stock !== undefined && log.stock !== null ? log.stock : (log.kilos_calculado || log.kilos || log.peso)) || 0
   if (kilosExplicit !== 0) return kilosExplicit
-  
-  // De lo contrario, conversión estricta por peso_x_pieza del producto
+  const pzas = parseFloat(log.cantidad_piezas) || 0
   return pzas * pesoXPieza.value
 }
 
-// Filtrado de logs por producto seleccionado y rango de fechas
+// Filtrado de logs por producto seleccionado, snapshot y rango de fechas
 const filteredLogs = computed(() => {
   if (!selectedProduct.value) return []
   const code = selectedProduct.value.codigo
 
-  // Obtener todos los logs del producto hasta la fecha fin (o hasta la fecha actual)
+  // Buscar el snapshot del 12/08 o más cercano
+  const productSnaps = snapshots.value.filter(s => s.codigo_producto === code)
+  productSnaps.sort((a, b) => new Date(b.fecha_corte) - new Date(a.fecha_corte))
+  const latestSnap = productSnaps.length > 0 ? productSnaps[0] : null
+
   let list = rawLogs.value.filter(log => log.codigo_producto === code)
+
+  if (latestSnap) {
+    // Tomar sólo movimientos posteriores a la fecha del snapshot
+    const snapDate = new Date(latestSnap.fecha_corte)
+    list = list.filter(log => new Date(log.fecha) >= snapDate)
+  }
 
   if (filters.value.endDate) {
     const endStr = `${filters.value.endDate}T23:59:59`
@@ -404,31 +409,41 @@ const filteredLogs = computed(() => {
   // Ordenar cronológicamente ascendente
   list.sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
 
-  // Stock real actual de referencia (Punto de anclaje final)
-  const currentStock = unitMode.value === 'piezas' ? stockPiezasTotal.value : stockKilosTotal.value
+  let resultList = []
+  let runningBalance = 0
 
-  // Calcular la suma total de deltas de movimientos registrados
-  const deltas = list.map(log => {
-    return unitMode.value === 'piezas' ? (parseFloat(log.cantidad_piezas) || 0) : calcularKilosLog(log)
-  })
-
-  const totalDeltas = deltas.reduce((sum, d) => sum + d, 0)
-
-  // Balance inicial estimado antes del primer movimiento registrado
-  let runningBalance = currentStock - totalDeltas
-
-  const withBalances = list.map((log, index) => {
-    runningBalance += deltas[index]
-    return {
-      ...log,
+  if (latestSnap) {
+    runningBalance = parseFloat(latestSnap.stock_kilos) || 0
+    const snapshotEntry = {
+      id: `snapshot-${latestSnap.id}`,
+      fecha: latestSnap.fecha_corte,
+      tipo_movimiento: 'SNAPSHOT_INICIAL',
+      concepto: latestSnap.observaciones || 'Inventario Inicial Auditado 12/08/2026',
+      cantidad_piezas: 0,
+      stock: 0,
+      isSnapshot: true,
       balanceAcumulado: runningBalance
     }
+    resultList.push(snapshotEntry)
+  } else {
+    // Si no hay snapshot, usar recalculado con Stock Actual de referencia
+    const currentStock = stockKilosTotal.value
+    const deltas = list.map(log => calcularKilosLog(log))
+    const totalDeltas = deltas.reduce((sum, d) => sum + d, 0)
+    runningBalance = currentStock - totalDeltas
+  }
+
+  list.forEach((log) => {
+    runningBalance += calcularKilosLog(log)
+    resultList.push({
+      ...log,
+      balanceAcumulado: runningBalance
+    })
   })
 
   // Filtrar por fecha desde si se ha especificado un rango
-  let filtered = withBalances
   if (filters.value.startDate) {
-    filtered = withBalances.filter(log => log.fecha >= filters.value.startDate)
+    resultList = resultList.filter(log => log.fecha >= filters.value.startDate)
   }
 
   // Punto del día de hoy con el Stock Actual de referencia
@@ -441,15 +456,14 @@ const filteredLogs = computed(() => {
     cantidad_piezas: 0,
     kilos_calculado: 0,
     isTodayCurrentStock: true,
-    balanceAcumulado: currentStock
+    balanceAcumulado: stockKilosTotal.value
   }
 
-  // Si no hay filtro de fecha fin o si hoy cae dentro del rango de fecha fin
   if (!filters.value.endDate || new Date(filters.value.endDate) >= now) {
-    return [...filtered, todayEntry]
+    resultList.push(todayEntry)
   }
 
-  return filtered
+  return resultList
 })
 
 // Métricas KPI
@@ -458,7 +472,7 @@ const kpis = computed(() => {
   let totalEgresos = 0
 
   filteredLogs.value.forEach(log => {
-    const val = unitMode.value === 'piezas' ? (parseFloat(log.cantidad_piezas) || 0) : calcularKilosLog(log)
+    const val = calcularKilosLog(log)
     if (val > 0) {
       totalIngresos += val
     } else {
@@ -481,10 +495,10 @@ const renderChart = async () => {
 
   const logs = filteredLogs.value
   const labels = logs.map(log => formatDateShort(log.fecha))
-  const dataValues = logs.map(log => Number(log.balanceAcumulado.toFixed(unitMode.value === 'piezas' ? 0 : 3)))
+  const dataValues = logs.map(log => Number(log.balanceAcumulado.toFixed(3)))
 
   const ctx = chartCanvas.value.getContext('2d')
-  const labelSerie = unitMode.value === 'piezas' ? 'Stock en Piezas (uds)' : 'Stock en Kilos (kg)'
+  const labelSerie = 'Stock en Kilos (kg)'
 
   chartInstance = new Chart(ctx, {
     type: 'line',
@@ -515,8 +529,7 @@ const renderChart = async () => {
         tooltip: {
           callbacks: {
             label: (context) => {
-              const unit = unitMode.value === 'piezas' ? 'uds' : 'kg'
-              return `${context.dataset.label}: ${context.raw} ${unit}`
+              return `${context.dataset.label}: ${context.raw} kg`
             }
           }
         }
@@ -563,6 +576,7 @@ const formatDateShort = (str) => {
 }
 
 const getTipoLabel = (tipo) => {
+  if (tipo === 'SNAPSHOT_INICIAL') return 'Inventario Inicial'
   if (tipo === 'STOCK_ACTUAL') return 'Stock Actual'
   if (tipo === 'INGRESO_PROVEEDOR') return 'Ingreso'
   if (tipo === 'PEDIDO_ENVIADO') return 'Despacho'
@@ -574,6 +588,7 @@ const getTipoLabel = (tipo) => {
 }
 
 const getTipoClass = (tipo) => {
+  if (tipo === 'SNAPSHOT_INICIAL') return 'badge-info'
   if (tipo === 'STOCK_ACTUAL') return 'badge-info'
   if (tipo === 'INGRESO_PROVEEDOR') return 'badge-success'
   if (tipo === 'PEDIDO_ENVIADO') return 'badge-primary'
@@ -588,7 +603,7 @@ const getDeltaClass = (val) => {
   return 'text-muted'
 }
 
-// Exportar trazabilidad a Excel
+// Exportar trazabilidad a Excel (Strictly Kilos)
 const exportToExcel = () => {
   if (!selectedProduct.value || filteredLogs.value.length === 0) return
 
@@ -599,17 +614,25 @@ const exportToExcel = () => {
     'Fecha y Hora': formatDateTime(log.fecha),
     'Tipo Movimiento': getTipoLabel(log.tipo_movimiento),
     'Concepto / Detalle': log.concepto || log.detalle || '-',
-    'Cantidad Piezas (uds)': parseFloat(log.cantidad_piezas) || 0,
-    'Peso x Pieza (kg)': pesoXPieza.value,
-    'Cantidad Kilos (kg)': parseFloat(calcularKilosLog(log).toFixed(3)),
-    'Stock Acumulado': parseFloat(log.balanceAcumulado.toFixed(3))
+    'Variación (kg)': parseFloat(calcularKilosLog(log).toFixed(3)),
+    'Stock Acumulado (kg)': parseFloat(log.balanceAcumulado.toFixed(3))
   }))
 
   const worksheet = XLSX.utils.json_to_sheet(dataToExport)
   const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Trazabilidad')
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Trazabilidad Kilos')
 
-  XLSX.writeFile(workbook, `Trazabilidad_${prod.codigo}_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  worksheet['!cols'] = [
+    { wch: 16 },
+    { wch: 28 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 45 },
+    { wch: 16 },
+    { wch: 20 }
+  ]
+
+  XLSX.writeFile(workbook, `Trazabilidad_Kilos_${prod.codigo}_${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
 onMounted(() => {

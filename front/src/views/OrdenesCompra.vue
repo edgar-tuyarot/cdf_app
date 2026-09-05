@@ -89,8 +89,8 @@ const calcularPesoEstimado = (item) => {
   const b = bultos.value.find(b => b.codigo_producto === item.codigo_producto)
   const totalPzs = calcularTotalPiezas(item)
   
-  if (prod && parseFloat(prod.peso_x_pieza) > 0) {
-    const totalPeso = totalPzs * parseFloat(prod.peso_x_pieza)
+  if (prod && parseFloat(prod.peso_pieza) > 0) {
+    const totalPeso = totalPzs * parseFloat(prod.peso_pieza)
     return totalPeso > 0 ? `${totalPeso.toFixed(2)} kg` : '-'
   }
   if (b && parseFloat(b.peso_caja) > 0) {
@@ -116,8 +116,8 @@ const totalesOrden = (items) => {
     const b = bultos.value.find(b => b.codigo_producto === item.codigo_producto)
     const pzs = calcularTotalPiezas(item)
 
-    if (prod && parseFloat(prod.peso_x_pieza) > 0) {
-      totalPesoKg += pzs * parseFloat(prod.peso_x_pieza)
+    if (prod && parseFloat(prod.peso_pieza) > 0) {
+      totalPesoKg += pzs * parseFloat(prod.peso_pieza)
       tienePeso = true
     } else if (b && parseFloat(b.peso_caja) > 0) {
       const cajas = parseFloat(item.cantidad_cajas) || 0
@@ -583,7 +583,7 @@ const getBadgeClass = (estado) => {
                       <span v-if="!prod.activo" class="badge-inactivo">Inactivo</span>
                     </div>
                     <div class="item-sub">
-                      <span v-if="prod.peso_x_pieza">{{ prod.peso_x_pieza }} kg/pz</span>
+                      <span v-if="prod.peso_pieza">{{ prod.peso_pieza }} kg/pz</span>
                     </div>
                   </div>
                   <div v-if="productosFiltradosBusqueda.length === 0" class="search-dropdown-empty">
@@ -594,8 +594,8 @@ const getBadgeClass = (estado) => {
                 <span v-if="bultoInfoSeleccionado" class="text-help mt-1" style="color: var(--accent-primary);">
                   <i class="ph ph-box-arrow-down"></i> Caja/Bulto registrado: ~{{ bultoInfoSeleccionado.cantidad_piezas }} pzs/caja ({{ bultoInfoSeleccionado.peso_caja }} kg)
                 </span>
-                <span v-else-if="selectedProducto && selectedProducto.peso_x_pieza" class="text-help mt-1" style="color: var(--accent-info);">
-                  <i class="ph ph-scales"></i> Peso promedio configurado: {{ selectedProducto.peso_x_pieza }} kg/pieza
+                <span v-else-if="selectedProducto && selectedProducto.peso_pieza" class="text-help mt-1" style="color: var(--accent-info);">
+                  <i class="ph ph-scales"></i> Peso promedio configurado: {{ selectedProducto.peso_pieza }} kg/pieza
                 </span>
               </div>
 

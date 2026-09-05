@@ -1,0 +1,1531 @@
+<html>
+<head>
+    <title>BlockWMS</title>
+    <meta name="keywords" content="WMS">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">     
+    
+    <!-- Comentado xq el archivo no se encuentra en esa ubicacion  <link rel="stylesheet" type = "text/css" href="css/jquery.notify.css">-->
+    <link rel="stylesheet" type = "text/css" href="css/bootstrap.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/estilos.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/xtree.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/dialog_box.css"/>
+    <!-- <link rel="stylesheet" type = "text/css" href="include/ArbolCSS/simpletree.css"/> -->
+    <link rel="stylesheet" type = "text/css" href="css/jquery.datatables.min.css">    
+    <!--link rel="stylesheet" type = "text/css" href="css/responsive.bootstrap.min.css"/--> 
+    <link rel="stylesheet" type = "text/css" href="../jalert/jquery.alerts.css"/>  
+    <link rel="stylesheet" type = "text/css" href="css/colreorder.datatables.min.css"/> 
+    <!--link rel="stylesheet" type = "text/css" href="css/keyTable.dataTables.min.css"/-->  
+    <link rel="stylesheet" type = "text/css" href="css/block-datatables-custom.css"/> 
+    <link rel="stylesheet" type = "text/css" href="css/block-multiselect-custom.css"/>  
+    <link rel="stylesheet" type = "text/css" href="css/datatables.select.min.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/fixedcolumns.datatables.min.css"/>
+    <link rel="stylesheet" type = "text/css" href="css/block-reportes-custom.css"/> 
+    <link rel="stylesheet" type = "text/css" href="css/buttons.datatables.min.css"/>
+
+    <script language="JavaScript" src="http://192.168.10.2:80/js/strings.js"></script>
+    <script LANGUAGE="JavaScript" SRC="http://192.168.10.2:80/js/xtree.js"></script>
+    <script type="text/javascript" src="http://192.168.10.2:80/js/dialog_box.js"></script>
+
+    <script type = "text/javascript" src = "js/jquery-1.12.4.js"></script>
+    <script type = "text/javascript" src = "js/bootstrap.min.js"></script>
+    <script type = "text/javascript" src = "js/jquery-datatable.js"></script> 
+    <script type = "text/javascript" src = "js/bootstrap-datatable-base.js"></script>
+    <script type = "text/javascript" src = "js/datatables.fixedcolumns.min.js"></script>
+    
+    <script type = "text/javascript" src = "js/jquery.blockUI.js"></script>
+    <script type="text/javascript" src="js/jquery.validate.min.js"></script>    
+    <link rel="stylesheet" href="assets/bootstrap-select/bootstrap-select.css">
+    <script src="assets/bootstrap-select/bootstrap-select.min.js"></script>
+
+    <script type = "text/javascript" src = "js/genera_listado.js"></script>
+    <!--script type = "text/javascript" src = "js/dataTables.responsive.min.js"></script-->
+    <!--script type = "text/javascript" src = "js/responsive.bootstrap.min.js"></script-->
+    <script type = "text/javascript" src = "jalert/jquery.alerts.js"></script>  
+    <!--script type = "text/javascript" src = "js/ColReorderWithResize.js"></script-->  
+    <script type = "text/javascript" src = "js/datatables.colreorder.min.js"></script>
+    <!--script type = "text/javascript" src = "js/dataTables.keyTable.min.js"></script-->
+    <script type = "text/javascript" src = "js/datatables.select.min.js"></script>    
+  <script type = "text/javascript" src = "js/datatables.buttons.min.js"></script>    
+  <script type = "text/javascript" src = "js/buttons.colvis.min.js"></script>    
+  <script type = "text/javascript" src = "js/bootbox.min.js"></script>
+            
+    <!-- <link rel="stylesheet" type="text/css" href="JSCal2/css/jscal2.css"  />
+    <link rel="stylesheet" type="text/css" href="JSCal2/css/border-radius.css" />
+    <script type="text/javascript" src="JSCal2/js/jscal2.js"></script>
+    <script type="text/javascript" src="JSCal2/js/lang/es.js"></script> -->
+    <script type="text/javascript"  src="js/becalendario.js"></script>
+
+    <link href="css/bootstrap-multiselect.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+
+    <script type="text/javascript" src="js/jquery-ui-1.8.23.js"></script>
+    <link rel="stylesheet" type="text/css" href="js/DHTML/jquery-ui.css"/>
+    
+    <script type = "text/javascript" src = "js/http.js?v=1"></script>
+    <script language="JavaScript" src="js/library.js?v=9"></script>
+    <script language="JavaScript" src="js/multilenguaje.js?v=0"></script>
+    <script language="JavaScript" src="js/library_datatable.js"></script>
+    <script language="JavaScript" src="js/library_datatable_advanced.js"></script>    
+    <script language="JavaScript" src="js/globalsdata.js"></script>    
+    <script language="JavaScript" src="js/library_modals.js"></script>
+
+  <!--Referencias jsTree-->
+    <link rel="stylesheet" href="js/jsTree/themes/block/style.css" />
+    <script src="js/jsTree/jstree.js"></script>
+    <script src="js/library_jstree.js?v=8"></script>
+  <!--Referencias jsTree-->
+  
+  <!--Referencias de Moltran     -->
+  <script src="assets/jquery-sparkline/jquery.sparkline.min.js"></script>
+  <script src="assets/jquery-detectmobile/detect.js"></script>
+  <script src="assets/fastclick/fastclick.js"></script>
+  <script src="assets/jquery-slimscroll/jquery.slimscroll.js"></script>
+  <script src="assets/jquery-blockui/jquery.blockui.js"></script> 
+  <script src="assets/notifications/notify.min.js"></script>
+  <script src="assets/notifications/notify-metro.js"></script>
+  <script src="assets/notifications/notifications.js"></script>
+  <script src="js/balanza.js"></script>
+
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="assets/notifications/notification.css" rel="stylesheet" />
+  <link href="assets/font-awesome/css/font-awesome.css" rel="stylesheet" />
+  <!--link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" /-->
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="css/material-design-iconic-font.min.css" rel="stylesheet">
+  <link href="css/helper.css" rel="stylesheet" type="text/css" />
+  <script>
+    gobjBlockMultilenguaje.diccionarioCargar("EdgarTu","1435",1);
+  </script>
+  <!--<link href="css/style-moltran.css" rel="stylesheet" type="text/css" /-->
+    
+  <!-- Font Icons GAUCHO 05072017-->
+  <!--link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+  <link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+  <link href="css/material-design-iconic-font.min.css" rel="stylesheet"-->
+  <!-- Font Icons GAUCHO 05072017-->
+  <!--Comentar el siguiente script provoca errores en el menu -->
+  <script>
+    //Comentar esta linea en caso de querer los logs 
+//    console.log=()=>{};
+    const debuggerCode=()=>{
+      //sacar comentario en esta linea en caso de querer el debugger. 
+      //debugger;
+    };
+  </script> 
+
+<style media="print"> .noprint { visibility: hidden; display:none; } </style>
+
+    
+    <script LANGUAGE="JavaScript">
+     
+    window.status="BlockWMS";
+
+    var sepDec='.';
+    var sepMil=',';
+    var tmpSepDecClient = new String(3/2);
+    var sepDecClient = tmpSepDecClient.substr(1,1);
+
+    var ARYextImg = new Array();
+ARYextImg[0] = 'gif';
+ARYextImg[1] = 'jpg';
+ARYextImg[2] = 'jpeg';
+ARYextImg[3] = 'png';
+ARYextImg[4] = 'swf';
+ARYextImg[5] = 'asf';
+ARYextImg[6] = 'bmp';
+ARYextImg[7] = '';
+var ARYextObj = new Array();
+ARYextObj[0] = 'gif';
+ARYextObj[1] = 'jpg';
+ARYextObj[2] = 'jpeg';
+ARYextObj[3] = 'png';
+ARYextObj[4] = 'bmp';
+ARYextObj[5] = 'js';
+ARYextObj[6] = 'css';
+ARYextObj[7] = 'xml';
+ARYextObj[8] = 'xsl';
+ARYextObj[9] = 'swf';
+ARYextObj[10] = 'mid';
+ARYextObj[11] = 'midi';
+ARYextObj[12] = 'wav';
+ARYextObj[13] = 'au';
+ARYextObj[14] = 'mov';
+ARYextObj[15] = 'avi';
+ARYextObj[16] = 'mpg';
+ARYextObj[17] = 'mpeg';
+ARYextObj[18] = 'mp2';
+ARYextObj[19] = 'mp3';
+ARYextObj[20] = 'asx';
+ARYextObj[21] = 'rm';
+ARYextObj[22] = 'ram';
+ARYextObj[23] = 'zip';
+ARYextObj[24] = 'rar';
+ARYextObj[25] = 'tif';
+ARYextObj[26] = 'tiff';
+ARYextObj[27] = 'class';
+ARYextObj[28] = '';
+var ARYextDoc = new Array();
+ARYextDoc[0] = 'txt';
+ARYextDoc[1] = 'rtf';
+ARYextDoc[2] = 'wri';
+ARYextDoc[3] = 'doc';
+ARYextDoc[4] = 'mcw';
+ARYextDoc[5] = 'wps';
+ARYextDoc[6] = 'wpd';
+ARYextDoc[7] = 'pdf';
+ARYextDoc[8] = 'xls';
+ARYextDoc[9] = 'wk1';
+ARYextDoc[10] = 'wk2';
+ARYextDoc[11] = 'wk4';
+ARYextDoc[12] = 'ppt';
+ARYextDoc[13] = 'pps';
+ARYextDoc[14] = 'zip';
+ARYextDoc[15] = 'gif';
+ARYextDoc[16] = 'jpg';
+ARYextDoc[17] = 'jpeg';
+ARYextDoc[18] = 'asf';
+ARYextDoc[19] = 'mpg';
+ARYextDoc[20] = 'mpeg';
+ARYextDoc[21] = 'avi';
+ARYextDoc[22] = 'exe';
+ARYextDoc[23] = 'tif';
+ARYextDoc[24] = 'tiff';
+ARYextDoc[25] = '';
+    var gId_Logins = '1149';
+    </script>
+
+        
+    <title>Connvertia</title>
+
+</head>
+<div id="multilenguaje" style="visibility:hidden;"></div>
+<div id="divHeaderBussy" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true" style="z-index:9999">
+  <div><i id="imgHeaderSpinner" class="fa fa-spin fa-spinner" style="color:white;font-size:55px;position: absolute;top: 47%;left: 47%;"></i></div>
+</div>
+<div id="divPopupFormulario"></div>
+
+  <!-- Comentado, se visualizaba el fondo blanco en Catalogo/Agrupamiento -->
+  <!-- <body id="body_header" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" bgcolor="#FFFFFF"> -->
+  <body id="body_header" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" style="background-color:#CECFBD">
+  
+
+
+
+<div class="noprint">  <head>
+	 <!-- Font Icons -->
+		<link href="assets/font-awesome/css/font-awesome.min.css" rel="stylesheet" />
+		<link href="assets/ionicon/css/ionicons.min.css" rel="stylesheet" />
+		<link href="css/material-design-iconic-font.min.css" rel="stylesheet">
+
+		<style>
+			.popover{
+    		width:220px;
+			}
+		</style>
+<head>
+
+	<div id="divClave" ><div id="divClave1" style="position:absolute;z-index:999999999999999999999999999999; visibility:hidden; cursor:default; style='filter: alpha(opacity=80);z-index:999999999999999999999999999999; visibility:hidden; cursor:default;" name="xx"><table width="100%" border="0" cellpadding="0" cellspacing="1" bgcolor="#403E3E" class=fontnormal><tr height=25><td valign=top bgcolor="#C0C0C0"><table width="100%"  border="0" cellpadding="0" cellspacing="0" bgcolor="#FFFFCC" class=fontnormal><tr><td valign=top><IFRAME WIDTH="100%" HEIGHT="450" NORESIZE SCROLLING=YES FRAMEBORDER=0 MARGINHEIGHT=0 MARGINWIDTH=0 SRC="include/cambiarpass.php" name="prueba" id="prueba"></IFRAME></td></tr></table></td></tr></table></div></div>
+<div id="divCambioClave"></div>
+<!--<div id="pucheta" style="position:absolute; width:135px; height:40px; z-index:1; left: 0px; top: 5px; visibility: visible"><a href="#" onMouseOver="MM_showHideLayers('user','','show')" onMouseOut="MM_showHideLayers('user','','hide')"><img src="image/spacer.gif" width="135" height="40" border="0"><div id="user" style="position:absolute; width:130px; height:115px; z-index:0; left: 4px; top: 30px; visibility: hidden; cursor:default;"> -->
+
+<!--<div id="pucheta" style="position:absolute; width:135px; height:40px; z-index:1; left: 0px; top: 5px; visibility: visible">-->
+	<!--<a href="#" onMouseOver="MM_showHideLayers('user','','show')" onMouseOut="MM_showHideLayers('user','','hide')"><img src="image/spacer.gif" width="135" height="40" border="0">-->
+
+	
+<div id="user" style="position:absolute; width:130px; height:115px; z-index:0; left: 4px; top: 30px; visibility: hidden; cursor:default;">
+
+<script>	
+  function dialog_attach_modal(script, titulo) {
+      if (event.stopPropagation) event.stopPropagation(); else event.cancelBubble = true;
+          
+      
+      html = $("div#divClave1").html();
+      
+        abrirModalHTML("divCambioClave", titulo, html, {
+        subtitle: "",
+        image:"changepass.png"
+      });
+      
+      return "ok";
+      
+  }
+
+  function showHideMenu(){
+    if($("#tdMenu").css("display")=="none"){
+      $("#tdMenu").css("display","table-cell");
+      sessionStorage.setItem("new_menu_display","table-cell");
+    }else{
+      $("#tdMenu").css("display","none");
+      sessionStorage.setItem("new_menu_display","none");
+      $(window).trigger('resize');      
+    }
+  }
+
+  function closeChangePassword()
+  {	
+	$('#mdl_infoGenerico').modal('toggle');
+  }
+</script>
+
+<table width="130" border="0" cellspacing="0" cellpadding="0">
+
+</table>
+<table width="129" border="0" cellspacing="0" cellpadding="0">
+<tr> 
+	<td bgcolor="#000000" width="1"><img src="image/spacer.gif" width="1" height="1"></td>
+	<td bgcolor="EFEBDE" width="9"><img src="image/spacer.gif" width="9" height="1"></td>
+	<td bgcolor="EFEBDE" width="109"> 
+	<table width="109" border="0" cellspacing="0" cellpadding="0">
+	<tr> 
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>	
+	</tr>
+	<tr> 
+		<td class="solapa" style="word-wrap:break-word; width:109px;vlign:'top';"><IMG SRC="image/ico_login.gif" WIDTH="15" HEIGHT="16" BORDER="0" ALT="">&nbsp;Edgar&nbsp;Tuyarol		</td>
+		<td>
+					<span onClick="dialog_attach_modal('include/cambiarpass.php', 'Cambiar Password');" style="cursor:hand;"><img src="image/ico_key.gif" width="12" height="12" border=0></span>
+				</td>
+	</tr>
+	<tr> 
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>
+	</tr>
+	<tr>
+		<td class="solapa" colspan="2"><IMG SRC="image/ico_perfil.gif" WIDTH="15" HEIGHT="16" BORDER="0" ALT="Rol">&nbsp;Supervisor Sucursal</td>
+	</tr>
+	<tr> 
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>
+	</tr>
+		<tr> 
+		<td class="solapa" colspan="2"><B>Site</B><br>			<FONT COLOR="#FF0000"><B>Distribución. Fiambrería Chaco</B></FONT>		</td>
+	</tr>
+	<tr>
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>
+	</tr>
+	<tr>
+		<td class="solapa" colspan="2"><B>DB</B><br>SERVERBLOCK<br>sys_block_DEPOT</td>
+	</tr>
+	<tr>
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>
+	</tr>
+
+	<tr>
+		<td class="solapa" colspan="2"><B>Browser</B><br><br>ver </td>
+	</tr>
+	<tr>
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>
+	</tr>
+
+
+	<tr>
+		<td class="solapa" colspan="2"><B>Entorno</B><BR>DEPOT</td>
+	</tr>
+	<tr>
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>
+	</tr>
+
+		<tr>
+		<td class="solapa" colspan="2"><B>Versi�n</B><BR>3.0</td>
+	</tr>
+	<tr>
+		<td colspan="2"><img src="image/header_spacer.gif" width="109" height="6"></td>
+	</tr>
+	
+	</table>
+	</td>
+	<td bgcolor="EFEBDE" width="9"><img src="image/spacer.gif" width="9" height="1"></td>
+	<td bgcolor="#000000" width="1"><img src="image/spacer.gif" width="1" height="1"></td>
+	</tr>
+	</table>
+	<table width="130" border="0" cellspacing="0" cellpadding="0" bgcolor="#000000">
+	<tr> 
+		<td width="1"><img src="image/spacer.gif" width="1" height="1"></td>
+	</tr>
+	</table>
+</div>
+</a>
+</div>
+<table border="0" cellspacing="0" cellpadding="0" style="width:100%;">
+  <tr> 
+    <td width="100%"> 
+      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr> 
+          <td class="desktop"><img src="image/spacer.gif" width="1" height="2"></td>
+        </tr>
+        <tr> 
+          <td bgcolor="#000000"> 
+            <img src="image/spacer.gif" width="1" height="1"></td>
+        </tr>
+        <tr> 
+          <td bgcolor="#AAAAAA"><img src="image/spacer.gif" width="1" height="1"></td>
+        </tr>
+        <tr> 
+          <td bgcolor="#CECFCE"><img src="image/spacer.gif" width="1" height="1"></td>
+        </tr>
+        <tr bgcolor="#F2F2F2"> 
+          <td> 
+            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr> 
+                <td align="center" style="width:30px;">
+                  <a href="javascript:showHideMenu();"><i class='fa fa-bars' style="font-size: 23px;"></i></a>
+                  <!--<button class="button-menu-mobile" style="color:#000000;" onclick="showHideMenu();">
+                    <i class='fa fa-bars'></i>
+                  </button>-->
+                </td>
+                <td>  
+					   <button style="width:170px;" type="button" class="btn btn-warning waves-effect waves-light w-sm pop" 
+
+						 data-container="body" data-toggle="popover" data-placement="bottom" 
+
+						 data-content="<p><i class='fa fa-user'></i>&nbsp;EdgarTuyarol						 
+														&nbsp;<span class='click_me' onClick='dialog_attach_modal('include/cambiarpass.php', 'Cambiar Password');' style='cursor:hand; font-size:17px;'><i class='md md-vpn-key'></i></span>
+						</p>
+						<br>
+								<p><i class='fa fa-users'></i>&nbsp;Supervisor Sucursal</p><br>
+														<p><B>Site</B><br>								<FONT COLOR='#FF0000'><B>Distribución. Fiambrería Chaco</B></FONT>								<br><br>
+								<B>DB</B><br>SERVERBLOCK<br>sys_block_DEPOT<br><br>
+								<B>Browser</B><br>Ver<br><br>
+								<B>Entorno</B><BR>DEPOT<br><br>
+								<B>Versión</B><BR>3.0<br><br>
+								<B>Sistema</B><BR>Microsoft SQL Server 2016 (RTM) - 13.0.1601.5 (X64) 
+	Apr 29 2016 23:23:58 
+	
+	Enterprise Edition (64-bit) on Windows Server 2019 Standard 6.3 <X64> (Build 17763: ) (Hypervisor)
+"
+								
+								data-original-title="" title=""><i class="fa fa-user"></i><span></span>
+							EdgarTu							</button>
+                </td>
+                <td width="68">
+				<a href="home.php" class="btn btn-icon waves-effect waves-light btn-danger">Desktop <i class="fa fa-home"></i></a>				
+				</td>
+                <td width="10"></td>
+				<!--   <td width="76"><img src="image/header_mensajes1.gif" border=0></td>fa-external-link class="btn btn-icon waves-effect waves-light btn-purple"
+				<button name="bot_listado" id="bot_listado" alt="Listado" align="absbottom" onclick="tipoReporte = 'listado'" class="btn btn-icon waves-effect waves-light btn-purple"><i class="fa fa-search"></i></button>
+
+				-->
+                <td width="75"><a href="logout.php" class="btn btn-icon waves-effect waves-light btn-success">Logout&nbsp; <i class="fa fa-external-link"></i></a>
+				
+				</td>
+				<td width="10"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr> 
+          <td bgcolor="#CECFCE">		  
+		  <img src="image/spacer.gif" width="1" height="1">	    
+		  </td>
+        </tr>
+        <tr bgcolor="#000000"> 
+          <td><img src="image/spacer.gif" width="1" height="1"></td>
+        </tr>
+      </table>
+    </td>
+    <td bgcolor="#888888"><img src="image/spacer.gif" width="1" height="1"></td>
+  </tr>
+</table>
+
+<script>
+
+$(".pop").popover({trigger: "manual" , html: true, animation:false})
+    .on("mouseenter", function () {
+        var _this = this;
+        $(this).popover("show");
+        $(".popover").on("mouseleave", function () {
+            $(_this).popover('hide');
+        });
+    }).on("mouseleave", function () {
+        var _this = this;
+        setTimeout(function () {
+            if (!$(".popover:hover").length) {
+                $(_this).popover("hide");
+            }
+        }, 300);
+});	
+
+	 $(document).on("click", ".click_me", function() {
+		 dialog_attach_modal('include/cambiarpass.php', 'Cambiar Password');
+});
+</script>
+</div>  <table border="0" cellspacing="0" cellpadding="0" style="width:100%; height:100%;"><tr>
+            <td id="tdMenu" width="137" valign="top" align="center"
+                background="image/menu_background_3.gif" class="noprint" style="display:none;">
+		<table width="100%" border="0" cellspacing="0" cellpadding="0">
+		<tr>
+			<td>
+        <br>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td width="100%" align="center">
+            <!--<img src="image/spacer.gif" class="msPinSite">-->
+            <img src="image/spacer.gif" class="msPinSite">
+          </td>
+                                    <td class="menumadre" width="101" align="right"><a href="default.php"
+                                            class="menumadre"></td>
+        </tr>
+        </table>
+        <br>
+			</td>
+		</tr>
+		</table>	<link href="js/Menu/menu.css" rel="stylesheet">
+    <!-- Begin menu -->
+	<table id="new_menu"  border="0" cellPadding="0" cellSpacing="0" width="200">
+    <tr>
+	    <td  width="200" valign="top">﻿<!--link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet"-->
+<link href="assets/font-awesome/css/font-awesome.min.css " rel="stylesheet">
+
+<table id="tablaMenu" width='200px' border='0' cellspacing='0' cellpadding='0'>
+  <tr>
+    <td width='200px'>
+      <div class="nav-side-menu" style="position:inherit">
+          <!--<div class="brand"><b>BlockWMS 2.0</b></div>-->
+          <i class="fa fa-bars fa-2x toggle-btn" data-toggle="collapse" data-target="#menu-content"></i>
+          <div class="menu-list" >
+            <ul id="menu-content" class="menu-content collapse out" >
+            </ul>
+          </div>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<script src="js/Menu/menudata.js"></script>
+<script src="js/Menu/menuservice.js"></script>
+
+<script>
+	
+	$(document).ready(function(){
+  var lstrMenuId=0;
+  
+    //Esta propiedad indica si el menu esta cacheado o no. El script menu.asp se encarga de cambiar este valor.
+    MenuService.mbooMenuCached=false;
+
+    if(!MenuService.mbooMenuCached){
+      MenuService.Nivel1();
+      MenuService.Nivel2();
+      //setTimeout(function(){MenuService.Nivel2();},50);
+      MenuService.Nivel3(); //Este metodo carga el html en cache
+      //setTimeout(function(){MenuService.Nivel3();},100);
+    }else{
+      $("#menu-content").append(localStorage.getItem("new_menu_cache")); //Cargamos el DOM con el html cacheado previamente
+      MenuService.mbooNivel1Cargado=true;
+      MenuService.mbooNivel2Cargado=true;
+      MenuService.mbooNivel3Cargado=true;
+    }
+
+    //Posicionamiento del item del menu seleccionado
+    lstrMenuId=urlParamPorGetDevolver("idm");
+
+    if(lstrMenuId!=undefined){ //Si lo encuentra en la url => lo guardamos
+      sessionStorage.setItem("idm",lstrMenuId);
+    }else{ //Si no encuentra el parametro idm en la url => toma el ultimo seleccionado
+      lstrMenuId=sessionStorage.getItem("idm");      
+    }
+
+    menuItemDesplegar('N3_'+lstrMenuId,0)
+    //setTimeout(function(){menuItemDesplegar('N3_'+lstrMenuId,0)},150);    
+	});
+
+  function menuItemDesplegar(pstrMenuId,pintReintentos){
+  var lstrMenuDispayTipo=null;
+    //if($($("[id^='N3_']").length).length>0){ //Si esta cargado el nivel 3
+    if(MenuService.mbooNivel3Cargado){
+      if($("#"+pstrMenuId).length>0){
+        if($("#"+pstrMenuId).attr("nivel")=='3'){ //if(pbooItemSeleccionado){ //Nodo hoja
+          //$("#"+pstrMenuId).addClass("bg-primary");
+          $("#"+pstrMenuId).css("background-color","#d19b3d");//$("#"+pstrMenuId).css("background-color","#cecfbd");
+          var lobjLink=$("#"+pstrMenuId).children("a");
+          lobjLink.css("color","#000000");
+          lobjLink.css("font-weight","bold");
+          menuItemDesplegar($("#"+pstrMenuId).attr("parent_id"),pintReintentos);
+        }else{ //El nodo no es una hoja
+          $("#"+pstrMenuId).click();
+          menuItemDesplegar($("#"+pstrMenuId).attr("parent_id"),pintReintentos);
+        }
+      }else{ //En este caso el menu ya fue desplegado
+        //Mostramos/ocultamos el menu, segun la seleccion del usuario.
+        lstrMenuDispayTipo=sessionStorage.getItem("new_menu_display"); //Esta variable se setea en el archivos login_header
+
+        if(lstrMenuDispayTipo!=null){
+          $("#tdMenu").css("display",lstrMenuDispayTipo);
+          $(window).trigger('resize');
+        }else{
+          $("#tdMenu").css("display","table-cell");
+        }
+      }
+    }else{ //Nivel 3 no cargado => reintento
+      console.log('menu (posicionamiento) - reintentando');
+      setTimeout(function(){menuItemDesplegar(pstrMenuId,pintReintentos+1)},100);
+      /*if(pintReintentos<50){
+        console.log('menu (posicionamiento) - reintentando');
+        setTimeout(function(){menuItemDesplegar(pstrMenuId,pintReintentos+1)},100);
+      }else{
+        console.log("No fue posible cargar el nivel 3 del menu (reintentos: "+pintReintentos+")");
+      }*/
+    }
+  }
+</script>
+<!--<br><br><br>-->
+	    </td>
+    </tr>
+   </table>   
+<!-- End menu -->
+
+	</td>
+	<td width="100%" align="center" valign="top" background="image/back_page1.gif" height="100%">
+	<div id="content">
+<table cellpadding="0" cellspacing="0" border="0" width="100%" height="100%">
+<tr>
+	<td width="100%" valign="top" background="image/back_page1.gif"><!-- Select multiple -->
+<link rel="stylesheet" href="assets/bootstrap-select/bootstrap-select.css" />
+<script src="assets/bootstrap-select/bootstrap-select.min.js"></script>
+<style>
+  .bootstrap-select > .dropdown-toggle{
+    height: inherit;
+    background-color: #FDFDF3;
+  }
+</style>
+        <style>
+            .breadcrumb.blockwms {
+                background-color: #2e353d;
+                margin-bottom: 10px;
+                color: #fff;
+            }
+
+            .breadcrumb.brand-primary a {
+                color: #fff;
+            }
+        </style>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb blockwms">
+                <li class='breadcrumb-item' style='font-size:13px' aria-current='page' ></a></li>            </ol>
+        </nav>
+    <div id ="divMail"></div>
+<div id ="divStatusUpdate"></div>
+<div id ="divBuscadorGenerico"></div>
+
+<SCRIPT LANGUAGE="JavaScript">
+
+  //Select multiple
+  $('select').selectpicker();
+
+	function notificationParent(msgModel,Titulo,msg){
+		$.Notification.notify(msgModel, 'bottom center', Titulo, msg);		
+	}
+
+	function viewDiv(dd) {
+		//MM_showHideLayers('dlayout0','',(dd == 'dlayout0') ? 'auto' : 'hidden');
+        if (event.stopPropagation) event.stopPropagation();
+        else event.cancelBubble = true;
+		$('#divInfoPosicion', window.parent.document).html();
+		var script="";		
+		html = $( "div#dlayout0" ).html();
+
+		abrirModalHTML("divMail", "Enviar Reporte por Mail", html, {
+			subtitle: "",
+			image:"mail.png"
+		});
+		return "ok";	
+	}
+	
+
+    var tipoReporte = "";
+	//var xmlhttp = new ActiveXObject ("Microsoft.XMLHTTP"); 
+	
+	function showFiltros(){
+		if (trFiltros.style.display == 'none') {
+			trFiltros.style.display = '';
+			$("#bot_filtro").removeClass('btn-inverse').addClass('btn-default');
+			document.all.h_trFiltros.value = "1";
+		} else {
+			trFiltros.style.display = 'none';
+			$("#bot_filtro").removeClass('btn-default').addClass('btn-inverse');
+			document.all.h_trFiltros.value = "0";
+		}
+
+		return false;
+	}
+
+	function getValueSiteId(obj){
+		$("#hdnRPT_Site").val($('select[name=E_id_entidades_sites]').val());
+
+		var id_entidades_sites_name;
+		id_entidades_sites_name = $('select[name=E_id_entidades_sites] option:selected').text();
+		$('input[name=TXT_E_id_entidades_sites]').val(id_entidades_sites_name);
+
+	}
+
+	function getTextCombo(obj, hiden) { 
+        if ( obj != undefined ){ 
+            if ( $(obj).attr("multiple") != undefined ){
+                var txt = "";
+                for(var i in $(obj)[0].selectedOptions){
+                    if ( $(obj)[0].selectedOptions[i].innerHTML != undefined ){
+                        if ( txt != "" ) txt += ", ";
+                        txt += $(obj)[0].selectedOptions[i].innerHTML;
+                    }
+                }
+                hiden.value = txt;
+            } else if ( obj.selectedIndex > -1) {
+                hiden.value = obj.options[obj.selectedIndex].text; 
+				//(obj.options[obj.selectedIndex].text);       		
+            }
+        }
+        /*if ( hiden != undefined ) {
+		    console.log(hiden.name);
+        }*/
+	}
+
+	function postXML(URL) {
+			var request = false;
+			if (window.XMLHttpRequest) {
+				 var request = new XMLHttpRequest(); 
+			} else if (window.ActiveXObject) {
+            try {
+                var request = new ActiveXObject("Msxml2.XMLHTTP");
+            } catch (e) {
+                try {
+                    var request = new ActiveXObject("Microsoft.XMLHTTP");
+                } catch (e) {
+                    alert('Browser not ajax');
+                }
+            }
+        }
+			   request.open("GET", URL, false);
+			   request.send();
+			   return request.responseText;
+	}
+
+	function getComboDep(obj,combodep,query,seleccionado,letra) {
+        //console.log("obj ", obj);
+        //console.log("query ", query);
+		spinner('on', combodep.id+'_spinner');
+
+        var key_value = "";
+        if ( obj.selectedIndex == -1 ) {
+            key_value = 0;
+			} else {
+            for(var i = 0; i < obj.options.length; i++) {
+                if ( obj.options[i].selected ) {
+                    if ( key_value != "" ) key_value += ", ";
+                    key_value += obj.options[i].value;
+                }  
+            }              
+        }
+
+		var respuesta = '';
+		var url = "http://192.168.10.2:80/proc_reports.php?accion=getcombodep&seleccionado="+ seleccionado +"&campo=" + combodep.id + "&query=" + query + "&idkey=" + key_value + "&letra=" + letra+ "&pintSiteId=" + $("#hdnRPT_Site").val() ;
+console.log("url1 ", url);
+console.log('valor select ',$("#H_id_layout_grupos").val());
+console.log('combodep.id ',combodep.id);
+
+    respuesta = postXML(url);
+        console.log("respuesta ", respuesta);
+		if(typeof combodep != 'undefined'){
+			combodep.innerHTML = respuesta;
+			spinner('off', combodep.id+'_spinner');
+		}
+	}
+    // HACE UN POST A SI MISMO Y EN EL SUCCESS LLAMO A REPORT.MAK	
+	function getReporte(reporte) {        
+        if ( tipoReporte == "pdf" ) reporte = "pdf";
+        if ( tipoReporte == "excel" ) reporte = "excel";
+        if ( tipoReporte == "listado" ) reporte = "listado";
+        if ( tipoReporte == "word" ) reporte = "word";
+        if ( tipoReporte == "chart" ) reporte = "chart"; //GAUCHO 11082024       
+
+        //alert(reporte);
+	    $('#ResultadoReporte_spinner3').hide()
+		$('#ResultadoReporte_spinner1').show()
+		$('#ResultadoReporte_spinner1').html('<div align="center" z-index="-1"><br><br><img border="0" alt="Procesando" src="image/spinner.gif">Procesando..<br><br>Un momento por favor.</div>');
+		var xurl;
+		if ( reporte == 'word' ) {
+		    xurl ='reports.php?aword=si';
+		} else if ( reporte == 'excel' ) {
+		    xurl ='reports.php?aexcel=si';
+    } else if ( reporte == 'pdf' ) {
+		    xurl ='reports.php?apdf=si';
+    } else if ( reporte == 'chart' ) { //GAUCHO 11082024 
+		    xurl ='reports.php?achart=si'; //GAUCHO 11082024 
+		} else if ( reporte == 'listado' ) {
+		    xurl ='reports.php?alistado=si';
+		} else { 
+		    xurl='reports.php';
+		}
+		var formData = $("#formreport").serializeArray();
+       // alert(JSON.stringify(formData));
+		var loading;
+		$.ajax({
+		  async:true, 
+		  type: 'POST',
+		  data: formData ,
+		  url: xurl,
+		    beforeSend: function (){
+				loading= setTimeout("$('#ResultadoReporte_spinner1').show()", 400);
+			},
+		  success: function(xmldata){
+			$('#ResultadoReporte_spinner3').html('<iframe id = "ifrContent" onload="parent.$(\'#ResultadoReporte_spinner1\').hide();parent.$(\'#ResultadoReporte_spinner3\').show();" iframeborder="0" width="100%" height="950px" src="reports_maker.php?t="></iframe>');															
+			clearTimeout(loading);
+			trFiltros.style.display = 'none';
+			$("#bot_filtro").removeClass('btn-default').addClass('btn-inverse');
+			document.all.h_trFiltros.value = "0";
+		   },
+            error: function(msg) {
+                $('#ResultadoReporte_spinner1').html('');
+				$('#ResultadoReporte_spinner2').html("<br><p align='center'><img border='0'  src='image/ico_importante.gif'>&nbsp;Error al intentar generar el reporte.</p>");
+				clearTimeout(loading);
+            }		 
+		});
+		return false;
+	}
+	
+
+
+	function getComboDep2(obj,combodep,query,seleccionado,letra,campo2) {
+    spinner('on', combodep.id+'_spinner');
+		var respuesta = '';
+		var url = "http://192.168.10.2:80/proc_reports.php?accion=getcombodep2&seleccionado="+ seleccionado +"&campo=" + combodep.id + "&query=" + query + "&idkey=" + obj.options[obj.selectedIndex].value + "&letra=" + letra  + "&campo2=" + campo2 ;
+		respuesta = postXML(url);
+		if(typeof combodep != 'undefined'){
+			combodep.innerHTML = respuesta;
+			spinner('off', combodep.id+'_spinner');
+		}
+
+	}
+
+	function getComboDep4(obj,combodep,query,seleccionado,letra,campo2,query2,query3) {
+
+		//debuggerCode();		
+		spinner('on', combodep.id+'_spinner');
+		var respuesta = '';
+		var url = "http://192.168.10.2:80/proc_reports.php?accion=getcombodep4&seleccionado="+ seleccionado +"&campo=" + combodep.id + "&query=" + query + "&idkey=" + obj.options[obj.selectedIndex].value + "&letra=" + letra  + "&campo2=" + campo2+ "&query2=" + query2 + "&query3=" + query3;
+		respuesta = postXML(url);
+		if(typeof combodep != 'undefined'){
+			combodep.innerHTML = respuesta;
+			spinner('off', combodep.id+'_spinner');
+		}
+
+	}
+
+function getComboDep5(obj,combodep,query,seleccionado,letra,campo2,query2,query3) {
+
+//debuggerCode();		
+spinner('on', combodep.id+'_spinner');
+var respuesta = '';
+var url = "http://192.168.10.2:80/proc_reports.php?accion=getcombodep5&seleccionado="+ seleccionado +"&campo=" + combodep.id + "&query=" + query + "&idkey=" + obj.options[obj.selectedIndex].value + "&letra=" + letra  + "&campo2=" + campo2+ "&query2=" + query2 + "&query3=" + query3;
+respuesta = postXML(url);
+if(typeof combodep != 'undefined'){
+  combodep.innerHTML = respuesta;
+  spinner('off', combodep.id+'_spinner');
+}
+
+}
+
+	function cleanCombos() {
+		getComboDep2(document.all.X_id_productos_grupos1,document.all.div_id_productos_grupos2,'',0,'Y','id_productos_grupos3');
+		getComboDep2(document.all.Y_id_productos_grupos2,document.all.div_id_productos_grupos3,'',0,'Z',' ');
+
+	}
+//-->
+
+</SCRIPT>
+<form method="Post" action="reports.php" name="formreport" id="formreport" onsubmit="javascript: getReporte('listado'); return false;">
+<input type="hidden" id="hdnRPT_Site" name="hdnRPT_Site" value="194326"> 
+<input type="hidden" id="hdnRPT_Site_Flag" name="hdnRPT_Site_Flag" value="194326"> 
+
+<input type="hidden" name="Site" value="0">
+<input type="hidden" name="accion" value="ok">
+<input type="hidden" name="codigo_reportes" value="repoordenesingresodiferencias">
+<input type="hidden" name="h_trFiltros" value="0">
+<table width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="" align=center>
+	
+	<tr>
+
+		<td class="spantitulocontenidoNT" height="10" width="100%" colspan="6">&nbsp;&nbsp;  
+        <!--input type="image" name="imgFiltro" src="image/bot_movedown.gif" alt='Filtros Reporte' onClick="return showFiltros();">&nbsp;
+        <a href="javascript:;" onClick="return showFiltros();"><b><font size=2>Filtros Reporte</font></a></b>&nbsp;-->
+    <a href="javascript:;" onClick="return showFiltros();" name=bot_filtro id=bot_filtro alt='Filtros Reportes' align='absbottom' class='btn btn-icon waves-effect waves-light btn-default'><i class='fa fa-filter'></i></a>
+		<!--button name=bot_filtro id=bot_filtro alt='Filtros Reportes' align='absbottom' onClick="showFiltros();" class='btn btn-icon waves-effect waves-light btn-purple'><i class='fa fa-filter'></i></button-->
+		<button name=bot_listado id=bot_listado alt='Listado' align='absbottom'  onclick="tipoReporte = 'listado'"  class='btn btn-icon waves-effect waves-light btn-purple '><i class='fa fa-search'></i></button>
+		<button name=bot_pdf id=bot_pdf alt='PDF' align='absbottom'  onclick="tipoReporte = 'pdf'"  class='btn btn-icon waves-effect waves-light btn-danger '><i class='fa fa-file-pdf-o'></i></button>
+		<button name=bot_excel id=bot_excel alt='Excel' align='absbottom'  onclick="tipoReporte = 'excel'"  class='btn btn-icon waves-effect waves-light btn-success '><i class='fa fa-file-excel-o'></i></button>
+		<button name=bot_word id=bot_word alt='Word' align='absbottom'  onclick="tipoReporte = 'word'"  class='btn waves-effect waves-light btn-primary '><i class='fa fa-file-word-o'></i></button>
+		<!--<button name=bot_chart id=bot_chart alt='Chart' align='absbottom'  onclick="tipoReporte = 'chart'"  class='btn waves-effect waves-light btn-pink '><i class='fa fa-pie-chart'></i></button>-->
+	
+    <!--<button name=bot_mail id=bot_mail alt='Mail' align='absbottom' type="button"  onclick="('xxmail','','show')"  class='btn btn-icon waves-effect waves-light btn-warning  '><i class='fa fa-mail-forward'></i></button>-->
+			<a class='btn btn-icon waves-effect waves-light btn-warning' href="#" onClick="viewDiv('dlayout0');">
+				<i class='fa fa-mail-forward'></i>
+					<div id="dlayout0" style="position:absolute; z-index:0; left: 4px; top: 0px; visibility: hidden; cursor:default;">
+						<iframe WIDTH="100%" HEIGHT="200"  FRAMEBORDER="0" MARGINHEIGHT="0" MARGINWIDTH="0" SRC="report.mail.php" bgcolor="#EFEBDF" name="divAgrup" id="divAgrup" scrolling="no">
+						</iframe>
+					</div>
+			</a>
+		<td>
+
+			<div id="divAgrupName" name="divAgrupName"></div>
+		</td>	
+            <td>
+		<div id="pedomail" style="z-index:1; visibility:visible">
+				<div id="xxmail" style="position:absolute; filter: alpha(opacity=95);z-index:10; visibility:hidden; cursor:default;" name="xxmail">
+				    <div style="color: black; background-color: #DCDCDC;">
+				        <B>Enviar Reporte por Mail</B> 
+				        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+				        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp
+				        <img style=cursor:hand; src="image/del.gif" onClick="MM_showHideLayers('xxmail','','hide')" border="0" alt="Cerrar"> 
+				    </div>
+				    <div style="width: 100%; background-color: #DCDCDC;">
+				        &nbsp;
+				    </div>
+				    <iframe id="ifrmail" frameborder="0" width="350" height="150" src="report.mail.php"></iframe>
+				</div>
+		</div>
+									<!-- <A href="excel_export.php" target=new><IMG border=0 alt="Exportar a CSV" src="image/export_excel.gif"></A>	-->
+                        		</td>
+	</tr>
+	<tr valign=top id="trFiltros" style="display: 'none';">
+            <td>
+                <!--height="200"-->
+		<table align=center width="100%" border="0" cellspacing="1" cellpadding="0" bgcolor="#8C9082">
+			<tr>
+			<td>
+				<table align=center width="100%" border="0" cellspacing="1" cellpadding="0">
+                                <tr>
+                                    				<td class='tdmarroncontenido'>&nbspSite</td>
+                <td class='tdblancocontenido' valign="middle" style="height:32px">
+                    <select    name="E_id_entidades_sites" class="select form-control" onFocus="this.className='selectSelected form-control';" onBlur="this.className='select form-control';" style="width:250px;height:28px;font-size:11px" onchange="getValueSiteId();">
+				<option value='194326' selected>Distribución. Fiambrería Chaco</option></select>					<INPUT TYPE="hidden" NAME="OPE_E_id_entidades_sites" value="=">
+					<INPUT TYPE="hidden" NAME="OPL_E_id_entidades_sites" value="AND">
+					<INPUT TYPE="hidden" NAME="NAM_E_id_entidades_sites" value="Site">
+					<INPUT TYPE="hidden" NAME="TXT_E_id_entidades_sites" value="Todos">
+          <!--
+					<SCRIPT LANGUAGE="JavaScript">
+					
+						getTextCombo(document.all.E_id_entidades_sites , document.all.TXT_E_id_entidades_sites );
+					</SCRIPT>	
+					//-->
+				</td>
+			
+				<td class='tdmarroncontenido' >&nbspASN</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px"><INPUT  TYPE="text" NAME="C_asn" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value="">
+				<INPUT TYPE="hidden" NAME="OPE_C_asn" value="=">
+				<INPUT TYPE="hidden" NAME="OPL_C_asn" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_asn" value="ASN">
+				<INPUT TYPE="hidden" NAME="AUX_C_asn" value="">
+				<INPUT TYPE="hidden" NAME="AUX2_C_asn" value="">
+            </td>
+			
+				<td class='tdmarroncontenido' >&nbspWave</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px"><INPUT  TYPE="text" NAME="C_wave" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value="">
+				<INPUT TYPE="hidden" NAME="OPE_C_wave" value="=">
+				<INPUT TYPE="hidden" NAME="OPL_C_wave" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_wave" value="Wave">
+				<INPUT TYPE="hidden" NAME="AUX_C_wave" value="">
+				<INPUT TYPE="hidden" NAME="AUX2_C_wave" value="">
+            </td>
+			</tr><tr>				<td class='tdmarroncontenido'>&nbspFecha ALta</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px">    <table cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <script language="javascript">
+                function XX_showHideLayers() {
+                    var i, p, v, obj, args = XX_showHideLayers.arguments;
+                    for (i = 0; i < (args.length - 2); i += 3)
+                        if ((obj = MM_findObj(args[i])) != null) {
+                            p = args[i + 1];
+                            v = args[i + 2];
+                            if (obj.style)
+                                obj = obj.style;
+                            v = (v == 'show') ? 'visible' : (v = 'hide') ? 'hidden' : v;
+                            obj.left = getPosX(p);
+                            obj.top = getPosY(p) + 16;
+                            if (parseInt(obj.left) + parseInt(obj.width) > 760)
+                                obj.left = '600px';
+                            obj.visibility = v;
+                        }
+                }
+
+                function getPosX(obj) {
+                    var curleft = 0;
+                    if (document.getElementById || document.all)
+                        while (obj.offsetParent) {
+                            curleft += obj.offsetLeft;
+                            obj = obj.offsetParent;
+                        }
+                    else if (document.layers)
+                        curleft += obj.x;
+                    return curleft;
+                }
+
+                function getPosY(obj) {
+                    var curleft = 0;
+                    if (document.getElementById || document.all)
+                        while (obj.offsetParent) {
+                            curleft += obj.offsetTop;
+                            obj = obj.offsetParent;
+                        }
+                    else if (document.layers)
+                        curleft += obj.y;
+                    return curleft;
+                }
+            </script>
+
+            
+            <td>
+                <input class="form-control" id="fecha_alta_fecha_desde" name="fecha_alta_fecha_desde" type='date' value="1900-01-01" onFocus="this.className='selectSelected form-control';" onBlur="this.className='form-control';" style="width:140px;height:28px;font-size:11px;">
+            </td>
+            <td style="width: 2px;">
+
+            </td>
+            <td>
+                <input class="form-control" id="fecha_alta_fecha_hasta" name="fecha_alta_fecha_hasta" type='date' value="1900-01-01" onFocus="this.className='selectSelected form-control';" onBlur="this.className='form-control';" style="width:140px;height:28px;font-size:11px;">
+            </td>
+
+            <td>
+                
+                    <button name=bot_cal id=bot_cal alt='Calendario' align='absbottom' type="button" onclick="hideiframe(); XX_showHideLayers('fecha_altaDivPeriod',this,'show'); setTimeout('XX_showHideLayers(\'fecha_altaDivPeriod\',this,\'hide\')', 10000, '')" class='btn btn-icon waves-effect waves-light btn-warning btn-sm'><i class='fa fa-calendar'></i></button>
+
+
+                    <div id="fecha_altaDivPeriod" name="fecha_altaDivPeriod" style="position:absolute; visibility:hidden; cursor:default; filter: alpha(opacity=90);z-index:10;">
+                        <table bgcolor="#8C9082" cellspacing="1" cellpadding="2">
+                            <col class="tdmarroncontenido" style="cursor:hand; position:absolute; z-index:9999999; currentStyle:visibility;">
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2026-08-28';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Hoy</span></td>
+                            </tr>
+                            <!-- 
+
+                                            6-5-2020 Se modifica método para obtener fechas
+
+                                                -->
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2026-08-21';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Ultima Semana</span></td>
+                            </tr>
+
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2026-08-13';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 15 días</span></td>
+                            </tr>
+
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2026-07-28';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimo Mes</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2026-05-28';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 3 meses</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2026-02-28';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 6 meses</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2025-08-28';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimo Año</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='2025-07-28';document.all.fecha_alta_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 13 Meses</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_alta_fecha_desde.value='1900-01-01';document.all.fecha_alta_fecha_hasta.value='1900-01-01';XX_showHideLayers('fecha_altaDivPeriod',this,'hide');"><span style="font-size:11px;">Todo</span></td>
+                            </tr>
+
+                        </table>
+                    </div>
+                            </td>
+        </tr>
+    </table>
+    <SCRIPT LANGUAGE="JavaScript">
+        function viewiframe() {
+            try {
+                document.getElementById('reporte').style.display = 'block';
+
+            } catch (err) {
+                //Handle errors here
+            }
+        }
+
+        function hideiframe() {
+            try {
+                document.getElementById('reporte').style.display = 'none';
+            } catch (err) {
+                //Handle errors here
+            }
+        }
+    </SCRIPT>
+				<INPUT type="hidden" name="F_fecha_alta" value="fecha_alta">
+				<INPUT TYPE="hidden" NAME="OPE_F_fecha_alta" value="=">
+				<INPUT TYPE="hidden" NAME="OPL_F_fecha_alta" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_F_fecha_alta" value="">
+            </td>
+							<td class='tdmarroncontenido'>&nbspFecha Cierre</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px">    <table cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            <script language="javascript">
+                function XX_showHideLayers() {
+                    var i, p, v, obj, args = XX_showHideLayers.arguments;
+                    for (i = 0; i < (args.length - 2); i += 3)
+                        if ((obj = MM_findObj(args[i])) != null) {
+                            p = args[i + 1];
+                            v = args[i + 2];
+                            if (obj.style)
+                                obj = obj.style;
+                            v = (v == 'show') ? 'visible' : (v = 'hide') ? 'hidden' : v;
+                            obj.left = getPosX(p);
+                            obj.top = getPosY(p) + 16;
+                            if (parseInt(obj.left) + parseInt(obj.width) > 760)
+                                obj.left = '600px';
+                            obj.visibility = v;
+                        }
+                }
+
+                function getPosX(obj) {
+                    var curleft = 0;
+                    if (document.getElementById || document.all)
+                        while (obj.offsetParent) {
+                            curleft += obj.offsetLeft;
+                            obj = obj.offsetParent;
+                        }
+                    else if (document.layers)
+                        curleft += obj.x;
+                    return curleft;
+                }
+
+                function getPosY(obj) {
+                    var curleft = 0;
+                    if (document.getElementById || document.all)
+                        while (obj.offsetParent) {
+                            curleft += obj.offsetTop;
+                            obj = obj.offsetParent;
+                        }
+                    else if (document.layers)
+                        curleft += obj.y;
+                    return curleft;
+                }
+            </script>
+
+            
+            <td>
+                <input class="form-control" id="fecha_cierre_fecha_desde" name="fecha_cierre_fecha_desde" type='date' value="1900-01-01" onFocus="this.className='selectSelected form-control';" onBlur="this.className='form-control';" style="width:140px;height:28px;font-size:11px;">
+            </td>
+            <td style="width: 2px;">
+
+            </td>
+            <td>
+                <input class="form-control" id="fecha_cierre_fecha_hasta" name="fecha_cierre_fecha_hasta" type='date' value="1900-01-01" onFocus="this.className='selectSelected form-control';" onBlur="this.className='form-control';" style="width:140px;height:28px;font-size:11px;">
+            </td>
+
+            <td>
+                
+                    <button name=bot_cal id=bot_cal alt='Calendario' align='absbottom' type="button" onclick="hideiframe(); XX_showHideLayers('fecha_cierreDivPeriod',this,'show'); setTimeout('XX_showHideLayers(\'fecha_cierreDivPeriod\',this,\'hide\')', 10000, '')" class='btn btn-icon waves-effect waves-light btn-warning btn-sm'><i class='fa fa-calendar'></i></button>
+
+
+                    <div id="fecha_cierreDivPeriod" name="fecha_cierreDivPeriod" style="position:absolute; visibility:hidden; cursor:default; filter: alpha(opacity=90);z-index:10;">
+                        <table bgcolor="#8C9082" cellspacing="1" cellpadding="2">
+                            <col class="tdmarroncontenido" style="cursor:hand; position:absolute; z-index:9999999; currentStyle:visibility;">
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2026-08-28';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Hoy</span></td>
+                            </tr>
+                            <!-- 
+
+                                            6-5-2020 Se modifica método para obtener fechas
+
+                                                -->
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2026-08-21';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Ultima Semana</span></td>
+                            </tr>
+
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2026-08-13';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 15 días</span></td>
+                            </tr>
+
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2026-07-28';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimo Mes</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2026-05-28';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 3 meses</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2026-02-28';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 6 meses</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2025-08-28';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimo Año</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='2025-07-28';document.all.fecha_cierre_fecha_hasta.value='2026-08-28';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Ultimos 13 Meses</span></td>
+                            </tr>
+                            <tr>
+                                <td onmouseover="this.className='tdamarillocontenido';" class="tdmarroncontenido" onmouseout="this.className='tdmarroncontenido';" onclick="viewiframe(); javascript: document.all.fecha_cierre_fecha_desde.value='1900-01-01';document.all.fecha_cierre_fecha_hasta.value='1900-01-01';XX_showHideLayers('fecha_cierreDivPeriod',this,'hide');"><span style="font-size:11px;">Todo</span></td>
+                            </tr>
+
+                        </table>
+                    </div>
+                            </td>
+        </tr>
+    </table>
+    <SCRIPT LANGUAGE="JavaScript">
+        function viewiframe() {
+            try {
+                document.getElementById('reporte').style.display = 'block';
+
+            } catch (err) {
+                //Handle errors here
+            }
+        }
+
+        function hideiframe() {
+            try {
+                document.getElementById('reporte').style.display = 'none';
+            } catch (err) {
+                //Handle errors here
+            }
+        }
+    </SCRIPT>
+				<INPUT type="hidden" name="F_fecha_cierre" value="fecha_cierre">
+				<INPUT TYPE="hidden" NAME="OPE_F_fecha_cierre" value="=">
+				<INPUT TYPE="hidden" NAME="OPL_F_fecha_cierre" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_F_fecha_cierre" value="">
+            </td>
+			<td class='tdmarroncontenido'></td><td class='tdblancocontenido'></td></tr><tr>
+				<td class='tdmarroncontenido' >&nbspOrden</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px"><INPUT  TYPE="text" NAME="C_codigo_ordenes" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value="">
+				<INPUT TYPE="hidden" NAME="OPE_C_codigo_ordenes" value="LIKE">
+				<INPUT TYPE="hidden" NAME="OPL_C_codigo_ordenes" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_codigo_ordenes" value="Orden">
+				<INPUT TYPE="hidden" NAME="AUX_C_codigo_ordenes" value="codigo_ordenes_erp">
+				<INPUT TYPE="hidden" NAME="AUX2_C_codigo_ordenes" value="">
+            </td>
+			 
+				<td class='tdmarroncontenido'>&nbspOperación</td>             
+				<td class='tdblancocontenido' valign="middle" style="height:32px">&nbsp;
+                <select  id="H_id_operaciones" name="H_id_operaciones[]" multiple class="selectpicker form-control" data-actions-box="true" title="Elija los filtros..." data-select-all-text="Seleccionar todos" data-deselect-all-text="Deseleccionar todos" onFocus="this.className='selectSelected form-control';" onBlur="this.className='select form-control';" style="width:250px;height:28px;font-size:11px" onchange="getComboDep(this,document.all.div_id_ordenes_documentos,'select * from view_Documentos_Operacion where idkey=@@IDKEY@@  @@SITE@@ ORDER BY descri',-1,'K'); getTextCombo(this,document.all.TXT_H_id_operaciones);">
+                        <option value='1'>Recepción</option></select>					<INPUT TYPE="hidden" NAME="OPE_H_id_operaciones" value="=">
+					<INPUT TYPE="hidden" NAME="OPL_H_id_operaciones" value="AND">
+					<INPUT TYPE="hidden" NAME="NAM_H_id_operaciones" value="Operación">
+					<INPUT TYPE="hidden" NAME="TXT_H_id_operaciones" value="Todos">
+					<!--
+					<SCRIPT LANGUAGE="JavaScript">
+                        var id = "H_" + "id_operaciones";
+                        $('#' + id).multiselect({
+		                    includeSelectAllOption: true
+	                    });
+                        
+                        /*$('#' + id).multiselect('selectAll', false);
+                        $('#' + id).multiselect('updateButtonText');*/
+
+						getTextCombo(document.all.H_id_operaciones , document.all.TXT_H_id_operaciones );
+					</SCRIPT>
+					//-->
+				    <td class='tdmarroncontenido' valign="middle" style="height:32px">
+                <B>
+                    <FONT SIZE=+1 COLOR=#0066FF>»</FONT>
+                </B>Doc.					    <div id="div_id_ordenes_documentos_spinner" name="div_id_ordenes_documentos_spinner"></div>
+				    </td> 
+
+				    <td class='tdblancocontenido' valign="middle" style="height:32px" >
+					<div id="div_id_ordenes_documentos" name="div_id_ordenes_documentos"></div>
+					<INPUT TYPE="hidden" NAME="OPE_K_id_ordenes_documentos" value="=">
+					<INPUT TYPE="hidden" NAME="OPL_K_id_ordenes_documentos" value="AND">
+					<INPUT TYPE="hidden" NAME="NAM_K_id_ordenes_documentos" value="Doc.">
+					<INPUT TYPE="hidden" NAME="TXT_K_id_ordenes_documentos" value="Todos">
+                                    <SCRIPT LANGUAGE="JavaScript">
+                        getComboDep(document.all.H_id_operaciones, document.all.div_id_ordenes_documentos, 'select * from view_Documentos_Operacion where idkey=@@IDKEY@@  @@SITE@@ ORDER BY descri', , 'K');
+                    </script>					<SCRIPT LANGUAGE="JavaScript">
+							getTextCombo(document.all.H_id_operaciones , document.all.TXT_H_id_operaciones );
+							getTextCombo(document.all.K_id_ordenes_documentos , document.all.TXT_K_id_ordenes_documentos );
+					</SCRIPT>	
+				</td>
+            </tr><tr>
+				<td class='tdmarroncontenido'>&nbspPrioridad</td>
+				<td class='tdblancocontenido'>
+					<div class="input-group" >
+					  <input pattern="^(\d|-)?(\d|)*\.?\d*$"  NAME="R_D_prioridad" type="text"  class="form-control" placeholder="Desde" style="font-size:11; width:100px; height:25px;" value="" onkeydown="return validNumNeg(event,this,true)">				
+					  <input pattern="^(\d|-)?(\d|)*\.?\d*$"  NAME="R_H_prioridad" type="text"  class="form-control" placeholder="Hasta" style="font-size:11; width:100px; height:25px" value="" onkeydown="return validNumNeg(event,this,true)">
+					</div>
+				<INPUT TYPE="hidden" NAME="OPE_R_prioridad" value="=">
+				<INPUT TYPE="hidden" NAME="OPL_R_prioridad" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_R_prioridad" value="Prioridad">
+            </td>
+							<td class='tdmarroncontenido'>&nbspLogin</td>             
+            <td class='tdblancocontenido' valign="middle" style="height:32px">
+                <select  name="Q_id_logins_operador" class="select form-control" onFocus="this.className='selectSelected form-control';" onBlur="this.className='select form-control';" style="width:250px;height:28px;font-size:11px" onchange="getTextCombo(this,document.all.TXT_Q_id_logins_operador);">                    <option value=-1>Todos</option>
+                    <option value='828'>GastonG</option><option value='879'>GastonGo</option><option value='968'>JORGEM</option><option value='969'>JORGEMA</option><option value='1014'>26REC</option><option value='1015'>26DES</option><option value='1016'>26BCK</option><option value='1148'>EdgarT</option><option value='1149'>EdgarTu</option>                </select>
+					<INPUT TYPE="hidden" NAME="OPE_Q_id_logins_operador" value="=">
+					<INPUT TYPE="hidden" NAME="OPL_Q_id_logins_operador" value="AND">
+					<INPUT TYPE="hidden" NAME="NAM_Q_id_logins_operador" value="Login">
+					<INPUT TYPE="hidden" NAME="TXT_Q_id_logins_operador" value="Todos">
+
+				</td>
+            
+				<td class='tdmarroncontenido'>&nbspDiferencias</td>
+				<td class='tdblancocontenido' valign="middle" style="height:32px">
+				<select name="W_diferencia" class="select form-control" onFocus="this.className='selectSelected form-control';" onBlur="this.className='select form-control';" style="width:250px;height:28px;font-size:11px" onChange="getTextCombo(this,document.all.TXT_W_diferencia);"  >
+                        <OPTION VALUE="-1" selected >Todos</OPTION>
+                        <OPTION VALUE="1" >Si</OPTION>
+                        <OPTION VALUE="0" >No</OPTION>
+					</select>
+					<INPUT TYPE="hidden" NAME="OPE_W_diferencia" value="=">
+					<INPUT TYPE="hidden" NAME="OPL_W_diferencia" value="AND">
+					<INPUT TYPE="hidden" NAME="NAM_W_diferencia" value="Diferencias">
+					<INPUT TYPE="hidden" NAME="TXT_W_diferencia" value="Todos">
+					<!--
+					<SCRIPT LANGUAGE="JavaScript">
+                    getTextCombo( ,  );
+					</SCRIPT>				
+					//-->
+				</td>
+			</tr><tr>        
+                <!-- CELDA DE TITULO -->        
+                <td class='tdmarroncontenido'>&nbspProveedor<a onclick="crearBuscador('Proveedor', 'select * from View_Entidad_Clientes_and_Proveedores', 'codigo_entidades', 'C_codigo_entidades', '')" href="#" class="btn btn-sm"><span class="glyphicon glyphicon-search"></span></a></td>             
+
+                <!-- CONTROL ASOCIADO -->
+				<td class='tdblancocontenido'  valign="middle" style="height:32px"><INPUT  TYPE="text" ID="C_codigo_entidades" NAME="C_codigo_entidades" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value=""></td>
+				<INPUT TYPE="hidden" NAME="OPE_C_codigo_entidades" value="LIKE">
+				<INPUT TYPE="hidden" NAME="OPL_C_codigo_entidades" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_codigo_entidades" value="Proveedor">
+				<INPUT TYPE="hidden" NAME="AUX_C_codigo_entidades" value="cliente_proveedor">         
+                    
+                <!-- CELDA DE TITULO -->        
+                <td class='tdmarroncontenido'>&nbspTransportista<a onclick="crearBuscador('Transportista', 'select * from View_Entidad_Transportistas', 'codigo_entidades_transportista', 'C_codigo_entidades_transportista', '')" href="#" class="btn btn-sm"><span class="glyphicon glyphicon-search"></span></a></td>             
+
+                <!-- CONTROL ASOCIADO -->
+				<td class='tdblancocontenido'  valign="middle" style="height:32px"><INPUT  TYPE="text" ID="C_codigo_entidades_transportista" NAME="C_codigo_entidades_transportista" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value=""></td>
+				<INPUT TYPE="hidden" NAME="OPE_C_codigo_entidades_transportista" value="=">
+				<INPUT TYPE="hidden" NAME="OPL_C_codigo_entidades_transportista" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_codigo_entidades_transportista" value="Transportista">
+				<INPUT TYPE="hidden" NAME="AUX_C_codigo_entidades_transportista" value="transportista">         
+                    
+                <!-- CELDA DE TITULO -->        
+                <td class='tdmarroncontenido'>&nbspExpreso<a onclick="crearBuscador('Expreso', 'select * from View_Entidad_Expresos', 'codigo_entidades_expreso', 'C_codigo_entidades_expreso', '')" href="#" class="btn btn-sm"><span class="glyphicon glyphicon-search"></span></a></td>             
+
+                <!-- CONTROL ASOCIADO -->
+				<td class='tdblancocontenido'  valign="middle" style="height:32px"><INPUT  TYPE="text" ID="C_codigo_entidades_expreso" NAME="C_codigo_entidades_expreso" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value=""></td>
+				<INPUT TYPE="hidden" NAME="OPE_C_codigo_entidades_expreso" value="=">
+				<INPUT TYPE="hidden" NAME="OPL_C_codigo_entidades_expreso" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_codigo_entidades_expreso" value="Expreso">
+				<INPUT TYPE="hidden" NAME="AUX_C_codigo_entidades_expreso" value="expreso">         
+            </tr><tr>        
+                <!-- CELDA DE TITULO -->        
+                <td class='tdmarroncontenido'>&nbspProducto<a onclick="crearBuscador('Producto', 'select * from view_Productos', 'codigo_productos', 'C_codigo_productos', '')" href="#" class="btn btn-sm"><span class="glyphicon glyphicon-search"></span></a></td>             
+
+                <!-- CONTROL ASOCIADO -->
+				<td class='tdblancocontenido'  valign="middle" style="height:32px"><INPUT  TYPE="text" ID="C_codigo_productos" NAME="C_codigo_productos" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value=""></td>
+				<INPUT TYPE="hidden" NAME="OPE_C_codigo_productos" value="LIKE">
+				<INPUT TYPE="hidden" NAME="OPL_C_codigo_productos" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_codigo_productos" value="Producto">
+				<INPUT TYPE="hidden" NAME="AUX_C_codigo_productos" value="producto">         
+            			
+				<td class='tdmarroncontenido'>&nbspGrupo					<div id="div_id_productos_grupos1_spinner" name="div_id_productos_grupos1_spinner"></div>
+					<div id="div_id_productos_grupos2_spinner" name="div_id_productos_grupos2_spinner"></div>
+					<div id="div_id_productos_grupos3_spinner" name="div_id_productos_grupos3_spinner"></div>
+				</td>
+
+				<td class='tdmarroncontenido' valign="middle" style="height:32px">
+                <select id="V_id_productos_grupos" name="V_id_productos_grupos" class="select form-control" onFocus="this.className='selectSelected form-control';" onBlur="this.className='select form-control';" style="width:250px;height:28px;font-size:11px" onchange="if(this.value == '-1') {$('#X_id_productos_grupos1').val('-1');$('#Y_id_productos_grupos2').val('-1'); $('#Z_id_productos_grupos3').val('-1');} else{ getComboDep2(this,document.all.div_id_productos_grupos1,'SELECT id_productos_grupos as id,descri FROM Productos_Grupos WHERE id_productos_grupos_parent=@@IDKEY@@ order by descri',-1,'X','id_productos_grupos2'); getTextCombo(this,document.all.TXT_V_id_productos_grupos);}">
+                    <option value=-1>Todos</option>
+                    <option value='22'>ACCIONES COMERCIALES                              </option><option value='1'>ALIMENTO P/MASCOTAS                               </option><option value='16'>ART.VARIOS                                        </option><option value='19'>BEBIDAS                                           </option><option value='26'>BODEGA                                            </option><option value='15'>CARNICERIA                                        </option><option value='12'>CIGARRILLOS                                       </option><option value='11'>COCINA                                            </option><option value='9'>COMESTIBLES                                       </option><option value='17'>COMODATOS                                         </option><option value='5'>CONGELADOS                                        </option><option value='27'>DESAYUNO Y MERIENDA                               </option><option value='3'>ELECTRODOMESTICOS                                 </option><option value='10'>FERRETERIA                                        </option><option value='6'>FIAMBRERIA                                        </option><option value='24'>FRUTAS Y VERDURAS                                 </option><option value='25'>GASTOS                                            </option><option value='8'>GOLOSINAS                                         </option><option value='18'>HELADERAS                                         </option><option value='21'>INSUMOS                                           </option><option value='7'>LIBRERIA                                          </option><option value='2'>LIMPIEZA                                          </option><option value='13'>PANADERIA                                         </option><option value='29'>PESCADOS Y MARISCOS                               </option><option value='23'>PROD. FIESTAS                                     </option><option value='124'>PRODUCTOS NICHO                                   </option><option value='28'>RESTO SIN SECTOR                                  </option><option value='20'>ROTISERIA                                         </option><option value='14'>TIEMPO LIBRE                                      </option><option value='4'>TOCADOR Y COSMETICA                               </option>                </select>
+					<div id="div_id_productos_grupos1" name="div_id_productos_grupos1"></div>
+					<div id="div_id_productos_grupos2" name="div_id_productos_grupos2"></div>
+					<div id="div_id_productos_grupos3" name="div_id_productos_grupos3"></div>
+					<INPUT TYPE="hidden" NAME="OPE_V_id_productos_grupos" value="IN">
+					<INPUT TYPE="hidden" NAME="OPL_V_id_productos_grupos" value="AND">
+					<INPUT TYPE="hidden" NAME="NAM_V_id_productos_grupos" value="Grupo">
+					<INPUT TYPE="hidden" NAME="TXT_V_id_productos_grupos" value="Todos">
+
+					<INPUT TYPE="hidden" NAME="TXT_X_id_productos_grupos1" value="Todos">
+					<INPUT TYPE="hidden" NAME="TXT_Y_id_productos_grupos2" value="Todos">
+					<INPUT TYPE="hidden" NAME="TXT_Z_id_productos_grupos3" value="Todos">
+            </td>
+                						<SCRIPT LANGUAGE="JavaScript">
+						getComboDep2(document.all.V_id_productos_grupos , document.all.div_id_productos_grupos1,'SELECT id_productos_grupos as id,descri FROM Productos_Grupos WHERE id_productos_grupos_parent=@@IDKEY@@ order by descri',,'X','id_productos_grupos2');
+						getComboDep2(document.all.X_id_productos_grupos1 , document.all.div_id_productos_grupos2,'SELECT id_productos_grupos as id,descri FROM Productos_Grupos WHERE id_productos_grupos_parent=@@IDKEY@@ order by descri',,'Y','id_productos_grupos3');
+						getComboDep(document.all.Y_id_productos_grupos2 , document.all.div_id_productos_grupos3,'SELECT id_productos_grupos as id,descri FROM Productos_Grupos WHERE id_productos_grupos_parent=@@IDKEY@@ order by descri',,'Z',' ');
+                </script>
+                					<SCRIPT LANGUAGE="JavaScript">
+							getTextCombo(document.all.V_id_productos_grupos , document.all.TXT_V_id_productos_grupos );
+							getTextCombo(document.all.X_id_productos_grupos1 , document.all.TXT_X_id_productos_grupos1 );
+							getTextCombo(document.all.Y_id_productos_grupos2 , document.all.TXT_Y_id_productos_grupos2 );
+							getTextCombo(document.all.Z_id_productos_grupos3 , document.all.TXT_Z_id_productos_grupos3 );
+					</SCRIPT>	
+
+				</td>
+
+				
+				<td class='tdmarroncontenido'>&nbspPres.</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px">
+                <select  name="T_id_presentaciones" class="select form-control" onFocus="this.className='selectSelected form-control';" onBlur="this.className='select form-control';" style="width:250px;height:28px;font-size:11px" onchange="getTextCombo(this,document.all.TXT_T_id_presentaciones);">                    <option value=-1>Todos</option>
+                    <option value='1'>BULTO</option><option value='3'>BULTO 1</option><option value='14'>BULTO 1</option><option value='8'>BULTO 2</option><option value='11'>BULTO 3</option><option value='12'>BULTO 4</option><option value='13'>BULTO 5</option><option value='2'>CAJA MADRE</option><option value='9'>CENTIMETROS</option><option value='6'>KILOGRAMOS</option><option value='7'>UNIDAD</option>                </select>
+					<INPUT TYPE="hidden" NAME="OPE_T_id_presentaciones" value="=">
+					<INPUT TYPE="hidden" NAME="OPL_T_id_presentaciones" value="AND">
+					<INPUT TYPE="hidden" NAME="NAM_T_id_presentaciones" value="Pres.">
+					<INPUT TYPE="hidden" NAME="TXT_T_id_presentaciones" value="Todos">
+					<!--
+					<SCRIPT LANGUAGE="JavaScript">
+                    getTextCombo( ,  );
+					</SCRIPT>				
+					//-->
+				</td>
+			</tr><tr>
+				<td class='tdmarroncontenido' >&nbspContenedor</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px"><INPUT  TYPE="text" NAME="C_codigo_contenedores" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value="">
+				<INPUT TYPE="hidden" NAME="OPE_C_codigo_contenedores" value="LIKE">
+				<INPUT TYPE="hidden" NAME="OPL_C_codigo_contenedores" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_codigo_contenedores" value="Contenedor">
+				<INPUT TYPE="hidden" NAME="AUX_C_codigo_contenedores" value="">
+				<INPUT TYPE="hidden" NAME="AUX2_C_codigo_contenedores" value="">
+            </td>
+			
+				<td class='tdmarroncontenido' >&nbspLote</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px"><INPUT  TYPE="text" NAME="C_lote" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value="">
+				<INPUT TYPE="hidden" NAME="OPE_C_lote" value="LIKE">
+				<INPUT TYPE="hidden" NAME="OPL_C_lote" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_lote" value="Lote">
+				<INPUT TYPE="hidden" NAME="AUX_C_lote" value="">
+				<INPUT TYPE="hidden" NAME="AUX2_C_lote" value="">
+            </td>
+			
+				<td class='tdmarroncontenido' >&nbspSerie</td>
+            <td class='tdblancocontenido' valign="middle" style="height:32px"><INPUT  TYPE="text" NAME="C_serie" class="form-control" onFocus="this.className='inputSelected form-control';" onBlur="this.className='form-control';" style="width:250px;height:28px;font-size:11px" value="">
+				<INPUT TYPE="hidden" NAME="OPE_C_serie" value="LIKE">
+				<INPUT TYPE="hidden" NAME="OPL_C_serie" value="AND">
+				<INPUT TYPE="hidden" NAME="NAM_C_serie" value="Serie">
+				<INPUT TYPE="hidden" NAME="AUX_C_serie" value="">
+				<INPUT TYPE="hidden" NAME="AUX2_C_serie" value="">
+            </td>
+							</tr>
+				</table>
+			</td>
+			</tr>
+		</table>
+		</td>
+	</tr>
+</table>
+</form>
+    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+            <td colspan="3" height="5"><img src="image/spacer.gif" width="1" height="1"></td>
+        </tr>
+        <tr bgcolor="#444444">
+            <td height="1" colspan="3"><img src="image/spacer.gif" width="1" height="1"></td>
+        </tr>
+        <tr bgcolor="#999999">
+            <td height="1" colspan="3"><img src="image/spacer.gif" width="1" height="1"></td>
+        </tr>
+    </table><!-- <iframe id="ResultadoReporte_spinner2" name="ResultadoReporte_spinner2" width="100%" height="100%" style="display:none"> -->
+<div id="ResultadoReporte_spinner" name="ResultadoReporte_spinner">
+		<div id="ResultadoReporte_spinner1" name="ResultadoReporte_spinner1"></div>
+</div>    
+<div id="ResultadoReporte_spinner3" name="ResultadoReporte_spinner3" width="100%" height="100%" style="display:none">
+</div>
+
+
+<!--INICIO Referencias de Moltran     -->
+<!--<script src="js/waves.js"></script>-->
+								<script src="js/wow.min.js"></script>
+								<script src="js/jquery.nicescroll.js" type="text/javascript"></script>
+								<script src="js/jquery.scrollto.min.js"></script>
+								<script>
+									var resizefunc = [];
+								</script>
+								<script src="js/jquery.app.js"></script>
+<!--FIN Referencias de Moltran     -->
+	
+							</td>
+						</tr>
+					</table>
+				</div>
+			</td>
+		<td bgcolor="#888888" width="1"><img src="image/spacer.gif" width="1" height="1"></td>
+	</tr>
+	<script language="JavaScript">
+		var script='reports.php';
+
+		function postXML(URL)  {
+			var request = false;
+			if (window.XMLHttpRequest) {
+			   var request = new XMLHttpRequest();}
+			else if (window.ActiveXObject) {
+					 try { var request = new ActiveXObject("Msxml2.XMLHTTP"); }
+					 catch (e){ try {var request = new ActiveXObject("Microsoft.XMLHTTP");}
+					 catch (e){ alert('Browser not ajax');}}
+				}
+					 request.open("GET", URL, false);
+					 request.send();
+					 return request.responseText;
+				}
+			
+		function ajaxPost(URL, onSuccess, onError)  {
+			$.ajax({				
+				timeout: 360000,
+				type: "POST",
+				url: URL,
+				data: {},
+				success: function (d) {
+					onSuccess(d);
+				},
+				error: function (d) {
+					onError(d);
+				}
+			});
+		}
+
+		function viewMessages() {
+			if($("#SRC_LICENCE").length == 0 ) { //Se agregó esta validación para evitar que se vayan displayando en cadena las notificaciones.
+				ajaxPost('http://192.168.10.2:80/teamwork/proc_mensajes.php?entorno=sys_block_DEPOT&id_logins_agenda=0&tipoMensaje=servicios&login_id_logins=1149',
+					function(d){
+						msgs = d;
+						if (msgs.substr(0,4) == '#ERR') {
+							// Grabar error en el LOG
+						} else {
+							//document.all.dMensajesPopup.innerHTML = msgs;
+							//22/02/2018 Se modifico para llamar la función de servicios detenidos con Bootstraps  
+							if (msgs.trim() !="") {
+								$.Notification.notify('warning', 'bottom right', 'Servicio Detenido',msgs);
+							} 
+						}
+						//window.setTimeout('viewMessages()', 5000, '');
+						window.setTimeout('viewMessages()', 900000, ''); //Se incremento el tiempo a 15' solo para que no venza la sesion
+					},
+					function(d){
+						jAlert(d.responseText, "");
+					}
+				);
+			}	
+		}
+		
+		function viewMessagesUsuario() {
+			if($("#MENSAJES_USUARIO").length == 0 ) { //Se agregó esta validación para evitar que se vayan displayando en cadena las notificaciones.
+				var url = 'http://192.168.10.2:80/teamwork/proc_mensajes.php?entorno=sys_block_DEPOT&id_logins_agenda=0&tipoMensaje=mensajes&login_id_logins=1149';
+				var result  			= http.get(url);
+				var msgs 			= result.split("~");
+				for (var i = 3; i < msgs.length ; i+=4) {
+					//document.all.dMensajesPopup.innerHTML = msgs;
+					//22/02/2018 Se modifico para llamar la función de servicios detenidos con Bootstrap
+					if (msgs[i] !="") {
+						$.Notification.confirm('info', 'bottom right', 'Mensajes al Usuario'+msgs[i-1], msgs[i], msgs[i-2], msgs[i-3] );
+					} 
+					window.setTimeout('viewMessagesUsuario()', 900000, ''); //Se incremento el tiempo a 15' solo para que no venza la sesion
+					//jAlert(msgs[i], "");
+				}
+			}	
+		}
+		
+		window.setTimeout('viewMessages()', 1000, '');
+		window.setTimeout('viewMessagesUsuario()', 1000, '');
+			
+		/*function viElMensaje(i){
+			eval("document.all.mensaje"+ i +".style.display='none';");
+			postXML('http://192.168.10.2:80/teamwork/proc_mensajes.php?id_logins_agenda=' + eval("document.all.mensaje"+ i +".tag"));
+			var n = i + 1;
+			var xtop = eval("document.all.mensaje"+ i + ".style.top");
+			var ztop = ""
+			while (typeof(eval("document.all.mensaje"+ n)) != 'undefined') {
+				if (eval("document.all.mensaje"+ n + ".style.display != 'none'")){
+					eval("ztop = document.all.mensaje"+ n + ".style.top");
+					eval("document.all.mensaje"+ n + ".style.top = xtop");
+					xtop=ztop;
+				}
+				n+=1;
+			}; 
+		}*/
+	</script>
+		</table>
+	<DIV id=dMensajesPopup name="dMensajesPopup" style="position:absolute; top:1px; right:8px; height:1px; width:1px;"></DIV>
+	</body>
+</html>
+<!-- End Framework -->

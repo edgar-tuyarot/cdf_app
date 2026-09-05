@@ -1,26 +1,8 @@
 <script setup>
-import { ref, watch } from 'vue'
 import { useRoute, RouterView } from 'vue-router'
-import { useAuthStore } from '../../stores/auth'
-import Sidebar from './Sidebar.vue'
-import Header from './Header.vue'
+import TopbarNav from './TopbarNav.vue'
 
 const route = useRoute()
-const authStore = useAuthStore()
-const isSidebarOpen = ref(false)
-
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
-
-const closeSidebar = () => {
-  isSidebarOpen.value = false
-}
-
-// Cerrar sidebar automáticamente al cambiar de ruta (en móvil)
-watch(() => route?.path, () => {
-  closeSidebar()
-})
 </script>
 
 <template>
@@ -29,24 +11,12 @@ watch(() => route?.path, () => {
   </div>
 
   <div v-else class="layout-wrapper">
-    <!-- Overlay para móvil -->
-    <div 
-      v-if="isSidebarOpen" 
-      class="sidebar-overlay" 
-      @click="closeSidebar"
-    ></div>
+    <!-- Topbar Superior con Menús Desplegables (Dropdowns) -->
+    <TopbarNav />
 
-    <!-- Sidebar con prop de estado (oculta para colaboradores) -->
-    <Sidebar v-if="authStore.user?.rol?.toLowerCase() !== 'colaborador'" :isOpen="isSidebarOpen" @close="closeSidebar" />
-
-    <div class="main-content">
-      <!-- Header con disparador de menú -->
-      <Header @toggle-menu="toggleSidebar" />
-      
-      <main class="page-content">
-        <RouterView />
-      </main>
-    </div>
+    <main class="page-content">
+      <RouterView />
+    </main>
   </div>
 </template>
 
@@ -62,6 +32,7 @@ watch(() => route?.path, () => {
 
 .layout-wrapper {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -69,36 +40,11 @@ watch(() => route?.path, () => {
   background: var(--bg-primary);
 }
 
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  background-color: var(--bg-primary);
-}
-
 .page-content {
   flex: 1;
   overflow-y: auto;
-  padding: 0.25rem;
+  padding: 0.5rem;
   background: var(--bg-primary);
-}
-
-/* Overlay sólo visible en móvil cuando el menú está abierto */
-.sidebar-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 40;
-}
-
-@media (min-width: 1024px) {
-  .sidebar-overlay {
-    display: none;
-  }
-  .page-content {
-    padding: 0.5rem;
-  }
 }
 
 /* Transición de página */

@@ -1,315 +1,287 @@
 <template>
-  <div class="page-container animate-fade">
-    <!-- Encabezado -->
-    <div class="page-header">
-      <div class="header-content">
-        <h2 class="page-title">
-          <i class="ph ph-buildings"></i> Consulta de Stock por Ubicación / Sucursal WMS
+  <div class="page-container animate-fade" style="padding: 1rem; max-width: 1400px; margin: 0 auto;">
+    
+    <!-- Encabezado de la Pantalla -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+      <div>
+        <h2 class="page-title" style="margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+          <i class="ph ph-buildings" style="color: var(--accent-primary); font-size: 1.6rem;"></i>
+          Stock Sucursales (Block WMS)
         </h2>
-        <p class="page-description">
-          Consulte el inventario y las existencias físicas en tiempo real de cualquier sucursal o depósito registrado en BlockWMS.
+        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
+          Consulte el stock físico consolidado de un producto específico en todas las sucursales y depósitos.
         </p>
       </div>
-      <div class="header-actions">
+
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
         <button 
-          class="btn btn-secondary" 
-          style="background: #1a7f37; color: #fff; border: 1px solid #15692e; display: flex; align-items: center; gap: 0.3rem;"
-          @click="exportToExcel"
-          :disabled="loadingStock || !stockReport || filteredProductos.length === 0"
+          v-if="reportData && reportData.items && reportData.items.length > 0" 
+          class="win-dialog-btn win-dialog-btn-ok" 
+          @click="exportarExcel"
+          style="display: flex; align-items: center; gap: 0.35rem; font-weight: 800;"
         >
           <i class="ph ph-file-xls"></i> Exportar a Excel
         </button>
       </div>
     </div>
 
-    <!-- Barra de Selección de Ubicación y Filtros -->
-    <div class="card mb-4">
-      <div class="card-body" style="padding: 1rem;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; align-items: flex-end;">
-          
-          <!-- Selector de Ubicación / Site -->
-          <div class="form-group mb-0">
-            <label class="form-label-compact">
-              <i class="ph ph-map-pin"></i> Seleccionar Ubicación / Depósito BlockWMS *
-            </label>
-            <div style="position: relative;">
-              <select 
-                v-model="selectedSiteId" 
-                @change="cargarStockSite" 
-                class="form-control-compact"
-                style="height: 38px; font-weight: bold; font-size: 0.95rem; background-color: var(--bg-window); color: var(--text-primary);"
-                :disabled="loadingSites || loadingStock"
-              >
-                <option value="" disabled>-- Seleccione una Ubicación --</option>
-                <option v-for="s in sites" :key="s.siteId" :value="s.siteId">
-                  🏢 {{ s.nombre }} {{ s.razonSocial && s.razonSocial !== s.nombre ? `(${s.razonSocial})` : '' }} [ID: {{ s.siteId }}]
-                </option>
-              </select>
-            </div>
-          </div>
+    <!-- Formulario de Consulta por Código de Producto -->
+    <div class="card" style="padding: 1.25rem; border: 2px solid var(--bevel-dark); background: var(--bg-window); margin-bottom: 1.25rem;">
+      <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.35rem;">
+        <i class="ph ph-magnifying-glass"></i> Ingrese el producto a consultar
+      </div>
 
-          <!-- Buscador de Productos -->
-          <div class="form-group mb-0">
-            <label class="form-label-compact">
-              <i class="ph ph-magnifying-glass"></i> Buscar en la Ubicación
-            </label>
-            <div style="position: relative; display: flex; align-items: center;">
-              <input 
-                type="text" 
-                v-model="searchQuery" 
-                placeholder="Código SKU o Nombre de producto..." 
-                class="form-control-compact"
-                style="height: 38px; padding-right: 2rem;"
-                :disabled="!selectedSiteId || loadingStock"
-              />
-              <button 
-                v-if="searchQuery" 
-                @click="searchQuery = ''" 
-                style="position: absolute; right: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted);"
-              >
-                <i class="ph ph-x-circle"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Botón de Recargar -->
-          <div>
+      <form @submit.prevent="consultarStockSucursales" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 280px;">
+          <label style="font-size: 0.82rem; font-weight: 800; color: var(--text-primary); display: block; margin-bottom: 0.35rem;">
+            Código de Producto / SKU o Nombre del Producto *
+          </label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input 
+              type="text" 
+              v-model="codigoProducto" 
+              placeholder="Ej: 1218, 1866, Muzzarella..." 
+              class="form-control" 
+              style="font-size: 0.95rem; font-weight: bold; height: 40px; border: 1.5px solid var(--bevel-dark);"
+              :disabled="loading"
+              ref="inputCodigo"
+              autofocus
+            />
             <button 
-              class="btn btn-primary" 
-              style="height: 38px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.3rem;"
-              @click="cargarStockSite"
-              :disabled="!selectedSiteId || loadingStock"
+              v-if="codigoProducto" 
+              type="button" 
+              @click="limpiarBusqueda" 
+              style="position: absolute; right: 0.6rem; background: none; border: none; cursor: pointer; color: var(--text-muted);"
             >
-              <i class="ph ph-spinner spinner" v-if="loadingStock"></i>
-              <i class="ph ph-arrows-clockwise" v-else></i> Actualizar Inventario
+              <i class="ph ph-x-circle" style="font-size: 1.2rem;"></i>
             </button>
           </div>
-
         </div>
-      </div>
+
+        <div style="width: 200px;">
+          <button 
+            type="submit" 
+            class="win-dialog-btn win-dialog-btn-ok" 
+            :disabled="loading"
+            style="width: 100%; height: 40px; font-weight: 800; font-size: 0.92rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;"
+          >
+            <i class="ph ph-magnifying-glass" v-if="!loading"></i>
+            <i class="ph ph-spinner spinner" v-else></i>
+            Buscar en Sucursales
+          </button>
+        </div>
+      </form>
     </div>
 
     <!-- Indicador de Carga -->
-    <div v-if="loadingStock" class="card p-5 text-center mb-4">
-      <i class="ph ph-spinner spinner" style="font-size: 2.5rem; color: var(--accent-primary);"></i>
-      <p class="mt-3 text-muted" style="font-weight: bold;">Consultando inventario en tiempo real para la ubicación seleccionada...</p>
+    <div v-if="loading" style="text-align: center; padding: 3rem; background: var(--bg-window); border: 2px solid var(--bevel-dark); margin-bottom: 1.25rem;">
+      <i class="ph ph-spinner spinner" style="font-size: 3rem; color: var(--accent-primary); margin-bottom: 0.75rem;"></i>
+      <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-primary);">Buscando "{{ codigoProducto }}" en todas las sucursales...</h3>
+      <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">
+        Ejecutando consolidado de existencias en Block WMS
+      </p>
     </div>
 
-    <!-- Tarjetas Resumen -->
-    <div v-if="stockReport && !loadingStock" class="grid-cards mb-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-      <div class="card p-3" style="border-left: 4px solid #0284c7;">
-        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Ubicación Consultada</div>
-        <div style="font-size: 1.1rem; font-weight: bold; color: var(--text-primary);" class="mt-1">
-          {{ selectedSiteNombre }}
-        </div>
+    <!-- Mensaje de Error -->
+    <div v-else-if="errorMessage" class="card" style="padding: 1.25rem; border: 2px solid #ef4444; background: #fef2f2; margin-bottom: 1.25rem; color: #991b1b;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; font-size: 1rem; margin-bottom: 0.35rem;">
+        <i class="ph ph-warning-circle" style="font-size: 1.4rem;"></i> Atencion
       </div>
-
-      <div class="card p-3" style="border-left: 4px solid #16a34a;">
-        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Total SKUs con Stock</div>
-        <div style="font-size: 1.4rem; font-weight: bold; color: #16a34a;" class="mt-1">
-          {{ stockReport.totalSkus || 0 }} productos
-        </div>
-      </div>
-
-      <div class="card p-3" style="border-left: 4px solid #8b5cf6;">
-        <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Total Acumulado en Ubicación</div>
-        <div style="font-size: 1.4rem; font-weight: bold; color: #8b5cf6;" class="mt-1">
-          {{ formatNumber(stockReport.totalKilos) }} kg / un
-        </div>
-      </div>
+      <p style="margin: 0; font-size: 0.9rem;">{{ errorMessage }}</p>
     </div>
 
-    <!-- Tabla de Existencias -->
-    <div v-if="stockReport && !loadingStock" class="card">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-        <span class="card-title">
-          Existencias Físicas en {{ selectedSiteNombre }} ({{ filteredProductos.length }} de {{ stockReport.totalSkus }})
-        </span>
-      </div>
+    <!-- Resultados -->
+    <template v-else-if="reportData">
+      
+      <!-- Resumen KPI -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem;">
+        
+        <div class="card" style="padding: 0.85rem 1rem; border: 2px solid var(--bevel-dark); background: var(--bg-window);">
+          <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; display: block;">
+            Sucursales con Existencias
+          </span>
+          <span style="font-size: 1.6rem; font-weight: 800; color: var(--accent-primary);">
+            {{ reportData.totalSucursales || 0 }} depósitos
+          </span>
+        </div>
 
-      <div class="card-body p-0">
-        <div style="overflow-x: auto;">
-          <table class="table table-striped table-hover mb-0" style="font-size: 0.9rem;">
-            <thead>
-              <tr style="background-color: var(--bg-secondary);">
-                <th style="width: 15%;">Código SKU</th>
-                <th style="width: 50%;">Producto / Descripción BlockWMS</th>
-                <th style="width: 15%;">ID Pres.</th>
-                <th style="width: 20%; text-align: right;">Stock Físico Real</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in filteredProductos" :key="p.codigo">
-                <td>
-                  <span class="badge badge-secondary" style="font-family: monospace; font-size: 0.9rem; font-weight: bold;">
-                    {{ p.codigo }}
-                  </span>
-                </td>
-                <td>
-                  <strong>{{ p.nombre }}</strong>
-                </td>
-                <td>
-                  <span style="font-size: 0.8rem; color: var(--text-muted);">
-                    {{ p.id_productos_presentaciones || '-' }}
-                  </span>
-                </td>
-                <td style="text-align: right;">
-                  <span 
-                    class="badge" 
-                    style="font-size: 0.95rem; font-weight: bold; padding: 0.3rem 0.6rem;"
-                    :style="p.stockFisico > 0 ? 'background-color: #dcfce7; color: #15803d; border: 1px solid #86efac;' : 'background-color: #f1f5f9; color: #64748b;'"
-                  >
-                    {{ formatNumber(p.stockFisico) }} kg/un
-                  </span>
-                </td>
-              </tr>
-              <tr v-if="filteredProductos.length === 0">
-                <td colspan="4" class="text-center text-muted py-4">
-                  <i class="ph ph-circle-wavy-warning" style="font-size: 1.5rem;"></i><br>
-                  No se encontraron productos que coincidan con la búsqueda.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="card" style="padding: 0.85rem 1rem; border: 2px solid var(--bevel-dark); background: var(--bg-window);">
+          <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800; display: block;">
+            Stock Total Consolidado
+          </span>
+          <span style="font-size: 1.6rem; font-weight: 800; color: #16a34a;">
+            {{ (reportData.totalStock || 0).toFixed(3) }} kg / un
+          </span>
         </div>
       </div>
-    </div>
 
-    <!-- Estado Inicial Sin Selección -->
-    <div v-if="!selectedSiteId && !loadingStock" class="card p-5 text-center">
-      <i class="ph ph-buildings" style="font-size: 3rem; color: var(--text-muted);"></i>
-      <h3 class="mt-3" style="font-weight: bold; color: var(--text-primary);">Seleccione una Ubicación</h3>
-      <p class="text-muted">Elija un depósito o sucursal del selector superior para consultar el inventario físico en tiempo real.</p>
+      <!-- Filtro Rápido en Pantalla -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary);">
+          Mostrando {{ filteredItems.length }} registros de sucursales
+        </div>
+        <div style="width: 260px;">
+          <input 
+            type="text" 
+            v-model="searchTerm" 
+            placeholder="Filtrar sucursal..." 
+            class="form-control" 
+            style="font-size: 0.85rem; font-weight: 600; height: 34px; border: 1.5px solid var(--bevel-dark);"
+          />
+        </div>
+      </div>
+
+      <!-- Tabla Principal: Sucursal, Código, Nombre y Stock -->
+      <div class="table-container" style="border: 2px solid var(--bevel-dark); background: var(--bg-window); overflow-x: auto;">
+        <table class="win-table" style="width: 100%; border-collapse: collapse; font-family: 'Nunito', sans-serif;">
+          <thead>
+            <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--bevel-dark); font-size: 0.82rem; text-transform: uppercase;">
+              <th style="padding: 0.65rem 0.85rem; text-align: left; width: 35%;">Sucursal</th>
+              <th style="padding: 0.65rem 0.85rem; text-align: center; width: 15%;">Código</th>
+              <th style="padding: 0.65rem 0.85rem; text-align: left; width: 35%;">Nombre</th>
+              <th style="padding: 0.65rem 0.85rem; text-align: right; width: 15%;">Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr 
+              v-for="item in filteredItems" 
+              :key="item.id"
+              style="border-bottom: 1.5px solid var(--bevel-dark); font-size: 0.9rem;"
+            >
+              <!-- 1. Sucursal -->
+              <td style="padding: 0.65rem 0.85rem; font-weight: 800; color: var(--text-primary);">
+                <i class="ph ph-storefront" style="color: var(--accent-primary); margin-right: 0.35rem;"></i>
+                {{ item.sucursal }}
+              </td>
+
+              <!-- 2. Código -->
+              <td style="padding: 0.65rem 0.85rem; text-align: center; font-family: monospace; font-weight: 800; color: var(--accent-primary); font-size: 0.95rem;">
+                {{ item.codigo }}
+              </td>
+
+              <!-- 3. Nombre -->
+              <td style="padding: 0.65rem 0.85rem; font-weight: 700; color: var(--text-primary);">
+                {{ item.nombre }}
+              </td>
+
+              <!-- 4. Stock -->
+              <td style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 800; font-size: 1rem; color: #16a34a;">
+                {{ item.stock.toFixed(3) }}
+              </td>
+            </tr>
+
+            <tr v-if="filteredItems.length === 0">
+              <td colspan="4" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                <i class="ph ph-package" style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem; opacity: 0.4;"></i>
+                No se encontraron existencias en sucursales para el producto "{{ codigoProducto }}".
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- Estado Inicial sin búsqueda -->
+    <div v-else-if="!reportData && !loading" class="card p-5 text-center" style="border: 2px solid var(--bevel-dark); background: var(--bg-window); padding: 3rem 1.5rem;">
+      <i class="ph ph-magnifying-glass" style="font-size: 3rem; color: var(--text-muted); opacity: 0.5;"></i>
+      <h3 style="margin: 0.75rem 0 0.25rem 0; font-weight: 800; color: var(--text-primary);">Ingrese un Producto para Consultar</h3>
+      <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+        Escriba el código de producto (SKU) o nombre en el campo superior y presione <strong>"Buscar en Sucursales"</strong> para ver el stock por depósito.
+      </p>
     </div>
 
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import * as XLSX from 'xlsx'
 
-const sites = ref([])
-const selectedSiteId = ref('')
-const loadingSites = ref(false)
-const loadingStock = ref(false)
-const stockReport = ref(null)
-const searchQuery = ref('')
+const codigoProducto = ref('')
+const loading = ref(false)
+const errorMessage = ref('')
+const reportData = ref(null)
+const searchTerm = ref('')
+const inputCodigo = ref(null)
 
-const selectedSiteNombre = computed(() => {
-  const found = sites.value.find(s => s.siteId === selectedSiteId.value)
-  return found ? found.nombre : selectedSiteId.value
+const consultarStockSucursales = async () => {
+  if (!codigoProducto.value.trim()) {
+    errorMessage.value = 'Por favor, ingrese un código de producto (SKU) o nombre para realizar la búsqueda.'
+    reportData.value = null
+    return
+  }
+
+  loading.value = true
+  errorMessage.value = ''
+  reportData.value = null
+
+  try {
+    const res = await fetch('/api/wms/stock-sucursales', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        codigoProducto: codigoProducto.value.trim()
+      })
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `Error ${res.status} al consultar Block WMS`)
+    }
+
+    const data = await res.json()
+    reportData.value = data
+  } catch (err) {
+    console.error('Error al consultar stock por sucursales:', err)
+    errorMessage.value = err.message || 'Error al conectar con Block WMS.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const limpiarBusqueda = () => {
+  codigoProducto.value = ''
+  reportData.value = null
+  errorMessage.value = ''
+  searchTerm.value = ''
+}
+
+const filteredItems = computed(() => {
+  if (!reportData.value || !reportData.value.items) return []
+  if (!searchTerm.value.trim()) return reportData.value.items
+
+  const q = searchTerm.value.trim().toLowerCase()
+  return reportData.value.items.filter(i => 
+    String(i.sucursal).toLowerCase().includes(q) ||
+    String(i.codigo).toLowerCase().includes(q) ||
+    String(i.nombre).toLowerCase().includes(q)
+  )
 })
 
-const filteredProductos = computed(() => {
-  if (!stockReport.value || !stockReport.value.productos) return []
-  let list = stockReport.value.productos
+const exportarExcel = () => {
+  if (!reportData.value || !reportData.value.items || reportData.value.items.length === 0) return
 
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase().trim()
-    list = list.filter(p => p.codigo.toLowerCase().includes(q) || p.nombre.toLowerCase().includes(q))
-  }
-
-  return list
-})
-
-const formatNumber = (val) => {
-  if (val === undefined || val === null || isNaN(val)) return '0.00'
-  return new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 3 }).format(val)
-}
-
-const getWmsHeaders = () => {
-  const savedSession = localStorage.getItem('wms_session')
-  if (!savedSession) return {}
-  try {
-    const sess = JSON.parse(savedSession)
-    if (sess.sessionId) {
-      return {
-        'X-WMS-Session-Id': sess.sessionId,
-        'X-WMS-Site-Id': sess.siteId || '194326',
-        'X-WMS-Host': sess.host || 'http://192.168.10.2'
-      }
-    }
-  } catch (e) {}
-  return {}
-}
-
-const cargarSites = async () => {
-  loadingSites.value = true
-  try {
-    const res = await fetch('/api/wms/sites', { headers: getWmsHeaders() })
-    const data = await res.json()
-    if (data.ok && data.sites) {
-      sites.value = data.sites
-      // Si existe DEPOT 026 (194326), seleccionarla por defecto
-      const defaultSite = sites.value.find(s => s.siteId === '194326') || sites.value[0]
-      if (defaultSite) {
-        selectedSiteId.value = defaultSite.siteId
-        await cargarStockSite()
-      }
-    }
-  } catch (err) {
-    console.error('Error al cargar sites de WMS:', err)
-  } finally {
-    loadingSites.value = false
-  }
-}
-
-const cargarStockSite = async () => {
-  if (!selectedSiteId.value) return
-  loadingStock.value = true
-  stockReport.value = null
-  try {
-    const res = await fetch(`/api/wms/stock-site/${selectedSiteId.value}`, { headers: getWmsHeaders() })
-    const data = await res.json()
-    if (data.ok) {
-      stockReport.value = data
-    } else {
-      throw new Error(data.error || 'Error al consultar stock.')
-    }
-  } catch (err) {
-    console.error('Error al cargar stock del site:', err)
-  } finally {
-    loadingStock.value = false
-  }
-}
-
-const exportToExcel = () => {
-  if (!stockReport.value || filteredProductos.value.length === 0) return
-
-  const rows = filteredProductos.value.map(p => ({
-    'Código SKU': p.codigo,
-    'Descripción / Producto': p.nombre,
-    'ID Presentación': p.id_productos_presentaciones,
-    'Stock Físico (kg/un)': p.stockFisico
+  const rows = filteredItems.value.map(i => ({
+    'Sucursal': i.sucursal,
+    'Código': i.codigo,
+    'Nombre': i.nombre,
+    'Stock (kg/un)': i.stock
   }))
 
-  const worksheet = XLSX.utils.json_to_sheet(rows)
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock Ubicación')
-
-  const filename = `Stock_WMS_${selectedSiteNombre.value.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`
-  XLSX.writeFile(workbook, filename)
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Stock Sucursales')
+  XLSX.writeFile(wb, `Stock_Sucursales_${codigoProducto.value.trim()}_${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
-
-onMounted(() => {
-  cargarSites()
-})
 </script>
 
 <style scoped>
-.form-label-compact {
-  font-size: 0.82rem;
-  font-weight: bold;
-  color: var(--text-secondary);
-  margin-bottom: 0.25rem;
-  display: block;
+.spinner {
+  animation: spin 1s linear infinite;
 }
-.form-control-compact {
-  width: 100%;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.88rem;
-  border: 1px solid var(--border-color, #cbd5e1);
-  border-radius: 4px;
+@keyframes spin {
+  100% { transform: rotate(360deg); }
 }
 </style>

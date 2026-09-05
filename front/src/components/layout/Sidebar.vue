@@ -20,18 +20,19 @@ const groups = [
     icon: 'ph-package',
     items: [
       { name: 'Productos', path: '/productos', icon: 'ph-package', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador'] },
-      { name: 'Stock por Ubicación WMS', path: '/wms-stock-ubicaciones', icon: 'ph-buildings', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Stock Sucursales', path: '/wms-stock-ubicaciones', icon: 'ph-buildings', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
       { name: 'Historial de Stock', path: '/movimientos-stock', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente'] },
       { name: 'Vencimientos', path: '/vencimientos', icon: 'ph-calendar', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
     ]
   },
   {
-    name: 'Ingresos',
-    icon: 'ph-download-simple',
+    name: 'Ingresos y Salidas',
+    icon: 'ph-arrows-down-up',
     items: [
       { name: 'Ingreso Mercadería', path: '/ingresos', icon: 'ph-download-simple', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Recep. Pendientes WMS', path: '/wms-ordenes-ingreso-pendientes', icon: 'ph-clock-afternoon', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
       { name: 'Historia Ingresos', path: '/ingresos-historial', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario']},
-      { name: 'Órdenes de Compra', path: '/ordenes-compra', icon: 'ph-file-text', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Historia Egresos', path: '/egresos-historial', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario']},
     ]
   },
   {

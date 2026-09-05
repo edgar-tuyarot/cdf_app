@@ -68,12 +68,6 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
     },
     {
-      path: '/ordenes-compra',
-      name: 'ordenes-compra',
-      component: () => import('../views/OrdenesCompra.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
-    },
-    {
       path: '/ingresos',
       name: 'ingresos',
       component: () => import('../views/Ingresos.vue'),
@@ -81,8 +75,24 @@ const router = createRouter({
     },
     {
       path: '/ingresos-historial',
-      name: 'ingresos-historial',
+      redirect: '/ingresos-historial-transferencias'
+    },
+    {
+      path: '/ingresos-historial-transferencias',
+      name: 'ingresos-historial-transferencias',
       component: () => import('../views/IngresosHistorial.vue'),
+      meta: { requiresAuth: true, tipoComprobante: '26_IN_PT_SU_TR', titulo: 'Ingresos Finalizados - Transferencias', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+    },
+    {
+      path: '/ingresos-historial-proveedores',
+      name: 'ingresos-historial-proveedores',
+      component: () => import('../views/IngresosHistorial.vue'),
+      meta: { requiresAuth: true, tipoComprobante: '26_IN_PT_SU_ED', titulo: 'Ingresos Finalizados - Proveedores', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+    },
+    {
+      path: '/egresos-historial',
+      name: 'egresos-historial',
+      component: () => import('../views/EgresosHistorial.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
     },
     {
@@ -197,6 +207,12 @@ const router = createRouter({
       path: '/wms-stock-ubicaciones',
       name: 'wms-stock-ubicaciones',
       component: () => import('../views/WmsConsultaStockUbicacion.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/wms-ordenes-ingreso-pendientes',
+      name: 'wms-ordenes-ingreso-pendientes',
+      component: () => import('../views/WmsOrdenesIngresoPendientes.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
     },
   ],

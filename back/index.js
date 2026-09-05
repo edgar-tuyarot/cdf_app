@@ -49,6 +49,7 @@ app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api/bultos', bultosRoutes);
 app.use('/api/ingreso-sucursales', ingresoSucursalesRoutes);
+app.use('/api/ingresos-sucursales', ingresoSucursalesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/produccion', dashboardRoutes);
 app.use('/api/auth', authRoutes);

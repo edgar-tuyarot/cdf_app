@@ -32,7 +32,7 @@ exports.getOrdenes = async (req, res) => {
             {
               model: Producto,
               as: 'producto',
-              attributes: ['codigo', 'nombre', 'peso_x_pieza', 'kg_x_bolsita']
+              attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion']
             }
           ]
         }
