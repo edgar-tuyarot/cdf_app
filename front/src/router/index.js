@@ -185,9 +185,31 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
     },
     {
+      path: '/reportes-despacho-semanal',
+      name: 'reportes-despacho-semanal',
+      component: () => import('../views/ReportesDespachoSemanal.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/reportes-proyeccion',
+      name: 'reportes-proyeccion',
+      component: () => import('../views/ReportesProyeccion.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/reportes-semanal',
+      redirect: '/reportes-despacho-semanal',
+    },
+    {
       path: '/reporte-trazabilidad',
       name: 'reporte-trazabilidad',
       component: () => import('../views/ReportesTrazabilidad.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/comparaciones-variabilidad',
+      name: 'comparaciones-variabilidad',
+      component: () => import('../views/ComparacionesVariabilidad.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
     },
     {
@@ -213,6 +235,30 @@ const router = createRouter({
       path: '/wms-ordenes-ingreso-pendientes',
       name: 'wms-ordenes-ingreso-pendientes',
       component: () => import('../views/WmsOrdenesIngresoPendientes.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/wms-ordenes-ingreso-pendientes-proveedores',
+      name: 'wms-ordenes-ingreso-pendientes-proveedores',
+      component: () => import('../views/WmsOrdenesIngresoPendientes.vue'),
+      meta: { requiresAuth: true, tipoOrigen: 'proveedores', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/wms-ordenes-ingreso-pendientes-sucursales',
+      name: 'wms-ordenes-ingreso-pendientes-sucursales',
+      component: () => import('../views/WmsOrdenesIngresoPendientes.vue'),
+      meta: { requiresAuth: true, tipoOrigen: 'sucursales', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/ordenes-compra',
+      name: 'ordenes-compra',
+      component: () => import('../views/OrdenesCompra.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+    },
+    {
+      path: '/wms-reporte-diferencias-ingreso',
+      name: 'wms-reporte-diferencias-ingreso',
+      component: () => import('../views/WmsReporteDiferenciasIngreso.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
     },
   ],

@@ -207,6 +207,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { formatDateTime } from '../utils/dateFormat'
 
 const rawLogs = ref([])
 const searchQuery = ref('')
@@ -311,18 +312,6 @@ const filteredLogs = computed(() => {
 })
 
 // Helpers de formato y estilo
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
 const formatNumber = (val, showSign = true, decimals = 3) => {
   const num = parseFloat(val) || 0
   if (num === 0) return '-'

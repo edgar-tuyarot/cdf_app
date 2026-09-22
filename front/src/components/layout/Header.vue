@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useVariabilidadStore } from '../../stores/variabilidad'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const variabilidadStore = useVariabilidadStore()
 const emit = defineEmits(['toggle-menu'])
 
 const isColaborador = computed(() => authStore.user?.rol?.toLowerCase() === 'colaborador')
@@ -21,6 +23,7 @@ const pageTitle = computed(() => {
   if (path.startsWith('/ingreso-recortes')) return 'Ingreso de Recortes'
   if (path.startsWith('/decomisos')) return 'Decomisos'
   if (path.startsWith('/demanda-pendiente')) return 'Demanda Pendiente'
+  if (path.startsWith('/comparaciones-variabilidad')) return 'Comparaciones de Variabilidad'
   if (path === '/') return isColaborador.value ? 'Menú Principal' : 'Dashboard'
   return 'CDF CRM'
 })
@@ -42,31 +45,34 @@ const pageTitle = computed(() => {
     </div>
     
     <div class="header-right">
-      <div v-if="authStore.user?.nombre_ubicacion" class="location-badge">
-        <i class="ph ph-map-pin" style="color: var(--accent-primary); font-size: 0.95rem;"></i>
-        <span>{{ authStore.user.nombre_ubicacion }}</span>
-      </div>
       <div class="header-actions">
+        <!-- Indicador de Tarea en Segundo Plano: Comparación de Variabilidad -->
+        <router-link 
+          v-if="variabilidadStore.loading" 
+          to="/comparaciones-variabilidad" 
+          class="bg-task-pill running"
+          title="Comparación de variabilidad ejecutándose en segundo plano. Clic para ver."
+        >
+          <i class="ph ph-spinner spinner"></i>
+          <span>Variabilidad: {{ variabilidadStore.formattedTimer }}s</span>
+        </router-link>
 
+        <router-link 
+          v-else-if="variabilidadStore.justCompleted && route.path !== '/comparaciones-variabilidad'" 
+          to="/comparaciones-variabilidad" 
+          class="bg-task-pill ready"
+          title="Comparación de variabilidad finalizada con éxito. Clic para ver."
+        >
+          <i class="ph ph-check-circle"></i>
+          <span>Variabilidad Lista</span>
+        </router-link>
       </div>
     </div>
   </header>
 </template>
 
+
 <style scoped>
-.location-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: bold;
-  border: 1px solid var(--bevel-dark);
-  text-transform: uppercase;
-}
 
 .header {
   height: 36px;
@@ -140,10 +146,50 @@ const pageTitle = computed(() => {
   letter-spacing: 0.05em;
 }
 
-.header-right {
+.header-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.bg-task-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.bg-task-pill.running {
+  background: rgba(30, 110, 200, 0.12);
+  color: #1e6ec8;
+  border: 1px solid rgba(30, 110, 200, 0.35);
+}
+
+.bg-task-pill.ready {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  animation: pulse 1.5s infinite;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
 }
 
 @media (min-width: 768px) {
@@ -155,3 +201,4 @@ const pageTitle = computed(() => {
   .menu-toggle { display: none; }
 }
 </style>
+

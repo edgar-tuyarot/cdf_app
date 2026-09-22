@@ -25,5 +25,10 @@ router.put('/:id/items/:codigo_producto', pedidosController.actualizarItemPedido
 router.put('/:id', pedidosController.actualizarPedido);
 router.delete('/:id', pedidosController.eliminarPedido);
 
+// Rutas de vinculación con órdenes de egreso de Block WMS
+router.post('/:id/vincular-egreso', pedidosController.vincularEgresoPedido);
+router.delete('/:id/desvincular-egreso', pedidosController.desvincularEgresoPedido);
+router.get('/:id/conciliacion', pedidosController.obtenerConciliacion);
+
 module.exports = router;
 

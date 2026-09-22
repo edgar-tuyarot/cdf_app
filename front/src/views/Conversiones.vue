@@ -9,7 +9,6 @@
         <button 
           v-if="selectedItems.length > 0 && activeTab === 'templates'" 
           class="btn btn-primary animate-fade" 
-          style="background-color: var(--accent-success);" 
           @click="openBulkProcesarModal"
         >
           <i class="ph ph-gear"></i> Procesar Lote ({{ selectedItems.length }})
@@ -49,7 +48,7 @@
 
     <!-- HISTORIAL: LISTADO DE FRACCIONADOS EN CARDS -->
     <div class="card" v-if="activeTab === 'templates'">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; background-color: #38761d;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
         <div style="display: flex; align-items: center; gap: 1rem;">
           <span class="card-title" style="color: white; font-weight: bold;">Plantillas de Conversión Activas</span>
           
@@ -188,7 +187,7 @@
 
             <!-- Botón Acción Individual -->
             <button 
-              class="win-dialog-btn win-dialog-btn-ok"
+              class="btn btn-primary"
               @click.stop="confirmProcesar(f)"
               :disabled="parseFloat(f.peso_a_fraccionar) < parseFloat(f.peso_a_descontar)"
               style="width: 100%; font-weight: 900; font-size: 0.82rem; padding: 6px; display: flex; align-items: center; justify-content: center; gap: 0.4rem;"
@@ -209,7 +208,7 @@
 
     <!-- LOG DE CONVERSIONES REALIZADAS -->
     <div class="card" v-if="activeTab === 'logs'">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; background-color: #0b5394;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <span class="card-title" style="color: white; font-weight: bold;">Historial de Procesamientos de Conversiones</span>
         <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
           <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
@@ -236,6 +235,7 @@
               <th>Producto Fraccionado (Destino)</th>
               <th class="text-right">Peso Fraccionado</th>
               <th>Operario</th>
+              <th class="text-center">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -253,6 +253,16 @@
               </td>
               <td class="text-right fw-bold text-blue">{{ parseFloat(l.peso_fraccionado).toFixed(3) }} kg</td>
               <td class="text-xs">{{ l.usuario || 'Sistema' }}</td>
+              <td class="text-center">
+                <button 
+                  class="btn btn-secondary" 
+                  style="padding: 2px 8px; font-size: 0.78rem; color: var(--accent-error); border-color: var(--accent-error); font-weight: bold;"
+                  title="Revertir esta conversión"
+                  @click="confirmRevertir(l)"
+                >
+                  <i class="ph ph-arrow-u-down-left"></i> Revertir
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -275,7 +285,7 @@
     <Teleport to="body">
       <div v-if="showModal" class="modal-overlay" @mousedown.self="closeModal">
         <div class="modal-card" style="max-width: 500px;">
-          <div class="modal-header" :style="isEditingFraccionado ? 'background-color: var(--accent-orange);' : 'background-color: var(--accent-success);'">
+          <div class="modal-header" :style="isEditingFraccionado ? 'background-color: var(--accent-orange);' : 'background-color: var(--accent-primary);'">
             <h3 class="modal-title" style="color: white; font-weight: bold;">
               {{ isEditingFraccionado ? 'Editar Conversión #' + editFraccionadoId : 'Nueva Conversión (Fraccionados)' }}
             </h3>
@@ -314,9 +324,9 @@
                 <div 
                   v-if="selectedOrigProduct" 
                   class="selected-product-badge mt-2 animate-fade"
-                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary);"
+                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-primary-light); border: 1px solid var(--accent-primary); font-size: 0.8rem; color: var(--text-primary);"
                 >
-                  <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
+                  <i class="ph ph-circle-wavy-check text-blue" style="font-size: 1rem;"></i>
                   <span>
                     Seleccionado: <strong>{{ selectedOrigProduct.nombre }}</strong>
                   </span>
@@ -380,9 +390,9 @@
                 <div 
                   v-if="selectedDestProduct" 
                   class="selected-product-badge mt-2 animate-fade"
-                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-success-light); border: 1px solid var(--accent-success); font-size: 0.8rem; color: var(--text-primary);"
+                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-primary-light); border: 1px solid var(--accent-primary); font-size: 0.8rem; color: var(--text-primary);"
                 >
-                  <i class="ph ph-circle-wavy-check text-green" style="font-size: 1rem;"></i>
+                  <i class="ph ph-circle-wavy-check text-blue" style="font-size: 1rem;"></i>
                   <span>
                     Seleccionado: <strong>{{ selectedDestProduct.nombre }}</strong>
                   </span>
@@ -393,7 +403,7 @@
               <button type="button" class="btn btn-secondary" @click="closeModal">
                 Cancelar
               </button>
-              <button type="submit" class="btn btn-primary" style="background-color: var(--accent-success); border-color: var(--accent-success-hover);" :disabled="submittingFraccionado">
+              <button type="submit" class="btn btn-primary" :disabled="submittingFraccionado">
                 <i class="ph ph-spinner spinner" v-if="submittingFraccionado"></i>
                 <i class="ph ph-floppy-disk" v-else></i>
                 {{ submittingFraccionado ? 'Guardando...' : (isEditingFraccionado ? 'Actualizar' : 'Convertir / Guardar') }}
@@ -574,12 +584,52 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Modal Confirmación Revertir Conversión del Log -->
+    <Teleport to="body">
+      <div v-if="itemToRevert" class="win-dialog-overlay" @mousedown.self="itemToRevert = null">
+        <div class="win-dialog" style="max-width: 460px;">
+          <div class="win-dialog-titlebar" style="background: var(--accent-error);">
+            <span class="win-dialog-titlebar-text" style="color: white; font-weight: bold;">Confirmar Reversión de Conversión</span>
+            <button class="win-dialog-close" style="color: white;" @click="itemToRevert = null"><i class="ph ph-x"></i></button>
+          </div>
+          <div class="win-dialog-body" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; gap: 0.75rem; align-items: start;">
+              <i class="ph ph-arrow-u-down-left win-dialog-icon text-red" style="font-size: 2.2rem; flex-shrink: 0;"></i>
+              <div class="win-dialog-msg">
+                ¿Estás seguro de que deseas revertir la conversión del comprobante <strong>#{{ itemToRevert.comprobante }}</strong>?<br><br>
+                <strong>Efectos de la reversión:</strong>
+                <ul style="margin-top: 0.35rem; margin-left: 1.2rem; font-size: 0.8rem; line-height: 1.4;">
+                  <li>Se descontarán <strong>{{ parseFloat(itemToRevert.peso_fraccionado).toFixed(3) }} kg</strong> del stock destino ({{ itemToRevert.codigo_fraccionado }}).</li>
+                  <li>Se devolverán <strong>{{ parseFloat(itemToRevert.peso_descontado).toFixed(3) }} kg</strong> al stock del producto origen ({{ itemToRevert.codigo_producto_original }}).</li>
+                  <li>La plantilla reaparecerá activa en la lista de conversiones pendientes para volver a procesarse.</li>
+                  <li><em style="color: var(--text-muted);">Nota: Acción local en la app (sin órdenes en BlockWMS).</em></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="win-dialog-footer">
+            <button 
+              class="win-dialog-btn win-dialog-btn-ok" 
+              style="background-color: var(--accent-error); color: white;" 
+              @click="handleRevertir" 
+              :disabled="revertingLog"
+            >
+              <i class="ph ph-spinner spinner" v-if="revertingLog"></i>
+              {{ revertingLog ? 'Revirtiendo...' : 'Sí, Revertir' }}
+            </button>
+            <button class="win-dialog-btn" @click="itemToRevert = null" :disabled="revertingLog">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { formatDateTime } from '../utils/dateFormat'
 
 const authStore = useAuthStore()
 
@@ -596,6 +646,8 @@ const submittingFraccionado = ref(false)
 const isEditingFraccionado = ref(false)
 const editFraccionadoId = ref(null)
 const itemToDelete = ref(null)
+const itemToRevert = ref(null)
+const revertingLog = ref(false)
 const itemsToProcesar = ref([])
 const comprobanteProcesar = ref('')
 const processingFrac = ref(false)
@@ -964,6 +1016,39 @@ const deleteItem = async () => {
   }
 }
 
+// REVERSIÓN DE LOG DE CONVERSIÓN
+const confirmRevertir = (item) => {
+  itemToRevert.value = item
+}
+
+const handleRevertir = async () => {
+  if (!itemToRevert.value || revertingLog.value) return
+
+  revertingLog.value = true
+  try {
+    const res = await fetch(`/api/fraccionados/logs/${itemToRevert.value.id}/revertir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+
+    const dataRes = await res.json()
+
+    if (res.ok) {
+      showAlert(dataRes.mensaje || 'Conversión revertida correctamente')
+      itemToRevert.value = null
+      await fetchFraccionados()
+      activeTab.value = 'templates'
+    } else {
+      showAlert(dataRes.error || dataRes.mensaje || 'Error al revertir la conversión', 'error')
+    }
+  } catch (error) {
+    console.error('Error reverting conversion:', error)
+    showAlert('Error de conexión al revertir la conversión', 'error')
+  } finally {
+    revertingLog.value = false
+  }
+}
+
 const sortBy = (key) => {
   if (sortKey.value === key) {
     sortOrder.value = sortOrder.value * -1
@@ -1043,20 +1128,6 @@ const filteredLogs = computed(() => {
 
   return result
 })
-
-// Helper para dar formato dd/mm/yyyy hh:mm
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return '-'
-  const date = new Date(dateStr)
-  if (isNaN(date.getTime())) return dateStr
-  const pad = (n) => n.toString().padStart(2, '0')
-  const dd = pad(date.getDate())
-  const mm = pad(date.getMonth() + 1)
-  const yyyy = date.getFullYear()
-  const hh = pad(date.getHours())
-  const min = pad(date.getMinutes())
-  return `${dd}/${mm}/${yyyy} ${hh}:${min}`
-}
 
 onMounted(() => {
   fetchFraccionados()

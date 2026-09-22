@@ -6,10 +6,10 @@
       <div>
         <h2 class="page-title" style="margin: 0; font-size: 1.4rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
           <i class="ph ph-clock-afternoon" style="color: #0284c7; font-size: 1.6rem;"></i>
-          Órdenes de Ingreso Pendientes (Block WMS)
+          {{ pageTitle }}
         </h2>
         <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
-          Recepción y Entradas de Mercadería en Espera de Ingreso Físico en Depósito
+          {{ pageDescription }}
         </p>
       </div>
 
@@ -32,6 +32,57 @@
           <i class="ph ph-file-xls"></i> Exportar Excel
         </button>
       </div>
+    </div>
+
+    <!-- Pestañas Selectoras de Origen (Proveedores vs Sucursales / CD) -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.5rem; flex-wrap: wrap;">
+      <button 
+        @click="activeOrigenTab = 'proveedores'"
+        :style="{ 
+          background: activeOrigenTab === 'proveedores' ? 'var(--accent-primary)' : 'var(--bg-window)', 
+          color: activeOrigenTab === 'proveedores' ? '#ffffff' : 'var(--text-primary)',
+          border: '1.5px solid var(--bevel-dark)'
+        }"
+        style="padding: 0.5rem 1.1rem; font-weight: 800; font-size: 0.85rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; box-shadow: var(--raised-shadow);"
+      >
+        <i class="ph ph-storefront" style="font-size: 1.1rem;"></i>
+        Ingresos de Proveedores
+        <span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; background: rgba(0,0,0,0.18); font-weight: 900;">
+          {{ countProveedores }}
+        </span>
+      </button>
+
+      <button 
+        @click="activeOrigenTab = 'sucursales'"
+        :style="{ 
+          background: activeOrigenTab === 'sucursales' ? 'var(--accent-primary)' : 'var(--bg-window)', 
+          color: activeOrigenTab === 'sucursales' ? '#ffffff' : 'var(--text-primary)',
+          border: '1.5px solid var(--bevel-dark)'
+        }"
+        style="padding: 0.5rem 1.1rem; font-weight: 800; font-size: 0.85rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; box-shadow: var(--raised-shadow);"
+      >
+        <i class="ph ph-truck-trailer" style="font-size: 1.1rem;"></i>
+        Ingresos de Sucursales / CD
+        <span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; background: rgba(0,0,0,0.18); font-weight: 900;">
+          {{ countSucursales }}
+        </span>
+      </button>
+
+      <button 
+        @click="activeOrigenTab = 'todos'"
+        :style="{ 
+          background: activeOrigenTab === 'todos' ? 'var(--accent-primary)' : 'var(--bg-window)', 
+          color: activeOrigenTab === 'todos' ? '#ffffff' : 'var(--text-primary)',
+          border: '1.5px solid var(--bevel-dark)'
+        }"
+        style="padding: 0.5rem 1.1rem; font-weight: 800; font-size: 0.85rem; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; box-shadow: var(--raised-shadow);"
+      >
+        <i class="ph ph-list-checks" style="font-size: 1.1rem;"></i>
+        Todos los Ingresos
+        <span style="font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; background: rgba(0,0,0,0.18); font-weight: 900;">
+          {{ items.length }}
+        </span>
+      </button>
     </div>
 
     <!-- KPIs Resumen -->
@@ -352,13 +403,10 @@
                 <i class="ph ph-hand-pointing" style="margin-right: 4px;"></i> HAZ CLIC PARA VER EL SIGUIENTE
               </div>
 
-              <!-- Código del Producto y Código de Barra (Code 128) -->
+              <!-- Código del Producto (Code 128) -->
               <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.25rem;">
-                <div style="font-size: 1.05rem; font-weight: 900; color: #475569; letter-spacing: 0.05em; text-transform: uppercase;">
-                  CÓDIGO / PLU: <span style="color: #0284c7; font-family: monospace; font-size: 1.3rem;">{{ currentBarcodeItem.codigo }}</span>
-                </div>
-                <div style="font-size: 1.05rem; font-weight: 900; color: #475569; letter-spacing: 0.05em; text-transform: uppercase;">
-                  CÓD. BARRA: <span style="color: #16a34a; font-family: monospace; font-size: 1.3rem; background: #f0fdf4; padding: 2px 10px; border-radius: 6px; border: 1px solid #bbf7d0;">{{ currentBarcodeItem.codigoBarra }}</span>
+                <div style="font-size: 1.15rem; font-weight: 900; color: #475569; letter-spacing: 0.05em; text-transform: uppercase;">
+                  CÓDIGO PRODUCTO: <span style="color: #0284c7; font-family: monospace; font-size: 1.4rem;">{{ currentBarcodeItem.codigo }}</span>
                 </div>
               </div>
 
@@ -369,7 +417,7 @@
 
               <!-- Código de Barras SVG Gigante -->
               <div style="background: #ffffff; padding: 1.25rem 1rem; border: 2.5px dashed #0284c7; border-radius: 10px; margin: 0 auto 1.25rem auto; max-width: 700px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                <div v-html="generateBarcodeSVG(currentBarcodeItem.codigoBarra, { scale: 4, height: 110, fontSize: 22, maxWidth: '650px' })"></div>
+                <div v-html="generateBarcodeSVG(currentBarcodeItem.codigo, { scale: 4, height: 110, fontSize: 22, maxWidth: '650px' })"></div>
               </div>
 
               <!-- Cantidad Pendiente -->
@@ -398,9 +446,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import * as XLSX from 'xlsx'
 
+const route = useRoute()
 const loading = ref(false)
 const items = ref([])
 const totalOrdenes = ref(0)
@@ -408,6 +458,33 @@ const vistaModo = ref('agrupado') // 'agrupado' (Por Orden WMS por defecto) | 't
 
 const filterSearch = ref('')
 const filterProveedor = ref('')
+const activeOrigenTab = ref('proveedores') // 'proveedores' | 'sucursales' | 'todos'
+
+const syncTabFromRoute = () => {
+  if (route.meta?.tipoOrigen) {
+    activeOrigenTab.value = route.meta.tipoOrigen
+  } else if (route.path.includes('sucursales')) {
+    activeOrigenTab.value = 'sucursales'
+  } else if (route.path.includes('proveedores')) {
+    activeOrigenTab.value = 'proveedores'
+  }
+}
+
+watch(() => route.path, () => {
+  syncTabFromRoute()
+})
+
+const pageTitle = computed(() => {
+  if (activeOrigenTab.value === 'proveedores') return 'Ingresos Pendientes - Proveedores'
+  if (activeOrigenTab.value === 'sucursales') return 'Ingresos Pendientes - Sucursales / CD'
+  return 'Ingresos Pendientes'
+})
+
+const pageDescription = computed(() => {
+  if (activeOrigenTab.value === 'proveedores') return 'Recepción y Entradas de Mercadería Pendientes de Proveedores'
+  if (activeOrigenTab.value === 'sucursales') return 'Transferencias e Ingresos Pendientes entre Sucursales o Centro de Distribución'
+  return 'Listado General de Entradas de Mercadería en Espera de Ingreso Físico en Depósito'
+})
 
 // Estado para Modal de Códigos de Barra
 const showBarcodeModal = ref(false)
@@ -477,26 +554,9 @@ const cargarOrdenesPendientes = async () => {
   }
 }
 
-// Obtener el código de barras asignado en las propiedades del catálogo de productos
+// Usar únicamente el código del producto como código de barra
 const getProductBarcodeProperty = (codigoProducto) => {
-  const normCod = String(codigoProducto || '').trim()
-  const localProd = catalogProducts.value.find(p => 
-    String(p.codigo || '').trim() === normCod ||
-    String(p.id || '').trim() === normCod
-  )
-  
-  if (localProd) {
-    if (localProd.codigo_barra && String(localProd.codigo_barra).trim()) {
-      return String(localProd.codigo_barra).trim()
-    }
-    if (localProd.codigo_ean && String(localProd.codigo_ean).trim()) {
-      return String(localProd.codigo_ean).trim()
-    }
-    if (localProd.codigo && String(localProd.codigo).trim()) {
-      return String(localProd.codigo).trim()
-    }
-  }
-  return normCod
+  return String(codigoProducto || '').trim()
 }
 
 // Abrir Modal de Códigos de Barra para una orden agrupada
@@ -635,7 +695,7 @@ const imprimirCodigosModal = () => {
   const prov = selectedOrderForBarcodes.value?.proveedor || '-'
 
   const itemsHtml = barcodeItems.value.map(it => {
-    const svgCode = generateBarcodeSVG(it.codigoBarra, { scale: 2, height: 45 })
+    const svgCode = generateBarcodeSVG(it.codigo, { scale: 2, height: 45 })
     return `
       <div style="border: 2px solid #000; padding: 10px; text-align: center; page-break-inside: avoid; border-radius: 4px; background: #fff;">
         <div style="font-size: 11px; font-weight: bold; font-family: monospace;">CÓDIGO: ${it.codigo}</div>
@@ -652,9 +712,11 @@ const imprimirCodigosModal = () => {
       <head>
         <title>Códigos de Barra - Orden WMS ${ordenWms}</title>
         <style>
-          body { font-family: sans-serif; padding: 20px; color: #000; background: #fff; }
-          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-          .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+          @page { size: A4; margin: 8mm; }
+          * { box-sizing: border-box; }
+          body { font-family: sans-serif; padding: 10px; color: #000; background: #fff; margin: 0; }
+          .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
           @media print {
             @page { margin: 10mm; }
           }
@@ -677,6 +739,31 @@ const imprimirCodigosModal = () => {
   win.document.close()
 }
 
+// Helpers para clasificar Origen (Proveedores vs Sucursales / CD)
+const esIngresoSucursalCD = (item) => {
+  const doc = String(item.tipoComprobante || '').toUpperCase()
+  const prov = String(item.proveedor || '').toUpperCase()
+  if (doc.includes('SU_TR') || doc.includes('TR') || doc.includes('TRANSFERENCIA') || doc.includes('SUCURSAL')) {
+    return true
+  }
+  if (prov.includes('SUCURSAL') || prov.includes('CENTRO DE DISTRIBUCION') || prov.includes('CD ') || prov.startsWith('CD') || prov.includes('TRANSF')) {
+    return true
+  }
+  return false
+}
+
+const esIngresoProveedor = (item) => {
+  return !esIngresoSucursalCD(item)
+}
+
+const countProveedores = computed(() => {
+  return items.value.filter(i => esIngresoProveedor(i)).length
+})
+
+const countSucursales = computed(() => {
+  return items.value.filter(i => esIngresoSucursalCD(i)).length
+})
+
 // Lista única de proveedores para el selector
 const proveedoresUnicos = computed(() => {
   const setProv = new Set()
@@ -689,6 +776,13 @@ const proveedoresUnicos = computed(() => {
 // Filtrado reactivo de ítems
 const filteredItems = computed(() => {
   return items.value.filter(i => {
+    // Filtro por pestaña de origen
+    if (activeOrigenTab.value === 'proveedores' && !esIngresoProveedor(i)) {
+      return false
+    }
+    if (activeOrigenTab.value === 'sucursales' && !esIngresoSucursalCD(i)) {
+      return false
+    }
     // Filtro por proveedor
     if (filterProveedor.value && i.proveedor !== filterProveedor.value) {
       return false
@@ -745,7 +839,7 @@ const exportarExcel = () => {
     'Orden WMS': i.ordenWms,
     'Orden ERP / OC': i.ordenCompraErp,
     'Fecha Alta': i.fechaAlta,
-    'Proveedor': i.proveedor,
+    'Proveedor / Origen': i.proveedor,
     'Código Producto': i.codigoProducto,
     'Descripción Producto': i.nombreProducto,
     'Cantidad Esperada': i.cantidadEsperada,
@@ -757,12 +851,13 @@ const exportarExcel = () => {
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Ingresos Pendientes')
 
-  const fileName = `WMS_Ingresos_Pendientes_${new Date().toISOString().split('T')[0]}.xlsx`
+  const fileName = `WMS_Ingresos_Pendientes_${activeOrigenTab.value}_${new Date().toISOString().split('T')[0]}.xlsx`
   XLSX.writeFile(workbook, fileName)
 }
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
+  syncTabFromRoute()
   fetchCatalogProducts()
   cargarOrdenesPendientes()
 })

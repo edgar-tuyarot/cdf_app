@@ -2,10 +2,12 @@
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useTheme } from '../../composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const { isDarkMode, toggleTheme } = useTheme()
 
 const activeDropdown = ref(null)
 const activeSubmenu = ref(null)
@@ -28,7 +30,15 @@ const groups = [
     icon: 'ph-arrows-down-up',
     items: [
       { name: 'Ingreso Mercadería', path: '/ingresos', icon: 'ph-download-simple', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
-      { name: 'Recep. Pendientes WMS', path: '/wms-ordenes-ingreso-pendientes', icon: 'ph-clock-afternoon', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { 
+        name: 'Ingresos Pendientes', 
+        icon: 'ph-clock-afternoon', 
+        roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'],
+        children: [
+          { name: 'Proveedores', path: '/wms-ordenes-ingreso-pendientes-proveedores', icon: 'ph-storefront', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+          { name: 'Sucursales / CD', path: '/wms-ordenes-ingreso-pendientes-sucursales', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] }
+        ]
+      },
       { 
         name: 'Ingresos Finalizados', 
         icon: 'ph-receipt', 
@@ -38,7 +48,7 @@ const groups = [
           { name: 'Proveedores', path: '/ingresos-historial-proveedores', icon: 'ph-storefront', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] }
         ]
       },
-      { name: 'Historia Egresos', path: '/egresos-historial', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+      { name: 'Egresos Finalizados', path: '/egresos-historial', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
     ]
   },
   {
@@ -66,8 +76,11 @@ const groups = [
     icon: 'ph-chart-line',
     items: [
       { name: 'Reportes de Pedidos', path: '/reportes-pedidos', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
-      { name: 'Top Fraccionados', path: '/reportes-produccion', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
-      { name: 'Trazabilidad de Producto', path: '/reporte-trazabilidad', icon: 'ph-line-segments', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] }
+      { name: 'Reporte Producción', path: '/reportes-produccion', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
+      { name: 'Despacho Semanal', path: '/reportes-despacho-semanal', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Proyección', path: '/reportes-proyeccion', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Trazabilidad de Producto', path: '/reporte-trazabilidad', icon: 'ph-line-segments', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Comparaciones de Variabilidad', path: '/comparaciones-variabilidad', icon: 'ph-scales', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] }
     ]
   },
   {
@@ -269,18 +282,24 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- Sección Derecha: Ubicación, Usuario & Logout -->
+      <!-- Sección Derecha: Usuario, Tema & Logout -->
       <div class="topbar-right">
-        <div v-if="authStore.user?.nombre_ubicacion" class="location-badge" title="Sucursal / Ubicación actual">
-          <i class="ph ph-map-pin"></i>
-          <span>{{ authStore.user.nombre_ubicacion }}</span>
-        </div>
-
         <div class="user-badge" v-if="authStore.user">
           <i class="ph ph-user"></i>
           <span class="user-name">{{ authStore.user.nombre || authStore.user.usuario }}</span>
           <span class="user-role">({{ authStore.user.rol }})</span>
         </div>
+
+        <!-- Toggle Tema (Claro / Oscuro) -->
+        <button 
+          type="button" 
+          @click="toggleTheme" 
+          class="theme-toggle-btn" 
+          :title="isDarkMode ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
+        >
+          <i class="ph" :class="isDarkMode ? 'ph-sun-dim' : 'ph-moon-stars'"></i>
+          <span class="theme-toggle-text">{{ isDarkMode ? 'Claro' : 'Oscuro' }}</span>
+        </button>
 
         <button @click="handleLogout" class="logout-btn" title="Cerrar sesión en CDF Gestión">
           <i class="ph ph-sign-out"></i>
@@ -347,9 +366,9 @@ onUnmounted(() => {
 <style scoped>
 .topbar-header {
   width: 100%;
-  background: linear-gradient(to right, #0f172a, #1e293b);
-  border-bottom: 2px solid #0284c7;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  background: #111827;
+  border-bottom: 2px solid var(--accent-primary);
+  box-shadow: none;
   position: relative;
   z-index: 1000;
   color: #f8fafc;
@@ -375,14 +394,14 @@ onUnmounted(() => {
 }
 
 .brand-badge {
-  background: #0284c7;
+  background: var(--accent-primary);
   color: #ffffff;
   font-weight: 900;
   font-size: 0.85rem;
   padding: 0.2rem 0.45rem;
   border-radius: 4px;
   letter-spacing: 0.05em;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--bevel-dark);
 }
 
 .brand-text {
@@ -395,9 +414,11 @@ onUnmounted(() => {
 /* Nav Container Desktop */
 .topbar-nav-container {
   display: none;
-  align-items: center;
-  gap: 0.35rem;
+  align-items: stretch;
+  gap: 0;
   height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 @media (min-width: 1024px) {
@@ -410,36 +431,42 @@ onUnmounted(() => {
   position: relative;
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
 }
 
 .topbar-group-btn {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.75rem;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 100%;
+  padding: 0 1rem;
+  margin: 0;
   background: transparent;
-  color: #cbd5e1;
+  color: #d1d5db;
   border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 0 !important;
   transition: all 0.15s ease;
 }
 
 .topbar-group-btn:hover,
 .topbar-group-btn.dropdown-open {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
 }
 
 .topbar-group-btn.group-active {
-  background: #0284c7;
+  background: var(--accent-primary);
   color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border-right-color: transparent;
 }
 
 .group-icon {
@@ -461,11 +488,11 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   min-width: 220px;
-  background: #ffffff;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1.5px solid var(--bevel-dark);
+  border-radius: 4px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   padding: 0.4rem 0;
   z-index: 1100;
 }
@@ -478,7 +505,7 @@ onUnmounted(() => {
   padding: 0.55rem 1rem;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.12s ease;
   position: relative;
@@ -496,12 +523,12 @@ onUnmounted(() => {
 }
 
 .dropdown-item:hover {
-  background: #f0f9ff;
-  color: #0284c7;
+  background: var(--accent-primary-light);
+  color: var(--accent-primary);
 }
 
 .dropdown-item.active {
-  background: #0284c7;
+  background: var(--accent-primary);
   color: #ffffff;
   font-weight: 700;
 }
@@ -564,26 +591,6 @@ onUnmounted(() => {
   margin-left: auto;
 }
 
-.location-badge {
-  display: none;
-  align-items: center;
-  gap: 0.35rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: #38bdf8;
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  text-transform: uppercase;
-}
-
-@media (min-width: 768px) {
-  .location-badge {
-    display: flex;
-  }
-}
-
 .user-badge {
   display: none;
   align-items: center;
@@ -609,22 +616,27 @@ onUnmounted(() => {
 }
 
 .logout-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
-  background: #dc2626;
-  color: #ffffff;
-  border: 1px solid #b91c1c;
-  padding: 0.3rem 0.65rem;
-  border-radius: 4px;
+  height: 32px;
+  padding: 0 0.75rem;
+  background: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--border-radius-md) !important;
   font-weight: 800;
   font-size: 0.78rem;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .logout-btn:hover {
-  background: #b91c1c;
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #b91c1c;
 }
 
 .mobile-toggle-btn {
@@ -742,5 +754,29 @@ onUnmounted(() => {
   font-weight: 800;
   font-size: 0.8rem;
   cursor: pointer;
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 32px;
+  padding: 0 0.7rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f3f4f6;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--border-radius-md) !important;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
 }
 </style>

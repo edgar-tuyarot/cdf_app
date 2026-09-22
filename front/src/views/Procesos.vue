@@ -351,6 +351,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { calcularPiezasProducto } from '../utils/calculoPiezas'
+import { formatDate } from '../utils/dateFormat'
 
 const authStore = useAuthStore()
 
@@ -694,15 +695,6 @@ const deleteItem = async () => {
   } finally {
     itemToDelete.value = null
   }
-}
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const parts = dateStr.split('T')[0].split('-')
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`
-  }
-  return dateStr
 }
 
 const sortBy = (key) => {

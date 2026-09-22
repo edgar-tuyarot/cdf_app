@@ -55,7 +55,7 @@
               <select 
                 v-model="statusFilter" 
                 class="form-control" 
-                style="height: 28px; font-size: 0.78rem; padding: 0 0.4rem; width: 130px; background: var(--bg-window); color: var(--text-primary); border: none;"
+                style="height: 28px; font-size: 0.78rem; padding: 0 0.4rem; width: 145px; background: var(--bg-window); color: var(--text-primary); border: none;"
               >
                 <option value="Todos">Todos los Estados</option>
                 <option value="Pendiente">Pendientes</option>
@@ -63,6 +63,8 @@
                 <option value="Listo">Listos para Enviar</option>
                 <option value="Enviado">Enviados</option>
                 <option value="Completado">Completados</option>
+                <option value="Vinculados">🔗 Con Egreso Block</option>
+                <option value="NoVinculados">Sin Egreso Block</option>
               </select>
 
               <!-- Buscador Predictivo -->
@@ -71,7 +73,7 @@
                 <input 
                   type="text" 
                   v-model="searchQuery" 
-                  placeholder="Buscar sucursal..." 
+                  placeholder="Buscar sucursal u orden..." 
                   style="border: none; outline: none; font-size: 0.78rem; background: transparent; width: 100%; color: var(--text-primary);"
                 />
                 <button v-if="searchQuery" @click="searchQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
@@ -81,7 +83,7 @@
             </div>
           </div>
 
-          <!-- Tabla de Historial: Fecha | Destino | % Completo | Estado -->
+          <!-- Tabla de Historial: Fecha | Destino | % Completo | Estado | Egreso Block -->
           <div class="table-container" style="max-height: calc(100vh - 250px); overflow-y: auto;">
             <table class="access-table" style="width: 100%; font-size: 0.82rem;">
               <thead>
@@ -90,6 +92,7 @@
                   <th @click="sortBy('sucursal')" class="sortable">Destino <i v-if="sortKey === 'sucursal'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
                   <th @click="sortBy('porcentaje')" class="sortable text-center">% Completo <i v-if="sortKey === 'porcentaje'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
                   <th @click="sortBy('estado')" class="sortable text-center">Estado <i v-if="sortKey === 'estado'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
+                  <th @click="sortBy('wms_orden_egreso')" class="sortable text-center">Egreso Block <i v-if="sortKey === 'wms_orden_egreso'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
                 </tr>
               </thead>
               <tbody>
@@ -112,11 +115,28 @@
                   <td class="text-center">
                     <span :style="getEstadoTextStyle(p.estado)">{{ p.estado }}</span>
                   </td>
+                  <td class="text-center" style="white-space: nowrap;">
+                    <span 
+                      v-if="p.wms_orden_egreso" 
+                      class="badge" 
+                      style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-family: monospace; font-size: 0.74rem; display: inline-flex; align-items: center; gap: 0.3rem; padding: 2px 7px; border-radius: 4px; font-weight: 700;"
+                      :title="`Orden Block: #${p.wms_orden_egreso} ${p.wms_documento ? '| Remito: ' + p.wms_documento : ''} | Despachado: ${parseFloat(p.wms_despachado_kg || 0).toFixed(3)} kg`"
+                    >
+                      <i class="ph ph-link-simple" style="font-size: 0.82rem;"></i>
+                      #{{ p.wms_orden_egreso }}
+                      <span v-if="p.wms_despachado_kg && parseFloat(p.wms_despachado_kg) > 0" style="font-size: 0.68rem; opacity: 0.85; font-weight: normal;">
+                        ({{ parseFloat(p.wms_despachado_kg).toFixed(1) }} kg)
+                      </span>
+                    </span>
+                    <span v-else style="color: var(--text-muted); font-size: 0.8rem; opacity: 0.5;">
+                      —
+                    </span>
+                  </td>
                 </tr>
 
                 <!-- Estado de Carga -->
                 <tr v-if="loading">
-                  <td colspan="4" class="text-center p-4">
+                  <td colspan="5" class="text-center p-4">
                     <i class="ph ph-spinner spinner icon-xl"></i><br>
                     <span style="font-size: 0.85rem; color: var(--text-secondary);">Cargando listado de pedidos...</span>
                   </td>
@@ -124,7 +144,7 @@
 
                 <!-- Lista Vacía -->
                 <tr v-if="!loading && filteredAndSortedPedidos.length === 0">
-                  <td colspan="4" class="text-center p-4 text-muted">
+                  <td colspan="5" class="text-center p-4 text-muted">
                     <i class="ph ph-shopping-cart icon-xl mb-2" style="font-size: 2rem; opacity: 0.5;"></i><br>
                     <span>No se encontraron pedidos con el criterio de búsqueda seleccionado.</span>
                   </td>
@@ -142,7 +162,7 @@
               Alerta de Stock CD Insuficiente ({{ productosConDeficit.length }})
             </span>
             <span style="font-size: 0.72rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 2px; font-weight: bold;">
-              Pedidos Pendientes
+              Pedidos Activos
             </span>
           </div>
 
@@ -186,15 +206,47 @@
             <i class="ph ph-arrow-left" style="font-size: 1.1rem; color: var(--accent-primary);"></i> Volver a Pedidos
           </button>
           <div>
-            <h2 style="margin: 0; font-size: 1.25rem; font-weight: bold; color: var(--text-primary); display: flex; align-items: center; gap: 0.6rem;">
-              Pedido: {{ selectedPedido.codigo }}
-              <span :style="getEstadoTextStyle(selectedPedido.estado)" style="font-size: 1rem;">({{ selectedPedido.estado }})</span>
+            <h2 style="margin: 0; font-size: 1.25rem; font-weight: bold; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+              <span>{{ selectedPedido.sucursal || 'Sin Sucursal' }}</span>
+              <span style="color: var(--text-muted); font-weight: normal;">|</span>
+              <span>{{ formatDateDayMonth(selectedPedido.fecha) }}</span>
+              <span style="color: var(--text-muted); font-weight: normal;">|</span>
+              <span :style="getEstadoTextStyle(selectedPedido.estado)">{{ selectedPedido.estado }}</span>
             </h2>
           </div>
         </div>
 
         <!-- Acciones Destacadas Superior -->
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+          <!-- Botón Vincular / Estado Egreso Block WMS -->
+          <button 
+            v-if="!selectedPedido.wms_orden_egreso"
+            type="button" 
+            class="btn btn-secondary" 
+            style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; background: #fef2f2; border-color: #ef4444; color: #dc2626;"
+            @click="openVincularModal(selectedPedido)"
+            title="Vincular con una orden de egreso / despacho de Block WMS"
+          >
+            <i class="ph ph-link" style="font-size: 1.1rem;"></i> Vincular Egreso Block
+          </button>
+          <div 
+            v-else 
+            style="display: flex; align-items: center; gap: 0.35rem; background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 4px; padding: 0.25rem 0.6rem;"
+          >
+            <span style="font-size: 0.8rem; font-weight: 800; color: #15803d; display: flex; align-items: center; gap: 0.3rem;" :title="'Documento: ' + (selectedPedido.wms_documento || 'S/N')">
+              <i class="ph ph-link-simple" style="font-size: 1.1rem;"></i> Block #{{ selectedPedido.wms_orden_egreso }} ({{ parseFloat(selectedPedido.wms_despachado_kg || 0).toFixed(3) }} kg)
+            </span>
+            <button 
+              type="button" 
+              class="btn btn-sm btn-secondary" 
+              style="padding: 1px 5px; font-size: 0.72rem; color: #dc2626; border-color: #f87171;" 
+              @click="desvincularEgreso(selectedPedido)" 
+              title="Desvincular egreso de Block"
+            >
+              <i class="ph ph-x"></i>
+            </button>
+          </div>
+
           <button 
             v-if="selectedPedido.estado === 'Pendiente' || selectedPedido.estado === 'Procesando'"
             type="button" 
@@ -221,6 +273,9 @@
           <button class="btn btn-secondary" @click="openControlModal(selectedPedido)" style="display: flex; align-items: center; gap: 0.3rem;">
             <i class="ph ph-check-square" style="font-size: 1rem; color: var(--accent-primary);"></i> Control de Piezas
           </button>
+          <button class="btn btn-secondary" @click="openBarcodesModalForPedido(selectedPedido)" title="Ver Códigos de Barra de los productos de este pedido" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; background: var(--bg-window);">
+            <i class="ph ph-barcode" style="font-size: 1.1rem; color: #0284c7;"></i> Códigos de Barra
+          </button>
           <button class="btn btn-secondary" @click="printPedidoPdf(selectedPedido)" title="Generar PDF con Código, Nombre, Kilos y Código de Barras" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 700; background: #ef4444; color: #fff; border-color: #dc2626;">
             <i class="ph ph-file-pdf" style="font-size: 1.1rem;"></i> Generar PDF (Barras)
           </button>
@@ -246,129 +301,334 @@
         
         <!-- MODO DETALLE READ-ONLY -->
         <div v-if="!isEditingMode" style="display: flex; flex-direction: column; gap: 1.25rem;">
-          <!-- Tarjeta de Resumen / Metadatos -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: var(--bg-secondary); padding: 1rem; border-radius: 0; border: 1px solid var(--bevel-light);">
-            <div>
-              <span class="text-xs text-muted" style="display: block; font-weight: bold; text-transform: uppercase;">Sucursal Destino</span>
-              <span style="font-size: 1.1rem; font-weight: bold; color: var(--text-primary);">
-                {{ selectedPedido.sucursal || '-' }}
-                <span v-if="loadingSucursalStock" style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-left: 0.4rem;">
-                  <i class="ph ph-spinner spinner"></i> Consultando stock...
+
+          <!-- Barra de Sub-pestañas: Preparación vs Conciliación Block -->
+          <div style="display: flex; gap: 0.35rem; border-bottom: 2px solid var(--bevel-dark); padding-bottom: 0.65rem; margin-bottom: 0.25rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button 
+                type="button" 
+                :class="['btn', subTabPedido === 'preparacion' ? 'btn-primary' : 'btn-secondary']"
+                @click="subTabPedido = 'preparacion'"
+                style="font-size: 0.84rem; font-weight: 800; padding: 0.4rem 0.85rem; display: flex; align-items: center; gap: 0.35rem;"
+              >
+                <i class="ph ph-package"></i> Preparación del Pedido
+              </button>
+
+              <button 
+                type="button" 
+                :class="['btn', subTabPedido === 'conciliacion' ? 'btn-primary' : 'btn-secondary']"
+                @click="cambiarASubTabConciliacion"
+                style="font-size: 0.84rem; font-weight: 800; padding: 0.4rem 0.85rem; display: flex; align-items: center; gap: 0.35rem;"
+              >
+                <i class="ph ph-git-diff"></i> Conciliación Block WMS
+                <span 
+                  v-if="selectedPedido.wms_orden_egreso" 
+                  class="badge badge-success" 
+                  style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px;"
+                >
+                  Vinculado (#{{ selectedPedido.wms_orden_egreso }})
                 </span>
-              </span>
+                <span 
+                  v-else 
+                  class="badge badge-secondary" 
+                  style="font-size: 0.68rem; padding: 1px 6px; border-radius: 4px; opacity: 0.85;"
+                >
+                  Sin vincular
+                </span>
+              </button>
             </div>
-            <div>
-              <span class="text-xs text-muted" style="display: block; font-weight: bold; text-transform: uppercase;">Fecha Emisión</span>
-              <span style="font-size: 1.1rem; font-weight: bold; color: var(--text-primary);">{{ formatDate(selectedPedido.fecha) }}</span>
-            </div>
-            <div>
-              <span class="text-xs text-muted" style="display: block; font-weight: bold; text-transform: uppercase;">Total Productos</span>
-              <span style="font-size: 1.1rem; font-weight: bold; color: var(--accent-primary);">{{ selectedPedido.items ? selectedPedido.items.length : 0 }} Ítems</span>
-            </div>
-            <div>
-              <span class="text-xs text-muted" style="display: block; font-weight: bold; text-transform: uppercase;">Estado Actual</span>
-              <span :style="getEstadoTextStyle(selectedPedido.estado)" style="font-size: 1.05rem;">{{ selectedPedido.estado }}</span>
+
+            <!-- Acciones de Conciliación si está activa -->
+            <div v-if="subTabPedido === 'conciliacion' && selectedPedido.wms_orden_egreso" style="display: flex; gap: 0.4rem; align-items: center;">
+              <button 
+                type="button" 
+                class="btn btn-secondary btn-sm"
+                @click="exportarConciliacionExcel"
+                style="display: flex; align-items: center; gap: 0.3rem; font-weight: 700; font-size: 0.78rem;"
+              >
+                <i class="ph ph-file-xls text-green"></i> Exportar Excel
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-secondary btn-sm"
+                @click="fetchConciliacion(selectedPedido)"
+                :disabled="loadingConciliacion"
+                style="display: flex; align-items: center; gap: 0.3rem; font-weight: 700; font-size: 0.78rem;"
+              >
+                <i class="ph ph-spinner spinner" v-if="loadingConciliacion"></i>
+                <i class="ph ph-arrows-clockwise" v-else></i> Refrescar
+              </button>
             </div>
           </div>
 
-          <!-- Ítems Enviados -->
-          <div>
-            <h3 style="font-size: 0.95rem; font-weight: bold; margin-bottom: 0.6rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
-              <i class="ph ph-check-circle text-green" style="font-size: 1.2rem;"></i> Ítems Enviados ({{ itemsEnviados.length }})
-            </h3>
-            <div class="table-container">
-              <table class="access-table" style="width: 100%; font-size: 0.85rem;">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Producto</th>
-                    <th class="text-right">Pzas Pedidas</th>
-                    <th class="text-right">Frac Pedida</th>
-                    <th class="text-right">Pzas Enviadas</th>
-                    <th class="text-right">Frac Enviada</th>
-                    <th class="text-right">Peso Enviado</th>
-                    <th class="text-right" style="color: var(--accent-orange);">Stock CD</th>
-                    <th class="text-right" style="color: var(--accent-primary);">Stock Sucursal</th>
-                    <th class="text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in itemsEnviados" :key="item.id">
-                    <td><strong>{{ item.codigo_producto }}</strong></td>
-                    <td>{{ item.Producto?.nombre || 'Sin nombre' }}</td>
-                    <td class="text-right">{{ item.pieza || 0 }}</td>
-                    <td class="text-right">{{ parseFloat(item.fraccion || 0).toFixed(3) }}</td>
-                    <td class="text-right fw-bold text-green">{{ item.cantidad_enviada || 0 }}</td>
-                    <td class="text-right fw-bold text-green">{{ parseFloat(item.fraccion_enviada || 0).toFixed(3) }}</td>
-                    <td class="text-right fw-bold text-green">{{ item.peso_enviado ? parseFloat(item.peso_enviado).toFixed(3) + ' kg' : '-' }}</td>
-                    <td class="text-right font-mono fw-bold">
-                      <span :style="{ color: getStockCD(item) <= 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }">
-                        {{ formatStockVal(getStockCD(item)) }}
-                      </span>
-                    </td>
-                    <td class="text-right font-mono fw-bold">
-                      <span v-if="loadingSucursalStock" class="text-muted" style="font-size: 0.75rem;"><i class="ph ph-spinner spinner"></i></span>
-                      <span v-else :style="{ color: getStockColor(sucursalStockMap[item.codigo_producto]) }">
-                        {{ formatStockVal(sucursalStockMap[item.codigo_producto]) }}
-                      </span>
-                    </td>
-                    <td class="text-center">
-                      <span class="badge badge-success" style="font-size: 0.7rem; padding: 2px 6px;">Enviado</span>
-                    </td>
-                  </tr>
-                  <tr v-if="itemsEnviados.length === 0">
-                    <td colspan="10" class="text-center text-muted" style="padding: 1.5rem;">
-                      Ningún producto enviado en este pedido.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- SUB-VISTA 1: TABLAS LADO A LADO (PREPARACIÓN) -->
+          <div v-if="subTabPedido === 'preparacion'" :style="{ display: 'grid', gridTemplateColumns: itemsNoEnviados.length > 0 ? '1fr 1fr' : '1fr', gap: '1rem', alignItems: 'start' }">
+            
+            <!-- Ítems Enviados -->
+            <div>
+              <h3 style="font-size: 0.9rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                <i class="ph ph-check-circle text-green" style="font-size: 1.1rem;"></i> Ítems Enviados ({{ itemsEnviados.length }})
+              </h3>
+              <div class="table-container">
+                <table class="access-table compact-items-table" style="width: 100%; font-size: 0.78rem;">
+                  <thead>
+                    <tr>
+                      <th style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Código</th>
+                      <th style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Producto</th>
+                      <th class="text-right" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Pzas Ped.</th>
+                      <th class="text-right" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Frac Ped.</th>
+                      <th class="text-right" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Pzas Env.</th>
+                      <th class="text-right" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Frac Env.</th>
+                      <th class="text-right" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Peso Env.</th>
+                      <th class="text-right" style="color: var(--accent-orange); padding: 0.25rem 0.35rem; font-size: 0.75rem;">Stk CD</th>
+                      <th class="text-center" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in itemsEnviados" :key="item.id">
+                      <td style="padding: 0.25rem 0.35rem;"><strong>{{ item.codigo_producto }}</strong></td>
+                      <td style="padding: 0.25rem 0.35rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="item.Producto?.nombre">{{ item.Producto?.nombre || 'Sin nombre' }}</td>
+                      <td class="text-right" style="padding: 0.25rem 0.35rem;">{{ item.pieza || 0 }}</td>
+                      <td class="text-right" style="padding: 0.25rem 0.35rem;">{{ parseFloat(item.fraccion || 0).toFixed(3) }}</td>
+                      <td class="text-right fw-bold text-green" style="padding: 0.25rem 0.35rem;">{{ item.cantidad_enviada || 0 }}</td>
+                      <td class="text-right fw-bold text-green" style="padding: 0.25rem 0.35rem;">{{ parseFloat(item.fraccion_enviada || 0).toFixed(3) }}</td>
+                      <td class="text-right fw-bold text-green" style="padding: 0.25rem 0.35rem;">{{ item.peso_enviado ? parseFloat(item.peso_enviado).toFixed(3) + ' kg' : '-' }}</td>
+                      <td class="text-right font-mono fw-bold" style="padding: 0.25rem 0.35rem;">
+                        <span :style="{ color: getStockCD(item) <= 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }">
+                          {{ formatStockVal(getStockCD(item)) }}
+                        </span>
+                      </td>
+                      <td class="text-center" style="padding: 0.25rem 0.35rem;">
+                        <span class="badge badge-success" style="font-size: 0.68rem; padding: 1px 5px;">Enviado</span>
+                      </td>
+                    </tr>
+                    <tr v-if="itemsEnviados.length === 0">
+                      <td colspan="9" class="text-center text-muted" style="padding: 1rem;">
+                        Ningún producto enviado en este pedido.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+            <!-- Ítems No Enviados -->
+            <div v-if="itemsNoEnviados.length > 0">
+              <h3 style="font-size: 0.9rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                <i class="ph ph-minus-circle text-muted" style="font-size: 1.1rem;"></i> Ítems No Enviados ({{ itemsNoEnviados.length }})
+              </h3>
+              <div class="table-container">
+                <table class="access-table compact-items-table" style="width: 100%; font-size: 0.78rem;">
+                  <thead>
+                    <tr>
+                      <th style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Código</th>
+                      <th style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Producto</th>
+                      <th class="text-right" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Pzas Ped.</th>
+                      <th class="text-right" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Frac Ped.</th>
+                      <th class="text-right" style="color: var(--accent-orange); padding: 0.25rem 0.35rem; font-size: 0.75rem;">Stk CD</th>
+                      <th class="text-center" style="padding: 0.25rem 0.35rem; font-size: 0.75rem;">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in itemsNoEnviados" :key="item.id" style="opacity: 0.85;">
+                      <td style="padding: 0.25rem 0.35rem;"><strong>{{ item.codigo_producto }}</strong></td>
+                      <td style="padding: 0.25rem 0.35rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="item.Producto?.nombre">{{ item.Producto?.nombre || 'Sin nombre' }}</td>
+                      <td class="text-right" style="padding: 0.25rem 0.35rem;">{{ item.pieza || 0 }}</td>
+                      <td class="text-right" style="padding: 0.25rem 0.35rem;">{{ parseFloat(item.fraccion || 0).toFixed(3) }}</td>
+                      <td class="text-right font-mono fw-bold" style="padding: 0.25rem 0.35rem;">
+                        <span :style="{ color: getStockCD(item) <= 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }">
+                          {{ formatStockVal(getStockCD(item)) }}
+                        </span>
+                      </td>
+                      <td class="text-center" style="padding: 0.25rem 0.35rem;">
+                        <span v-if="item.no_envia" class="badge badge-secondary" style="font-size: 0.68rem; padding: 1px 5px;">No Envía</span>
+                        <span v-else class="badge badge-danger" style="font-size: 0.68rem; padding: 1px 5px;">Sin Stock</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
           </div>
 
-          <!-- Ítems No Enviados -->
-          <div v-if="itemsNoEnviados.length > 0">
-            <h3 style="font-size: 0.95rem; font-weight: bold; margin-bottom: 0.6rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
-              <i class="ph ph-minus-circle text-muted" style="font-size: 1.2rem;"></i> Ítems No Enviados ({{ itemsNoEnviados.length }})
-            </h3>
-            <div class="table-container">
-              <table class="access-table" style="width: 100%; font-size: 0.85rem;">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Producto</th>
-                    <th class="text-right">Pzas Pedidas</th>
-                    <th class="text-right">Frac Pedida</th>
-                    <th class="text-right" style="color: var(--accent-orange);">Stock CD</th>
-                    <th class="text-right" style="color: var(--accent-primary);">Stock Sucursal</th>
-                    <th class="text-center">Motivo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in itemsNoEnviados" :key="item.id" style="opacity: 0.85;">
-                    <td><strong>{{ item.codigo_producto }}</strong></td>
-                    <td>{{ item.Producto?.nombre || 'Sin nombre' }}</td>
-                    <td class="text-right">{{ item.pieza || 0 }}</td>
-                    <td class="text-right">{{ parseFloat(item.fraccion || 0).toFixed(3) }}</td>
-                    <td class="text-right font-mono fw-bold">
-                      <span :style="{ color: getStockCD(item) <= 0 ? 'var(--accent-danger)' : 'var(--accent-success)' }">
-                        {{ formatStockVal(getStockCD(item)) }}
-                      </span>
-                    </td>
-                    <td class="text-right font-mono fw-bold">
-                      <span v-if="loadingSucursalStock" class="text-muted" style="font-size: 0.75rem;"><i class="ph ph-spinner spinner"></i></span>
-                      <span v-else :style="{ color: getStockColor(sucursalStockMap[item.codigo_producto]) }">
-                        {{ formatStockVal(sucursalStockMap[item.codigo_producto]) }}
-                      </span>
-                    </td>
-                    <td class="text-center">
-                      <span v-if="item.no_envia" class="badge badge-secondary" style="font-size: 0.7rem; padding: 2px 6px;">No Envía</span>
-                      <span v-else class="badge badge-danger" style="font-size: 0.7rem; padding: 2px 6px;">Sin Stock</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <!-- SUB-VISTA 2: CONCILIACIÓN CON EGRESO BLOCK WMS -->
+          <div v-else-if="subTabPedido === 'conciliacion'" style="display: flex; flex-direction: column; gap: 1rem;">
+            
+            <!-- CASO 1: NO VINCULADO -->
+            <div v-if="!selectedPedido.wms_orden_egreso" style="text-align: center; padding: 3rem 1.5rem; background: var(--bg-secondary); border: 2px dashed var(--bevel-dark); border-radius: 6px;">
+              <i class="ph ph-link-break" style="font-size: 3.5rem; color: #ef4444; margin-bottom: 0.75rem; opacity: 0.8; display: block;"></i>
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
+                Pedido sin Egreso de Block Vinculado
+              </h3>
+              <p style="margin: 0.5rem auto 1.25rem auto; font-size: 0.88rem; color: var(--text-secondary); max-width: 520px;">
+                Para conciliar lo solicitado y preparado contra lo despachado en depósito, vincula este pedido con la orden de egreso finalizada en Block WMS.
+              </p>
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="padding: 0.55rem 1.4rem; font-weight: 800; font-size: 0.9rem; background: #ef4444; border-color: #dc2626; color: #fff; display: inline-flex; align-items: center; gap: 0.45rem;"
+                @click="openVincularModal(selectedPedido)"
+              >
+                <i class="ph ph-link"></i> Vincular Egreso de Block Manualmente
+              </button>
             </div>
+
+            <!-- CASO 2: VINCULADO -->
+            <div v-else style="display: flex; flex-direction: column; gap: 1rem;">
+              
+              <!-- Tarjeta Resumen del Egreso Vinculado -->
+              <div style="background: var(--bg-secondary); border: 1.5px solid var(--bevel-dark); padding: 0.85rem 1.15rem; border-radius: 4px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; align-items: center;">
+                <div>
+                  <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800; display: block;">Nº Orden Block</span>
+                  <span style="font-size: 1.1rem; font-weight: 900; font-family: monospace; color: #ef4444;">
+                    #{{ selectedPedido.wms_orden_egreso }}
+                  </span>
+                </div>
+                <div>
+                  <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800; display: block;">Documento / Remito</span>
+                  <span style="font-size: 0.92rem; font-weight: 800; color: var(--text-primary);">
+                    {{ selectedPedido.wms_documento || 'Sin comprobante' }}
+                  </span>
+                </div>
+                <div>
+                  <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800; display: block;">Fecha Cierre Block</span>
+                  <span style="font-size: 0.92rem; font-weight: 800; color: var(--text-primary);">
+                    {{ selectedPedido.wms_fecha_egreso || '-' }}
+                  </span>
+                </div>
+                <div>
+                  <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800; display: block;">Total Despachado Block</span>
+                  <span style="font-size: 1.1rem; font-weight: 900; color: #dc2626;">
+                    {{ (parseFloat(selectedPedido.wms_despachado_kg || 0)).toFixed(3) }} kg
+                  </span>
+                </div>
+                <div style="text-align: right;">
+                  <button 
+                    type="button" 
+                    class="btn btn-secondary btn-sm"
+                    style="font-size: 0.78rem; font-weight: 800; color: #dc2626; border-color: #fca5a5;"
+                    @click="desvincularEgreso(selectedPedido)"
+                    title="Desasociar este egreso del pedido"
+                  >
+                    <i class="ph ph-link-break"></i> Desvincular
+                  </button>
+                </div>
+              </div>
+
+              <!-- Loader de Conciliación -->
+              <div v-if="loadingConciliacion" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                <i class="ph ph-spinner spinner" style="font-size: 2rem; color: #ef4444; margin-bottom: 0.5rem;"></i>
+                <div>Calculando conciliación de productos...</div>
+              </div>
+
+              <!-- Tabla de Conciliación: cod | nombre | pedido | preparado kg | enviado kg | diferencia | estado -->
+              <div v-else class="table-container" style="border: 1.5px solid var(--bevel-dark); background: var(--bg-window); overflow-x: auto;">
+                <table class="access-table" style="width: 100%; font-size: 0.82rem; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--bevel-dark); font-size: 0.76rem; text-transform: uppercase;">
+                      <th style="padding: 0.55rem 0.65rem; text-align: center; width: 9%;">Cód</th>
+                      <th style="padding: 0.55rem 0.65rem; text-align: left; width: 29%;">Nombre</th>
+                      <th style="padding: 0.55rem 0.65rem; text-align: right; width: 14%;">Pedido</th>
+                      <th style="padding: 0.55rem 0.65rem; text-align: right; width: 14%; color: #15803d;">Preparado kg</th>
+                      <th style="padding: 0.55rem 0.65rem; text-align: right; width: 14%; color: #dc2626;">Enviado kg</th>
+                      <th style="padding: 0.55rem 0.65rem; text-align: right; width: 10%;">Diferencia</th>
+                      <th style="padding: 0.55rem 0.65rem; text-align: center; width: 10%;">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr 
+                      v-for="item in listaConciliacion" 
+                      :key="item.codigo"
+                      :style="getConciliacionRowStyle(item)"
+                      style="border-bottom: 1px solid var(--bevel-light);"
+                    >
+                      <!-- Cód -->
+                      <td style="padding: 0.45rem 0.65rem; text-align: center; font-family: monospace; font-weight: 800; color: #ef4444;">
+                        {{ item.codigo }}
+                      </td>
+                      <!-- Nombre -->
+                      <td style="padding: 0.45rem 0.65rem; font-weight: 700; color: var(--text-primary);">
+                        {{ item.nombre }}
+                      </td>
+                      <!-- Pedido -->
+                      <td style="padding: 0.45rem 0.65rem; text-align: right; font-weight: 700;">
+                        {{ item.pedido_display !== '-' ? item.pedido_display : '-' }}
+                      </td>
+                      <!-- Preparado kg -->
+                      <td style="padding: 0.45rem 0.65rem; text-align: right; font-weight: 800; color: #15803d;">
+                        <template v-if="item.preparado_kg > 0">
+                          {{ item.preparado_kg.toFixed(3) }} kg
+                          <span v-if="item.preparado_piezas > 0" style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal; display: block;">
+                            ({{ item.preparado_piezas }} pz{{ item.preparado_piezas > 1 ? 's' : '' }})
+                          </span>
+                        </template>
+                        <span v-else-if="item.no_envia" class="badge badge-secondary" style="font-size: 0.68rem;">No Envía</span>
+                        <span v-else-if="item.sin_stock" class="badge badge-danger" style="font-size: 0.68rem;">Sin Stock</span>
+                        <span v-else style="color: var(--text-muted);">-</span>
+                      </td>
+                      <!-- Enviado kg (Block) -->
+                      <td style="padding: 0.45rem 0.65rem; text-align: right; font-weight: 800; color: #dc2626; font-size: 0.9rem;">
+                        <template v-if="item.enviado_kg > 0">
+                          {{ item.enviado_kg.toFixed(3) }} kg
+                        </template>
+                        <span v-else style="color: #b91c1c; font-weight: 800;">0.000 kg</span>
+                      </td>
+                      <!-- Diferencia -->
+                      <td style="padding: 0.45rem 0.65rem; text-align: right; font-weight: 800; font-family: monospace;">
+                        <span 
+                          :style="{
+                            color: Math.abs(item.diferencia_kg) < 0.005 ? '#15803d' : (item.diferencia_kg > 0 ? '#0284c7' : '#dc2626')
+                          }"
+                        >
+                          {{ item.diferencia_kg > 0 ? '+' : '' }}{{ item.diferencia_kg.toFixed(3) }} kg
+                        </span>
+                      </td>
+                      <!-- Estado / Badge -->
+                      <td style="padding: 0.45rem 0.65rem; text-align: center;">
+                        <span v-if="item.estado_conciliacion === 'COINCIDE'" class="badge badge-success" style="font-size: 0.68rem; padding: 2px 6px;">
+                          Coincide
+                        </span>
+                        <span v-else-if="item.estado_conciliacion === 'DIFERENCIA'" class="badge badge-warning" style="font-size: 0.68rem; padding: 2px 6px;">
+                          Desvío
+                        </span>
+                        <span v-else-if="item.estado_conciliacion === 'FALTANTE_BLOCK'" class="badge badge-danger" style="font-size: 0.68rem; padding: 2px 6px;">
+                          Faltante Block
+                        </span>
+                        <span v-else-if="item.estado_conciliacion === 'EXTRA_BLOCK'" class="badge badge-info" style="font-size: 0.68rem; padding: 2px 6px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+                          Extra en Block
+                        </span>
+                      </td>
+                    </tr>
+                    <tr v-if="listaConciliacion.length === 0">
+                      <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        No hay productos para conciliar.
+                      </td>
+                    </tr>
+                  </tbody>
+                  <!-- Footer con Totales -->
+                  <tfoot v-if="listaConciliacion.length > 0" style="background: var(--bg-secondary); border-top: 2.5px solid var(--bevel-dark); font-weight: 800;">
+                    <tr>
+                      <td colspan="3" style="padding: 0.65rem; text-align: right; text-transform: uppercase; font-size: 0.78rem;">
+                        Totales Consolidados:
+                      </td>
+                      <td style="padding: 0.65rem; text-align: right; color: #15803d; font-size: 0.95rem;">
+                        {{ totalPreparadoConciliacion.toFixed(3) }} kg
+                      </td>
+                      <td style="padding: 0.65rem; text-align: right; color: #dc2626; font-size: 0.95rem;">
+                        {{ totalEnviadoConciliacion.toFixed(3) }} kg
+                      </td>
+                      <td style="padding: 0.65rem; text-align: right; font-family: monospace; font-size: 0.95rem;" :style="{ color: Math.abs(diferenciaNetaConciliacion) > 0.05 ? '#dc2626' : '#15803d' }">
+                        {{ diferenciaNetaConciliacion > 0 ? '+' : '' }}{{ diferenciaNetaConciliacion.toFixed(3) }} kg
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+            </div>
+
           </div>
         </div>
 
@@ -376,7 +636,7 @@
         <div v-else>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid var(--bevel-light);">
             <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--accent-primary);">
-              Modificando Pedido: {{ editForm.codigo }}
+              Modificando: {{ editForm.sucursal || 'Sin Sucursal' }} | {{ formatDateDayMonth(editForm.fecha) }} | {{ editForm.estado }}
             </h3>
             <button class="btn btn-secondary btn-sm" @click="isEditingMode = false">Cancelar Edición</button>
           </div>
@@ -384,6 +644,7 @@
           <form @submit.prevent="saveEditPedido">
             <div style="display: flex; flex-direction: column; gap: 1.25rem;">
               
+              <!-- Metadatos de la Orden -->
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                 <div class="form-group">
                   <label class="form-label">Código de Pedido</label>
@@ -409,13 +670,48 @@
                 </div>
               </div>
 
+              <!-- Formulario Agregar Producto al Pedido (AHORA ARRIBA DE TODO) -->
+              <div class="card" style="border: 1.5px solid var(--bevel-dark); padding: 0.75rem; background: var(--bg-secondary);">
+                <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 0.4rem; color: var(--accent-primary); display: flex; align-items: center; gap: 0.35rem;">
+                  <i class="ph ph-plus-circle" style="font-size: 1.1rem;"></i> Agregar Producto al Pedido
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: end;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Buscar Producto *</label>
+                    <input 
+                      type="text"
+                      list="catalog-products-list-edit"
+                      v-model="editProductSearchInput"
+                      @input="handleEditProductInput"
+                      class="form-control" 
+                      placeholder="Escribe código o nombre de producto..."
+                      style="font-size: 0.8rem; height: 32px;"
+                    />
+                    <datalist id="catalog-products-list-edit">
+                      <option v-for="prod in catalogProducts" :key="prod.codigo" :value="prod.codigo">{{ prod.nombre }}</option>
+                    </datalist>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Piezas</label>
+                    <input type="number" v-model.number="newProductPiece" placeholder="Pzs" min="0" class="form-control" style="font-size: 0.8rem; height: 32px; text-align: right;" />
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">Fracción (Kg)</label>
+                    <input type="number" step="0.001" v-model.number="newProductFraccion" placeholder="Kg Frac" min="0" class="form-control" style="font-size: 0.8rem; height: 32px; text-align: right;" />
+                  </div>
+                  <button type="button" class="btn btn-primary" style="height: 32px; padding: 0 1rem; font-weight: bold;" @click="addEditItem">
+                    <i class="ph ph-plus"></i> Añadir
+                  </button>
+                </div>
+              </div>
+
               <!-- Tabla de Ítems a Editar -->
-              <div class="card" style="background: var(--bg-secondary); border: 1px solid var(--bevel-dark); padding: 0.75rem;">
+              <div class="card" style="background: var(--bg-secondary); border: 1.5px solid var(--bevel-dark); padding: 0.75rem;">
                 <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 0.5rem; color: var(--text-primary);">
                   Productos en el Pedido ({{ editForm.items.length }})
                 </div>
                 <div class="table-container" style="max-height: 350px; overflow-y: auto;">
-                  <table class="access-table" style="width: 100%; font-size: 0.8rem;">
+                  <table class="access-table compact-items-table" style="width: 100%; font-size: 0.8rem;">
                     <thead>
                       <tr>
                         <th>Código</th>
@@ -423,7 +719,6 @@
                         <th class="text-right" style="width: 75px;">Ped. Pzs</th>
                         <th class="text-right" style="width: 80px;">Ped. Frac</th>
                         <th class="text-right" style="width: 85px; color: var(--accent-orange);">Stock CD</th>
-                        <th class="text-right" style="width: 85px; color: var(--accent-primary);">Stock Suc.</th>
                         <th class="text-right" style="width: 75px;">Env. Pzs</th>
                         <th class="text-right" style="width: 80px;">Env. Frac</th>
                         <th class="text-right" style="width: 90px;">Env. Kg</th>
@@ -441,12 +736,6 @@
                             {{ formatStockVal(getStockCD(item)) }}
                           </span>
                         </td>
-                        <td class="text-right font-mono fw-bold">
-                          <span v-if="loadingSucursalStock" class="text-muted" style="font-size: 0.75rem;"><i class="ph ph-spinner spinner"></i></span>
-                          <span v-else :style="{ color: getStockColor(sucursalStockMap[item.codigo_producto]) }">
-                            {{ formatStockVal(sucursalStockMap[item.codigo_producto]) }}
-                          </span>
-                        </td>
                         <td><input type="number" min="0" v-model.number="item.cantidad_enviada" class="form-control text-right" style="height: 26px;" /></td>
                         <td><input type="number" step="0.001" min="0" v-model.number="item.fraccion_enviada" class="form-control text-right" style="height: 26px;" /></td>
                         <td><input type="number" step="0.001" min="0" v-model.number="item.peso_enviado" class="form-control text-right" style="height: 26px;" /></td>
@@ -456,36 +745,6 @@
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              </div>
-
-              <!-- Formulario Agregar Producto -->
-              <div class="card" style="border: 1px solid var(--bevel-light); padding: 0.75rem; background: var(--bg-secondary);">
-                <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 0.4rem; color: var(--text-secondary);">
-                  <i class="ph ph-plus-circle"></i> Agregar Producto al Pedido
-                </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.5rem; align-items: end;">
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <input 
-                      type="text"
-                      list="catalog-products-list-edit"
-                      v-model="editProductSearchInput"
-                      @input="handleEditProductInput"
-                      class="form-control" 
-                      placeholder="Buscar producto..."
-                      style="font-size: 0.8rem; height: 30px;"
-                    />
-                    <datalist id="catalog-products-list-edit">
-                      <option v-for="prod in catalogProducts" :key="prod.codigo" :value="prod.codigo">{{ prod.nombre }}</option>
-                    </datalist>
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <input type="number" v-model.number="newProductPiece" placeholder="Pzs" min="0" class="form-control" style="font-size: 0.8rem; height: 30px; text-align: right;" />
-                  </div>
-                  <div class="form-group" style="margin-bottom: 0;">
-                    <input type="number" step="0.001" v-model.number="newProductFraccion" placeholder="Kg Frac" min="0" class="form-control" style="font-size: 0.8rem; height: 30px; text-align: right;" />
-                  </div>
-                  <button type="button" class="btn btn-secondary" style="height: 30px; padding: 0 0.75rem;" @click="addEditItem">Añadir</button>
                 </div>
               </div>
 
@@ -864,11 +1123,11 @@
                 <div style="background: #ffffff; border: 1.5px solid var(--bevel-dark); padding: 0.6rem; margin-bottom: 0.85rem; text-align: center; border-radius: 0;">
                   <div style="font-size: 0.85rem; font-weight: 800; font-family: monospace; color: var(--text-secondary); margin-bottom: 0.25rem; letter-spacing: 0.5px;">
                     <i class="ph ph-barcode" style="font-size: 1.1rem; margin-right: 0.25rem; vertical-align: middle; color: var(--accent-primary);"></i>
-                    CÓDIGO BARRAS: {{ currentControlItem.Producto?.codigo_barra || currentControlItem.codigo_producto }}
+                    CÓDIGO BARRAS: {{ currentControlItem.codigo_producto }}
                   </div>
                   
                   <div 
-                    v-html="generateBarcodeSVG(currentControlItem.Producto?.codigo_barra || currentControlItem.codigo_producto)" 
+                    v-html="generateBarcodeSVG(currentControlItem.codigo_producto)" 
                     style="margin-top: 0.35rem; display: flex; justify-content: center;"
                   ></div>
                 </div>
@@ -939,6 +1198,288 @@
               <button class="win-dialog-btn" @click="closeControlModal">Cerrar</button>
             </div>
           </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- MODAL XL DE CÓDIGOS DE BARRA PARA PEDIDOS -->
+    <Teleport to="body">
+      <div v-if="showBarcodeModal" class="win-dialog-overlay" style="display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div class="win-dialog" style="width: 850px; max-width: 95vw; background: var(--bg-window); border: 3px solid var(--bevel-dark); box-shadow: var(--window-shadow);">
+          
+          <!-- Header del Modal -->
+          <div class="win-dialog-header" style="background: #0b5394; color: white; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="ph ph-barcode" style="font-size: 1.4rem;"></i>
+              Código de Barras - Pedido Nº {{ selectedPedidoForBarcodes?.codigo || selectedPedidoForBarcodes?.id }}
+            </span>
+            <button @click="showBarcodeModal = false" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.3rem; display: flex; align-items: center;">
+              <i class="ph ph-x"></i>
+            </button>
+          </div>
+
+          <!-- Subheader Info + Paginador -->
+          <div style="padding: 0.75rem 1.25rem; background: var(--bg-secondary); border-bottom: 1.5px solid var(--bevel-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="font-size: 0.88rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+              <div>
+                <strong>Sucursal:</strong> {{ selectedPedidoForBarcodes?.sucursal || '-' }}
+                <span v-if="selectedPedidoForBarcodes?.fecha" style="margin-left: 0.75rem;">
+                  <strong>Fecha:</strong> {{ formatDate(selectedPedidoForBarcodes.fecha) }}
+                </span>
+              </div>
+              <span style="font-size: 0.76rem; color: var(--text-secondary); background: var(--bg-window); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--bevel-dark); font-weight: bold;">
+                <i class="ph ph-keyboard" style="margin-right: 3px;"></i> Teclas ← / → para navegar
+              </span>
+            </div>
+            
+            <!-- Contador y Controles de Navegación -->
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <button 
+                class="win-dialog-btn" 
+                @click="prevBarcode" 
+                :disabled="barcodeItems.length <= 1"
+                style="padding: 3px 10px; font-weight: 800; font-size: 0.85rem;"
+                title="Ver producto anterior (Tecla Flecha Izquierda)"
+              >
+                <i class="ph ph-caret-left"></i> Anterior
+              </button>
+
+              <span style="font-weight: 900; font-size: 0.9rem; color: #0284c7; background: #e0f2fe; padding: 3px 12px; border-radius: 12px; border: 1px solid #bae6fd;">
+                {{ currentBarcodeIndex + 1 }} de {{ barcodeItems.length }}
+              </span>
+
+              <button 
+                class="win-dialog-btn" 
+                @click="nextBarcode" 
+                :disabled="barcodeItems.length <= 1"
+                style="padding: 3px 10px; font-weight: 800; font-size: 0.85rem;"
+                title="Ver producto siguiente (Tecla Flecha Derecha)"
+              >
+                Siguiente <i class="ph ph-caret-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cuerpo del Modal (Tarjeta XL Clickeable) -->
+          <div style="padding: 1.5rem; text-align: center;">
+            <div 
+              v-if="currentBarcodeItem" 
+              @click="nextBarcode"
+              style="background: #ffffff; border: 3px solid #0284c7; border-radius: 10px; padding: 1.75rem 1.5rem; cursor: pointer; user-select: none; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative;"
+              title="¡Haz clic aquí para avanzar al siguiente producto!"
+            >
+              <!-- Indicator Badge -->
+              <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #0284c7; color: white; padding: 2px 14px; border-radius: 12px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                <i class="ph ph-hand-pointing" style="margin-right: 4px;"></i> HAZ CLIC PARA VER EL SIGUIENTE
+              </div>
+
+              <!-- Código del Producto (Code 128) -->
+              <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                <div style="font-size: 1.15rem; font-weight: 900; color: #475569; letter-spacing: 0.05em; text-transform: uppercase;">
+                  CÓDIGO PRODUCTO: <span style="color: #0284c7; font-family: monospace; font-size: 1.4rem;">{{ currentBarcodeItem.codigo }}</span>
+                </div>
+              </div>
+
+              <!-- Nombre del Producto -->
+              <div style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin: 0.5rem 0 1.25rem 0; line-height: 1.2;">
+                {{ currentBarcodeItem.nombre }}
+              </div>
+
+              <!-- Código de Barras SVG Gigante -->
+              <div style="background: #ffffff; padding: 1.25rem 1rem; border: 2.5px dashed #0284c7; border-radius: 10px; margin: 0 auto 1.25rem auto; max-width: 700px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                <div v-html="generateBarcodeSVG(currentBarcodeItem.codigo, { scale: 4, height: 110, fontSize: 22, maxWidth: '650px' })"></div>
+              </div>
+
+              <!-- Cantidad Pedida -->
+              <div style="font-size: 1.1rem; font-weight: 900; color: #d97706; background: #fffbe6; padding: 0.4rem 1rem; border-radius: 6px; display: inline-block; border: 1px solid #fef08a;">
+                Cantidad Pedida: {{ currentBarcodeItem.cantidadDisplay }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer del Modal -->
+          <div class="win-dialog-footer" style="padding: 0.85rem 1.25rem; background: var(--bg-secondary); border-top: 1.5px solid var(--bevel-dark); display: flex; justify-content: space-between; align-items: center;">
+            <button class="win-dialog-btn" @click="imprimirCodigosModal" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 800;">
+              <i class="ph ph-printer" style="font-size: 1.2rem; color: #0284c7;"></i> Imprimir Todos los Códigos
+            </button>
+            
+            <button class="win-dialog-btn win-dialog-btn-ok" @click="showBarcodeModal = false" style="font-weight: 800; padding: 6px 20px;">
+              Cerrar
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- MODAL DE VINCULACIÓN MANUAL CON EGRESO BLOCK WMS -->
+    <Teleport to="body">
+      <div v-if="showVincularModal" class="win-dialog-overlay" style="display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 1rem;">
+        <div class="win-dialog" style="width: 780px; max-width: 95vw; background: var(--bg-window); border: 3px solid var(--bevel-dark); box-shadow: var(--window-shadow); display: flex; flex-direction: column; max-height: 90vh;">
+          
+          <!-- Header -->
+          <div class="win-dialog-header" style="background: #ef4444; color: white; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem;">
+              <i class="ph ph-link" style="font-size: 1.3rem;"></i>
+              Vincular Egreso de Block WMS al Pedido
+            </span>
+            <button @click="showVincularModal = false" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center;">
+              <i class="ph ph-x"></i>
+            </button>
+          </div>
+
+          <!-- Info del Pedido actual -->
+          <div style="background: var(--bg-secondary); padding: 0.75rem 1.25rem; border-bottom: 1.5px solid var(--bevel-light); font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <strong>Pedido:</strong> <span style="font-family: monospace; font-weight: bold; color: #ef4444;">{{ selectedPedido?.codigo }}</span>
+              <span style="margin-left: 1rem;"><strong>Sucursal:</strong> {{ selectedPedido?.sucursal || '-' }}</span>
+            </div>
+            <div>
+              <strong>Fecha Pedido:</strong> {{ formatDate(selectedPedido?.fecha) }}
+            </div>
+          </div>
+
+          <!-- Contenido del Modal -->
+          <div style="padding: 1.25rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1rem;">
+            
+            <!-- Entrada Directa del Nº de Orden o Remito -->
+            <div class="card" style="padding: 1rem; border: 1.5px solid var(--bevel-dark); background: var(--bg-window);">
+              <label style="font-size: 0.85rem; font-weight: 800; color: var(--text-primary); display: block; margin-bottom: 0.35rem;">
+                Nº de Orden de Egreso o Documento en Block WMS *
+              </label>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input 
+                  type="text" 
+                  v-model="vincularOrdenInput" 
+                  placeholder="Ej: 10542 o R-0001-00045678..." 
+                  class="form-control" 
+                  style="font-size: 0.95rem; font-weight: bold; height: 38px;"
+                  @keydown.enter.prevent="ejecutarBusquedaBlock"
+                />
+                <button 
+                  type="button" 
+                  class="btn btn-secondary" 
+                  style="height: 38px; padding: 0 1rem; font-weight: 800; display: flex; align-items: center; gap: 0.35rem; white-space: nowrap;"
+                  @click="ejecutarBusquedaBlock"
+                  :disabled="loadingBusquedaBlock"
+                >
+                  <i class="ph ph-spinner spinner" v-if="loadingBusquedaBlock"></i>
+                  <i class="ph ph-magnifying-glass" v-else></i>
+                  Buscar en Block
+                </button>
+              </div>
+              <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.35rem; display: block;">
+                Puedes tipear directamente el número de orden de egreso de Block y vincular, o presionar "Buscar en Block" para consultar las órdenes disponibles.
+              </small>
+            </div>
+
+            <!-- Filtros rápidos para buscar egresos de Block si el usuario no recuerda el número exacto -->
+            <div style="background: var(--bg-secondary); border: 1px solid var(--bevel-light); padding: 0.75rem 1rem;">
+              <div style="font-size: 0.78rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <span><i class="ph ph-calendar"></i> Búsqueda por Rango de Fechas en Block</span>
+                <span style="font-weight: normal; text-transform: none; font-size: 0.75rem;">Site: {{ vincularSiteId }}</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; align-items: flex-end;">
+                <div>
+                  <label style="font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 2px;">Desde</label>
+                  <input type="date" v-model="vincularFechaDesde" class="form-control" style="height: 30px; font-size: 0.8rem;" />
+                </div>
+                <div>
+                  <label style="font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 2px;">Hasta</label>
+                  <input type="date" v-model="vincularFechaHasta" class="form-control" style="height: 30px; font-size: 0.8rem;" />
+                </div>
+                <button 
+                  type="button" 
+                  class="btn btn-secondary" 
+                  style="height: 30px; padding: 0 0.75rem; font-size: 0.8rem; font-weight: bold; display: flex; align-items: center; gap: 0.25rem;"
+                  @click="consultarEgresosBlockParaVincular"
+                  :disabled="loadingBusquedaBlock"
+                >
+                  <i class="ph ph-spinner spinner" v-if="loadingBusquedaBlock"></i>
+                  <i class="ph ph-list-magnifying-glass" v-else></i> Listar
+                </button>
+              </div>
+            </div>
+
+            <!-- Lista de Egresos Encontrados en Block -->
+            <div v-if="vincularOrdenesList.length > 0" style="border: 1.5px solid var(--bevel-dark); max-height: 220px; overflow-y: auto;">
+              <table class="access-table" style="width: 100%; font-size: 0.78rem; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: var(--bg-secondary); border-bottom: 1.5px solid var(--bevel-dark); position: sticky; top: 0; z-index: 1;">
+                    <th style="padding: 0.4rem 0.5rem; text-align: center; width: 15%;">Nº Orden</th>
+                    <th style="padding: 0.4rem 0.5rem; text-align: left; width: 28%;">Destino / Entidad</th>
+                    <th style="padding: 0.4rem 0.5rem; text-align: left; width: 25%;">Documento</th>
+                    <th style="padding: 0.4rem 0.5rem; text-align: center; width: 14%;">Fecha</th>
+                    <th style="padding: 0.4rem 0.5rem; text-align: right; width: 18%;">Total kg</th>
+                    <th style="padding: 0.4rem 0.5rem; text-align: center; width: 10%;">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    v-for="o in vincularOrdenesList" 
+                    :key="o.orden"
+                    :style="{ background: vincularOrdenInput === o.orden ? '#fef2f2' : 'transparent' }"
+                    style="border-bottom: 1px solid var(--bevel-light); cursor: pointer;"
+                    @click="seleccionarOrdenParaVincular(o)"
+                  >
+                    <td style="padding: 0.4rem 0.5rem; text-align: center; font-family: monospace; font-weight: bold; color: #ef4444;">
+                      {{ o.orden }}
+                    </td>
+                    <td style="padding: 0.4rem 0.5rem; font-weight: 700;">{{ o.destino }}</td>
+                    <td style="padding: 0.4rem 0.5rem;">{{ o.documento }}</td>
+                    <td style="padding: 0.4rem 0.5rem; text-align: center;">{{ o.fechaCierre }}</td>
+                    <td style="padding: 0.4rem 0.5rem; text-align: right; font-weight: bold; color: #dc2626;">
+                      {{ (o.totalKilosDespachados || 0).toFixed(3) }} kg
+                    </td>
+                    <td style="padding: 0.4rem 0.5rem; text-align: center;">
+                      <button 
+                        type="button" 
+                        class="btn btn-sm"
+                        :class="vincularOrdenInput === o.orden ? 'btn-primary' : 'btn-secondary'"
+                        style="padding: 2px 8px; font-size: 0.72rem; font-weight: bold;"
+                        @click.stop="seleccionarOrdenParaVincular(o)"
+                      >
+                        {{ vincularOrdenInput === o.orden ? '✓ Elegida' : 'Elegir' }}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div v-else-if="busquedaRealizada && !loadingBusquedaBlock" style="text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.82rem;">
+              No se encontraron órdenes de egreso con los filtros ingresados.
+            </div>
+
+            <!-- Orden Seleccionada Info Preview -->
+            <div v-if="ordenSeleccionadaObj" style="padding: 0.75rem 1rem; background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 4px; color: #15803d; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong>Orden Seleccionada: #{{ ordenSeleccionadaObj.orden }}</strong><br>
+                <span>Destino: {{ ordenSeleccionadaObj.destino }} | Kilos: {{ (ordenSeleccionadaObj.totalKilosDespachados || 0).toFixed(3) }} kg ({{ ordenSeleccionadaObj.items?.length || 0 }} productos)</span>
+              </div>
+              <span class="badge badge-success" style="font-size: 0.75rem; padding: 3px 8px;">Lista para vincular</span>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div class="win-dialog-footer" style="padding: 0.85rem 1.25rem; background: var(--bg-secondary); border-top: 1.5px solid var(--bevel-dark); display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="win-dialog-btn" @click="showVincularModal = false">
+              Cancelar
+            </button>
+            <button 
+              type="button" 
+              class="win-dialog-btn win-dialog-btn-ok" 
+              style="background: #16a34a; border-color: #15803d; color: #fff; font-weight: 800; display: flex; align-items: center; gap: 0.35rem;"
+              :disabled="!vincularOrdenInput || savingVinculacion"
+              @click="guardarVinculacionManual"
+            >
+              <i class="ph ph-spinner spinner" v-if="savingVinculacion"></i>
+              <i class="ph ph-link" v-else></i>
+              Confirmar Vinculación
+            </button>
+          </div>
+
         </div>
       </div>
     </Teleport>
@@ -1169,7 +1710,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useWinDialog } from '../composables/useWinDialog'
 import { calcularPiezasProducto } from '../utils/calculoPiezas'
@@ -1310,98 +1851,229 @@ const exportarDetallesRequeridosExcel = () => {
   XLSX.writeFile(workbook, fileName)
 }
 
-// Generador SVG de Código de Barras EAN-13 (Oficial para pistolas y escáneres EAN-13)
+// Estado para Modal de Códigos de Barra
+const showBarcodeModal = ref(false)
+const selectedPedidoForBarcodes = ref(null)
+const barcodeItems = ref([])
+const currentBarcodeIndex = ref(0)
+
+const currentBarcodeItem = computed(() => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return null
+  return barcodeItems.value[currentBarcodeIndex.value] || barcodeItems.value[0]
+})
+
+const nextBarcode = () => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return
+  currentBarcodeIndex.value = (currentBarcodeIndex.value + 1) % barcodeItems.value.length
+}
+
+const prevBarcode = () => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return
+  currentBarcodeIndex.value = (currentBarcodeIndex.value - 1 + barcodeItems.value.length) % barcodeItems.value.length
+}
+
+const handleKeyDown = (e) => {
+  if (!showBarcodeModal.value) return
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    e.preventDefault()
+    nextBarcode()
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault()
+    prevBarcode()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    showBarcodeModal.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
+
+const formatCantidadItemDisplay = (item) => {
+  const pzas = parseInt(item.pieza || item.cantidad_enviada || 0, 10)
+  const frac = parseFloat(item.fraccion || item.fraccion_enviada || 0)
+  const peso = parseFloat(item.peso || item.peso_enviado || 0)
+  const pesoPieza = parseFloat(item.Producto?.peso_pieza || 0)
+
+  let partes = []
+
+  // Si hay peso grabado explícito o enviado
+  if (peso > 0) {
+    partes.push(`${peso.toFixed(3)} kg`)
+  } else if (frac > 0) {
+    partes.push(`${frac.toFixed(3)} kg`)
+  } else if (pzas > 0 && pesoPieza > 0) {
+    partes.push(`${(pzas * pesoPieza).toFixed(3)} kg`)
+  }
+
+  // Agregar detalle de piezas/fracciones si existen
+  if (pzas > 0 && frac > 0) {
+    partes.push(`(${pzas} P y ${Math.round(frac)} F)`)
+  } else if (pzas > 0) {
+    partes.push(`(${pzas} Pzs)`)
+  } else if (frac > 0 && peso === 0) {
+    partes.push(`(${frac.toFixed(3)} Frac)`)
+  }
+
+  if (partes.length > 0) {
+    return partes.join(' ')
+  }
+  return '-'
+}
+
+const openBarcodesModalForPedido = (pedido) => {
+  if (!pedido || !pedido.items || pedido.items.length === 0) {
+    showAlert('El pedido seleccionado no posee ítems.', 'error')
+    return
+  }
+  selectedPedidoForBarcodes.value = pedido
+  currentBarcodeIndex.value = 0
+
+  const mapProds = new Map()
+  pedido.items.forEach(it => {
+    const cod = String(it.codigo_producto || it.Producto?.codigo || '-').trim()
+    if (!cod || cod === '-') return
+    const nom = it.Producto?.nombre || it.nombre || cod
+    const cantDisp = formatCantidadItemDisplay(it)
+
+    if (!mapProds.has(cod)) {
+      mapProds.set(cod, {
+        codigo: cod,
+        nombre: nom,
+        cantidadDisplay: cantDisp
+      })
+    }
+  })
+
+  barcodeItems.value = Array.from(mapProds.values())
+  showBarcodeModal.value = true
+}
+
+const imprimirCodigosModal = () => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return
+
+  const win = window.open('', '_blank', 'width=1000,height=750')
+  if (!win) return
+
+  const codigoPedido = selectedPedidoForBarcodes.value?.codigo || selectedPedidoForBarcodes.value?.id || 'S/N'
+  const sucursal = selectedPedidoForBarcodes.value?.sucursal || '-'
+
+  const itemsHtml = barcodeItems.value.map(it => {
+    const svgCode = generateBarcodeSVG(it.codigo, { scale: 1.5, height: 40 })
+    return `
+      <div style="border: 1.5px solid #000; padding: 6px 4px; text-align: center; page-break-inside: avoid; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px;">
+        <div style="font-size: 10px; font-weight: bold; font-family: monospace; color: #000;">CÓD: ${it.codigo}</div>
+        <div style="font-size: 11px; font-weight: bold; font-family: sans-serif; margin: 2px 0; color: #000; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${it.nombre}">${it.nombre}</div>
+        <div style="margin: 2px 0;">${svgCode}</div>
+        <div style="font-size: 10px; font-weight: bold; font-family: monospace; color: #d97706;">CANTIDAD: ${it.cantidadDisplay}</div>
+      </div>
+    `
+  }).join('')
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Códigos de Barra - Pedido ${codigoPedido}</title>
+        <style>
+          @page { size: A4; margin: 8mm; }
+          * { box-sizing: border-box; }
+          body { font-family: sans-serif; padding: 10px; color: #000; background: #fff; margin: 0; }
+          .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+          @media print {
+            body { padding: 0; }
+            .header { margin-bottom: 8px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h3 style="margin: 0; font-size: 16px;">PEDIDO Nº ${codigoPedido}</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px;">Sucursal Destino: ${sucursal}</p>
+        </div>
+        <div class="grid">
+          ${itemsHtml}
+        </div>
+        <script>
+          window.onload = function() { window.print(); }
+        <\/script>
+      </body>
+    </html>
+  `)
+  win.document.close()
+}
+
+// Generador SVG de Código de Barras Code 128 (Usando únicamente el Código del Producto)
 const generateBarcodeSVG = (text, options = {}) => {
   if (!text) return ''
-  let rawDigits = String(text).replace(/\D/g, '')
-  if (!rawDigits) rawDigits = '0'
-
-  let digits12 = ''
-  if (rawDigits.length >= 13) {
-    digits12 = rawDigits.slice(0, 12)
-  } else {
-    digits12 = rawDigits.padStart(12, '0')
-  }
-
-  let sumOdd = 0
-  let sumEven = 0
-  for (let i = 0; i < 12; i++) {
-    const val = parseInt(digits12[i], 10)
-    if (i % 2 === 0) {
-      sumOdd += val
-    } else {
-      sumEven += val
-    }
-  }
-  const total = sumOdd + (sumEven * 3)
-  const checksum = (10 - (total % 10)) % 10
-  const ean13Str = digits12 + checksum
-
-  const L_CODES = [
-    "0001101", "0011001", "0010011", "0111101", "0100011",
-    "0110001", "0101111", "0111011", "0110111", "0001011"
-  ]
-  const G_CODES = [
-    "0100111", "0110011", "0011011", "0100001", "0011101",
-    "0111001", "0000101", "0010001", "0001001", "0010111"
-  ]
-  const R_CODES = [
-    "1110010", "1100110", "1101100", "1000010", "1011100",
-    "1001110", "1010000", "1000100", "1001000", "1110100"
+  const str = String(text).trim()
+  if (!str) return ''
+  
+  const patterns = [
+    "212222","222122","222221","121223","121322","131222","122213","122312","132212","221213",
+    "221312","231212","112232","122132","122231","113222","123122","123221","223211","221132",
+    "221231","213212","223112","312131","311222","321122","321221","312212","322112","322211",
+    "212123","212321","232121","111323","131123","131321","112313","132113","132311","211313",
+    "231113","231311","112133","112331","132131","113123","113321","133121","313121","211331",
+    "231131","213113","213311","213131","311123","311321","331121","312113","332111","332111",
+    "314111","221411","431111","111224","111422","121124","121421","141122","141221","112214",
+    "112412","122114","122411","142112","142211","241211","221114","411112","411211","211142",
+    "211241","211421","231112","112142","112241","114122","114221","124112","124211","411221",
+    "421121","412121","111143","111341","131141","114113","114311","411113","411311","113141",
+    "114131","311141","411131","211412","211214","211232","2331112"
   ]
 
-  const PARITY_PATTERNS = [
-    "LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
-    "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL"
-  ]
+  let codeBuffer = [104]
+  let checkSum = 104
 
-  const firstDigit = parseInt(ean13Str[0], 10)
-  const parity = PARITY_PATTERNS[firstDigit]
-
-  let bits = "101"
-
-  for (let i = 0; i < 6; i++) {
-    const digit = parseInt(ean13Str[i + 1], 10)
-    bits += (parity[i] === 'L') ? L_CODES[digit] : G_CODES[digit]
+  for (let i = 0; i < str.length; i++) {
+    const charCode = str.charCodeAt(i)
+    let code = charCode - 32
+    if (code < 0 || code > 95) code = 0
+    codeBuffer.push(code)
+    checkSum += code * (i + 1)
   }
 
-  bits += "01010"
+  const checksumVal = checkSum % 103
+  codeBuffer.push(checksumVal)
+  codeBuffer.push(106)
 
-  for (let i = 0; i < 6; i++) {
-    const digit = parseInt(ean13Str[i + 7], 10)
-    bits += R_CODES[digit]
+  let bars = ""
+  for (let i = 0; i < codeBuffer.length; i++) {
+    bars += patterns[codeBuffer[i]]
   }
 
-  bits += "101"
-
-  const scale = options.scale || 2.5
-  const height = options.height || 60
-  const guardExtraHeight = 10
-  const fontSize = options.fontSize || 14
-  const quietZone = 14
+  const scale = options.scale || 3.5
+  const height = options.height || 95
+  const fontSize = options.fontSize || 20
+  const quietZone = 20
 
   let x = quietZone
   let rects = ""
+  let isBar = true
 
-  for (let i = 0; i < bits.length; i++) {
-    const bit = bits[i]
-    const isGuard = (i < 3) || (i >= 45 && i < 50) || (i >= 92)
-    const barHeight = isGuard ? (height + guardExtraHeight) : height
-
-    if (bit === '1') {
-      rects += `<rect x="${x}" y="3" width="${scale}" height="${barHeight}" fill="#000000"/>`
+  for (let i = 0; i < bars.length; i++) {
+    const width = parseInt(bars[i], 10) * scale
+    if (isBar) {
+      rects += `<rect x="${x}" y="4" width="${width}" height="${height}" fill="#000000"/>`
     }
-    x += scale
+    x += width
+    isBar = !isBar
   }
 
   const totalWidth = x + quietZone
-  const svgHeight = height + guardExtraHeight + fontSize + 10
+  const svgHeight = height + fontSize + 15
 
-  const formattedText = `${ean13Str[0]}  ${ean13Str.slice(1, 7)}  ${ean13Str.slice(7)}`
   const showText = options.showText !== false
-  const textHtml = showText ? `<text x="${totalWidth / 2}" y="${height + guardExtraHeight + fontSize + 4}" font-family="monospace" font-size="${fontSize}" font-weight="900" text-anchor="middle" fill="#000000">${formattedText}</text>` : ''
+  const textHtml = showText ? `<text x="${totalWidth / 2}" y="${height + fontSize + 8}" font-family="monospace" font-size="${fontSize}" font-weight="900" text-anchor="middle" fill="#000000">${str}</text>` : ''
 
-  const maxWidthCss = options.maxWidth || '280px'
+  const maxWidthCss = options.maxWidth || '100%'
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${svgHeight}" style="width: 100%; max-width: ${maxWidthCss}; height: auto; display: block; margin: 0 auto;">
     <rect width="100%" height="100%" fill="#ffffff"/>
@@ -1416,10 +2088,373 @@ const selectedPedido = ref(null)
 const showDetailModal = ref(false)
 const statusFilter = ref('Todos')
 
+// Estados para Conciliación y Vinculación con Block WMS
+const subTabPedido = ref('preparacion') // 'preparacion' | 'conciliacion'
+const conciliacionData = ref([])
+const loadingConciliacion = ref(false)
+const showVincularModal = ref(false)
+const vincularOrdenInput = ref('')
+const vincularSiteId = ref('194326')
+const vincularFechaDesde = ref('')
+const vincularFechaHasta = ref('')
+const vincularOrdenesList = ref([])
+const ordenSeleccionadaObj = ref(null)
+const loadingBusquedaBlock = ref(false)
+const busquedaRealizada = ref(false)
+const savingVinculacion = ref(false)
+
+const cambiarASubTabConciliacion = () => {
+  subTabPedido.value = 'conciliacion'
+  if (selectedPedido.value && selectedPedido.value.wms_orden_egreso) {
+    fetchConciliacion(selectedPedido.value)
+  }
+}
+
+// Matriz de conciliación calculada reactivamente
+const listaConciliacion = computed(() => {
+  if (conciliacionData.value && conciliacionData.value.length > 0) {
+    return conciliacionData.value
+  }
+
+  // Fallback si el pedido ya tiene wms_datos_items
+  if (!selectedPedido.value) return []
+  let itemsBlock = selectedPedido.value.wms_datos_items
+  if (typeof itemsBlock === 'string') {
+    try {
+      itemsBlock = JSON.parse(itemsBlock)
+    } catch (e) {
+      itemsBlock = []
+    }
+  }
+  if (!Array.isArray(itemsBlock)) itemsBlock = []
+  if (itemsBlock.length === 0 && (!selectedPedido.value.items || selectedPedido.value.items.length === 0)) return []
+
+  const blockMap = new Map()
+  for (const bi of itemsBlock) {
+    const c = String(bi.codigo || bi.codigo_productos || '').trim().toUpperCase()
+    if (!c) continue
+    if (!blockMap.has(c)) {
+      blockMap.set(c, {
+        codigo: c,
+        nombre: String(bi.producto || bi.nombre || '').trim(),
+        lotes: [],
+        despachada: 0,
+        ubicaciones: new Set()
+      })
+    }
+    const bObj = blockMap.get(c)
+    bObj.despachada += parseFloat(bi.despachada || bi.cantidad_actual || 0)
+    if (bi.lote && !bObj.lotes.includes(bi.lote)) bObj.lotes.push(bi.lote)
+    if (bi.ubicacion) bObj.ubicaciones.add(bi.ubicacion)
+  }
+
+  const result = []
+  const processedBlockCodes = new Set()
+
+  const pedItems = selectedPedido.value.items || []
+  for (const pi of pedItems) {
+    const codigo = String(pi.codigo_producto || '').trim().toUpperCase()
+    
+    // Buscar coincidencia exacta o sin ceros
+    let blockData = blockMap.get(codigo)
+    if (!blockData) {
+      const unpadded = codigo.replace(/^0+/, '')
+      if (unpadded) {
+        blockData = blockMap.get(unpadded)
+        if (!blockData) {
+          for (const [k, v] of blockMap.entries()) {
+            if (k.replace(/^0+/, '') === unpadded) {
+              blockData = v
+              break
+            }
+          }
+        }
+      }
+    }
+
+    if (blockData) {
+      processedBlockCodes.add(blockData.codigo)
+    }
+    processedBlockCodes.add(codigo)
+
+    const enviadoKg = blockData ? parseFloat(blockData.despachada.toFixed(3)) : 0
+    const preparadoKg = parseFloat(pi.peso_enviado || 0)
+    const pzasPed = parseInt(pi.pieza || 0, 10)
+    const fracPed = parseFloat(pi.fraccion || 0)
+    const pzasEnv = parseInt(pi.cantidad_enviada || 0, 10)
+    const fracEnv = parseFloat(pi.fraccion_enviada || 0)
+
+    const diffKg = parseFloat((enviadoKg - preparadoKg).toFixed(3))
+    let estado = 'COINCIDE'
+
+    if (enviadoKg === 0 && (preparadoKg > 0 || pzasPed > 0 || fracPed > 0)) {
+      estado = 'FALTANTE_BLOCK'
+    } else if (Math.abs(diffKg) > 0.05) {
+      estado = 'DIFERENCIA'
+    }
+
+    result.push({
+      codigo,
+      nombre: pi.Producto?.nombre || blockData?.nombre || 'Producto sin nombre',
+      pedido_piezas: pzasPed,
+      pedido_fraccion: fracPed,
+      pedido_display: pzasPed > 0 ? `${pzasPed} pz${pzasPed > 1 ? 's' : ''}` : (fracPed > 0 ? `${fracPed.toFixed(3)} kg` : '-'),
+      preparado_piezas: pzasEnv,
+      preparado_fraccion: fracEnv,
+      preparado_kg: preparadoKg,
+      no_envia: !!pi.no_envia,
+      sin_stock: !!pi.sin_stock,
+      enviado_kg: enviadoKg,
+      lotes: blockData ? blockData.lotes.join(', ') : '',
+      ubicaciones: blockData ? Array.from(blockData.ubicaciones).join(', ') : '',
+      diferencia_kg: diffKg,
+      estado_conciliacion: estado
+    })
+  }
+
+  for (const [c, bObj] of blockMap.entries()) {
+    if (!processedBlockCodes.has(c)) {
+      result.push({
+        codigo: c,
+        nombre: bObj.nombre || 'Producto Extra en Block',
+        pedido_piezas: 0,
+        pedido_fraccion: 0,
+        pedido_display: '-',
+        preparado_piezas: 0,
+        preparado_fraccion: 0,
+        preparado_kg: 0,
+        no_envia: false,
+        sin_stock: false,
+        enviado_kg: parseFloat(bObj.despachada.toFixed(3)),
+        diferencia_kg: parseFloat(bObj.despachada.toFixed(3)),
+        estado_conciliacion: 'EXTRA_BLOCK'
+      })
+    }
+  }
+
+  return result
+})
+
+const totalPreparadoConciliacion = computed(() => {
+  return listaConciliacion.value.reduce((acc, i) => acc + (i.preparado_kg || 0), 0)
+})
+
+const totalEnviadoConciliacion = computed(() => {
+  return listaConciliacion.value.reduce((acc, i) => acc + (i.enviado_kg || 0), 0)
+})
+
+const diferenciaNetaConciliacion = computed(() => {
+  return parseFloat((totalEnviadoConciliacion.value - totalPreparadoConciliacion.value).toFixed(3))
+})
+
+const getConciliacionRowStyle = (item) => {
+  if (item.estado_conciliacion === 'FALTANTE_BLOCK') {
+    return { background: '#fef2f2' }
+  }
+  if (item.estado_conciliacion === 'EXTRA_BLOCK') {
+    return { background: '#f0f9ff' }
+  }
+  if (item.estado_conciliacion === 'DIFERENCIA') {
+    return { background: '#fffbeb' }
+  }
+  return {}
+}
+
+const openVincularModal = (pedido) => {
+  if (!pedido) return
+  vincularOrdenInput.value = pedido.wms_orden_egreso || ''
+  ordenSeleccionadaObj.value = null
+  vincularOrdenesList.value = []
+  busquedaRealizada.value = false
+
+  const d = pedido.fecha ? String(pedido.fecha).split('T')[0] : new Date().toISOString().split('T')[0]
+  vincularFechaDesde.value = d
+  vincularFechaHasta.value = d
+
+  showVincularModal.value = true
+}
+
+const seleccionarOrdenParaVincular = (orden) => {
+  ordenSeleccionadaObj.value = orden
+  vincularOrdenInput.value = orden.orden
+}
+
+const ejecutarBusquedaBlock = async () => {
+  consultarEgresosBlockParaVincular()
+}
+
+const consultarEgresosBlockParaVincular = async () => {
+  loadingBusquedaBlock.value = true
+  busquedaRealizada.value = true
+  vincularOrdenesList.value = []
+
+  try {
+    const params = new URLSearchParams()
+    if (vincularSiteId.value) params.append('siteId', vincularSiteId.value)
+    if (vincularFechaDesde.value) params.append('fechaDesde', vincularFechaDesde.value)
+    if (vincularFechaHasta.value) params.append('fechaHasta', vincularFechaHasta.value)
+    params.append('tipoComprobante', 'TODOS')
+
+    const res = await fetch(`/api/wms/ordenes-egreso?${params.toString()}`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data.ok && Array.isArray(data.ordenes)) {
+        let filtradas = data.ordenes
+        if (vincularOrdenInput.value.trim()) {
+          const q = vincularOrdenInput.value.trim().toUpperCase()
+          filtradas = filtradas.filter(o => 
+            String(o.orden).toUpperCase().includes(q) ||
+            String(o.documento || '').toUpperCase().includes(q) ||
+            String(o.destino || '').toUpperCase().includes(q)
+          )
+        }
+        vincularOrdenesList.value = filtradas
+      }
+    }
+  } catch (error) {
+    console.error('Error al consultar egresos de Block:', error)
+  } finally {
+    loadingBusquedaBlock.value = false
+  }
+}
+
+const guardarVinculacionManual = async () => {
+  if (!selectedPedido.value) return
+  if (!vincularOrdenInput.value.trim()) {
+    showAlert('Ingresa o selecciona un número de orden de Block.', 'error')
+    return
+  }
+
+  savingVinculacion.value = true
+  try {
+    const payload = {
+      ordenCodigo: vincularOrdenInput.value.trim(),
+      siteId: vincularSiteId.value
+    }
+    if (ordenSeleccionadaObj.value) {
+      payload.ordenData = ordenSeleccionadaObj.value
+    }
+
+    const res = await fetch(`/api/pedidos/${selectedPedido.value.id}/vincular-egreso`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    const data = await res.json()
+    if (res.ok) {
+      selectedPedido.value.wms_orden_egreso = data.pedido.wms_orden_egreso
+      selectedPedido.value.wms_documento = data.pedido.wms_documento
+      selectedPedido.value.wms_fecha_egreso = data.pedido.wms_fecha_egreso
+      selectedPedido.value.wms_despachado_kg = data.pedido.wms_despachado_kg
+      selectedPedido.value.wms_datos_items = data.pedido.wms_datos_items
+
+      conciliacionData.value = data.conciliacion || []
+      showVincularModal.value = false
+      subTabPedido.value = 'conciliacion'
+      showAlert('Egreso de Block vinculado correctamente al pedido.')
+      fetchPedidos()
+    } else {
+      showAlert(data.error || 'Error al vincular el egreso de Block.', 'error')
+    }
+  } catch (error) {
+    console.error('Error al guardar vinculación:', error)
+    showAlert('Error de conexión al vincular egreso.', 'error')
+  } finally {
+    savingVinculacion.value = false
+  }
+}
+
+const desvincularEgreso = async (pedido) => {
+  if (!pedido) return
+  if (!await winConfirm(`¿Deseas desvincular la orden de egreso de Block #${pedido.wms_orden_egreso} de este pedido?`, 'Confirmar Desvinculación')) {
+    return
+  }
+
+  try {
+    const res = await fetch(`/api/pedidos/${pedido.id}/desvincular-egreso`, {
+      method: 'DELETE'
+    })
+    const data = await res.json()
+    if (res.ok) {
+      pedido.wms_orden_egreso = null
+      pedido.wms_documento = null
+      pedido.wms_fecha_egreso = null
+      pedido.wms_despachado_kg = null
+      pedido.wms_datos_items = null
+      conciliacionData.value = []
+      showAlert('Egreso desvinculado del pedido.')
+      fetchPedidos()
+    } else {
+      showAlert(data.error || 'Error al desvincular egreso.', 'error')
+    }
+  } catch (error) {
+    console.error('Error al desvincular:', error)
+    showAlert('Error de conexión al desvincular.', 'error')
+  }
+}
+
+const fetchConciliacion = async (pedido) => {
+  if (!pedido || !pedido.id) return
+  loadingConciliacion.value = true
+  try {
+    const res = await fetch(`/api/pedidos/${pedido.id}/conciliacion`)
+    if (res.ok) {
+      const data = await res.json()
+      conciliacionData.value = data.conciliacion || []
+    }
+  } catch (error) {
+    console.error('Error al consultar conciliación:', error)
+  } finally {
+    loadingConciliacion.value = false
+  }
+}
+
+const exportarConciliacionExcel = () => {
+  if (listaConciliacion.value.length === 0) return
+  const ped = selectedPedido.value
+  const dataExport = listaConciliacion.value.map(it => ({
+    'Cód SKU': it.codigo,
+    'Producto': it.nombre,
+    'Pedido': it.pedido_display,
+    'Preparado (kg)': parseFloat((it.preparado_kg || 0).toFixed(3)),
+    'Enviado Block (kg)': parseFloat((it.enviado_kg || 0).toFixed(3)),
+    'Diferencia (kg)': parseFloat((it.diferencia_kg || 0).toFixed(3)),
+    'Estado': it.estado_conciliacion === 'COINCIDE' ? 'Coincide' :
+              (it.estado_conciliacion === 'DIFERENCIA' ? 'Desvío' :
+              (it.estado_conciliacion === 'FALTANTE_BLOCK' ? 'Faltante en Block' : 'Extra en Block'))
+  }))
+
+  dataExport.push({
+    'Cód SKU': 'TOTALES',
+    'Producto': 'Resumen General',
+    'Pedido': '-',
+    'Preparado (kg)': parseFloat(totalPreparadoConciliacion.value.toFixed(3)),
+    'Enviado Block (kg)': parseFloat(totalEnviadoConciliacion.value.toFixed(3)),
+    'Diferencia (kg)': parseFloat(diferenciaNetaConciliacion.value.toFixed(3)),
+    'Estado': Math.abs(diferenciaNetaConciliacion.value) <= 0.05 ? 'OK' : 'Diferencia Global'
+  })
+
+  const ws = XLSX.utils.json_to_sheet(dataExport)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Conciliación')
+
+  const fileName = `Conciliacion_${ped?.codigo || 'Pedido'}_Block_${ped?.wms_orden_egreso || 'SN'}.xlsx`
+  XLSX.writeFile(wb, fileName)
+}
+
 // Consulta de Stock por Ubicación / Sucursal Destino (Usando el ID de BBDD MariaDB de Sucursal)
 const sucursalStockMap = ref({})
 const loadingSucursalStock = ref(false)
 const listSucursales = ref([])
+
+const normalizeText = (str) => {
+  return String(str || '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+}
 
 const fetchSucursalStockForPedido = async (pedido) => {
   if (!pedido) {
@@ -1442,19 +2477,24 @@ const fetchSucursalStockForPedido = async (pedido) => {
     }
 
     // 2. Determinar la sucursal del pedido y sus datos de coincidencia
-    const targetSucName = String(pedido.sucursal || '').trim()
+    const rawSucVal = String(pedido.sucursal || '').trim()
+    const normRawSucVal = normalizeText(rawSucVal)
+
     const foundSuc = listSucursales.value.find(s => 
-      String(s.id) === targetSucName || 
-      String(s.sucursal || '').trim().toLowerCase() === targetSucName.toLowerCase() ||
-      String(s.numero) === targetSucName
+      String(s.id) === rawSucVal || 
+      String(s.numero) === rawSucVal ||
+      normalizeText(s.sucursal) === normRawSucVal ||
+      (s.Ubicacion && normalizeText(s.Ubicacion.nombre) === normRawSucVal)
     )
 
-    const numPadded = foundSuc ? String(foundSuc.numero).padStart(2, '0') : ''
+    const normFoundName = foundSuc ? normalizeText(foundSuc.sucursal) : ''
+    const normFoundUbi = (foundSuc && foundSuc.Ubicacion) ? normalizeText(foundSuc.Ubicacion.nombre) : ''
+    const numPadded = foundSuc && foundSuc.numero ? String(foundSuc.numero).padStart(2, '0') : ''
     const siteIdStr = foundSuc ? String(foundSuc.id) : ''
 
-    console.log(`[Pedidos] Consultando stock vía /api/wms/stock-sucursales para sucursal "${targetSucName}" (num: ${numPadded}, id: ${siteIdStr})`)
+    console.log(`[Pedidos] Consultando stock WMS para sucursal: val="${rawSucVal}", foundName="${normFoundName}", foundUbi="${normFoundUbi}", num="${numPadded}"`)
 
-    // 3. Consultar stock invocando el endpoint POST /api/wms/stock-sucursales (el mismo endpoint que /wms-stock-ubicaciones)
+    // 3. Consultar stock invocando el endpoint POST /api/wms/stock-sucursales
     const res = await fetch('/api/wms/stock-sucursales', {
       method: 'POST',
       headers: {
@@ -1470,15 +2510,26 @@ const fetchSucursalStockForPedido = async (pedido) => {
       if (data.ok && Array.isArray(data.items)) {
         const map = {}
         data.items.forEach(i => {
-          const siteStr = String(i.sucursal || '').toLowerCase()
-          const isMatch = (targetSucName && siteStr.includes(targetSucName.toLowerCase())) ||
-                          (numPadded && siteStr.includes(numPadded)) ||
-                          (siteIdStr && siteStr.includes(siteIdStr))
+          const normSiteStr = normalizeText(i.sucursal)
+
+          const isMatch = (normRawSucVal && (normSiteStr.includes(normRawSucVal) || normRawSucVal.includes(normSiteStr))) ||
+                          (normFoundName && (normSiteStr.includes(normFoundName) || normFoundName.includes(normSiteStr))) ||
+                          (normFoundUbi && (normSiteStr.includes(normFoundUbi) || normFoundUbi.includes(normSiteStr))) ||
+                          (numPadded && normSiteStr.includes(numPadded)) ||
+                          (siteIdStr && normSiteStr.includes(siteIdStr))
 
           if (isMatch && i.codigo) {
-            map[i.codigo] = parseFloat(i.stock) || 0
+            const rawCode = String(i.codigo).trim()
+            const unpaddedCode = rawCode.replace(/^0+/, '')
+            const stockVal = parseFloat(i.stock) || 0
+
+            map[rawCode] = stockVal
+            if (unpaddedCode) {
+              map[unpaddedCode] = stockVal
+            }
           }
         })
+        console.log('[Pedidos] sucursalStockMap final:', map)
         sucursalStockMap.value = map
       }
     }
@@ -1487,6 +2538,21 @@ const fetchSucursalStockForPedido = async (pedido) => {
   } finally {
     loadingSucursalStock.value = false
   }
+}
+
+const getSucursalStockForItem = (item) => {
+  if (!item) return 0.00
+  const code = String(item.codigo_producto || item.codigo || '').trim()
+  if (!code) return 0.00
+  const codeUnpadded = code.replace(/^0+/, '')
+
+  if (sucursalStockMap.value[code] !== undefined) {
+    return sucursalStockMap.value[code]
+  }
+  if (sucursalStockMap.value[codeUnpadded] !== undefined) {
+    return sucursalStockMap.value[codeUnpadded]
+  }
+  return 0.00
 }
 
 const formatStockVal = (val) => {
@@ -1519,7 +2585,12 @@ const getStockColor = (val) => {
 const selectPedido = (p) => {
   selectedPedido.value = p
   isEditingMode.value = false
+  subTabPedido.value = 'preparacion'
+  conciliacionData.value = []
   fetchSucursalStockForPedido(p)
+  if (p && p.wms_orden_egreso) {
+    fetchConciliacion(p)
+  }
 }
 
 const volverALaLista = () => {
@@ -1860,7 +2931,7 @@ const printPedidoPdf = (pedido) => {
   const itemsHtml = itemsEnviadosFilter.map(item => {
     const cod = item.codigo_producto || '-'
     const nombre = item.Producto?.nombre || item.codigo_producto || 'Sin descripción'
-    const barCodeText = item.Producto?.codigo_barra || item.codigo_producto || cod
+    const barCodeText = item.codigo_producto || cod
     
     const pesoVal = parseFloat(item.peso_enviado || 0)
     const fracVal = parseFloat(item.fraccion_enviada || 0)
@@ -1900,7 +2971,7 @@ const printPedidoPdf = (pedido) => {
     '.subtitle { font-size: 12px; color: #64748b; margin-top: 2px; font-weight: 600; }',
     '.meta-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 4px; font-size: 12px; display: flex; gap: 20px; margin-bottom: 12px; }',
     '.meta-item strong { color: #0f172a; }',
-    '.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }',
+    '.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }',
     '.product-card { border: 1.5px solid #0f172a; border-radius: 4px; padding: 6px 8px; background: #ffffff; page-break-inside: avoid; display: flex; flex-direction: column; justify-content: space-between; min-height: 110px; }',
     '.product-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 4px; }',
     '.product-code { font-weight: 800; font-size: 11px; color: #ef4444; font-family: monospace; }',
@@ -1952,6 +3023,15 @@ const formatDate = (dateStr) => {
   const parts = dateStr.split('T')[0].split('-')
   if (parts.length === 3) {
     return `${parts[2]}/${parts[1]}/${parts[0]}`
+  }
+  return dateStr
+}
+
+const formatDateDayMonth = (dateStr) => {
+  if (!dateStr) return '-'
+  const parts = dateStr.split('T')[0].split('-')
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}`
   }
   return dateStr
 }
@@ -2025,19 +3105,32 @@ const filteredAndSortedPedidos = computed(() => {
     result = result.filter(p => p.sucursal && p.sucursal.toLowerCase() === sucursalName)
   }
 
-  // Búsqueda interactiva (busca en código de pedido, sucursal o códigos de productos del pedido)
+  // Filtrar por estado o vinculación si no es Todos
+  if (statusFilter.value && statusFilter.value !== 'Todos') {
+    if (statusFilter.value === 'Vinculados') {
+      result = result.filter(p => !!p.wms_orden_egreso)
+    } else if (statusFilter.value === 'NoVinculados') {
+      result = result.filter(p => !p.wms_orden_egreso)
+    } else {
+      result = result.filter(p => p.estado === statusFilter.value)
+    }
+  }
+
+  // Búsqueda interactiva (busca en código de pedido, sucursal, orden de egreso block, remito o productos)
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase().trim()
     result = result.filter(p => {
       const codeMatch = p.codigo ? p.codigo.toLowerCase().includes(query) : false
       const sucursalMatch = p.sucursal ? p.sucursal.toLowerCase().includes(query) : false
       const statusMatch = p.estado ? p.estado.toLowerCase().includes(query) : false
+      const wmsMatch = p.wms_orden_egreso ? String(p.wms_orden_egreso).toLowerCase().includes(query) : false
+      const docMatch = p.wms_documento ? String(p.wms_documento).toLowerCase().includes(query) : false
       const itemMatch = p.items ? p.items.some(item => 
         item.codigo_producto.toLowerCase().includes(query) || 
         (item.Producto?.nombre && item.Producto.nombre.toLowerCase().includes(query))
       ) : false
 
-      return codeMatch || sucursalMatch || statusMatch || itemMatch
+      return codeMatch || sucursalMatch || statusMatch || wmsMatch || docMatch || itemMatch
     })
   }
 
@@ -2089,20 +3182,20 @@ const itemsNoEnviados = computed(() => {
   })
 })
 
-// Productos con demanda total mayor al stock CD (en pedidos pendientes o en preparación)
+// Productos con demanda total mayor al stock CD (en todos los pedidos activos excepto enviados y completados, solo con peso asignado)
 const productosConDeficit = computed(() => {
   const map = {}
 
   pedidos.value.forEach(p => {
-    // Consideramos pedidos en estado Pendiente, Preparando o Procesando
-    if (['Pendiente', 'Preparando', 'Procesando'].includes(p.estado) && Array.isArray(p.items)) {
+    // Consideramos todos los pedidos activos (excluyendo Enviado y Completado)
+    if (!['Enviado', 'Completado'].includes(p.estado) && Array.isArray(p.items)) {
       p.items.forEach(item => {
         const code = item.codigo_producto
         if (!code) return
 
         const pesoEnviado = parseFloat(item.peso_enviado || 0)
 
-        // Si aún no se pesó (peso_enviado == 0), se omite directamente
+        // Si no se asignó peso (peso_enviado <= 0), omitir
         if (pesoEnviado <= 0) return
 
         if (!map[code]) {
@@ -2730,6 +3823,13 @@ th i {
 
 .text-green {
   color: var(--accent-success) !important;
+}
+
+/* Tabla compacta sin espacio desperdiciado */
+.compact-items-table th,
+.compact-items-table td {
+  padding: 0.25rem 0.35rem !important;
+  font-size: 0.78rem !important;
 }
 
 /* ============================================== */

@@ -30,9 +30,26 @@ const groups = [
     icon: 'ph-arrows-down-up',
     items: [
       { name: 'Ingreso Mercadería', path: '/ingresos', icon: 'ph-download-simple', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
-      { name: 'Recep. Pendientes WMS', path: '/wms-ordenes-ingreso-pendientes', icon: 'ph-clock-afternoon', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
-      { name: 'Historia Ingresos', path: '/ingresos-historial', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario']},
-      { name: 'Historia Egresos', path: '/egresos-historial', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario']},
+      { 
+        name: 'Ingresos Pendientes', 
+        icon: 'ph-clock-afternoon', 
+        roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'],
+        children: [
+          { name: 'Proveedores', path: '/wms-ordenes-ingreso-pendientes-proveedores', icon: 'ph-storefront', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+          { name: 'Sucursales / CD', path: '/wms-ordenes-ingreso-pendientes-sucursales', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] }
+        ]
+      },
+      { 
+        name: 'Ingresos Finalizados', 
+        icon: 'ph-receipt', 
+        roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'],
+        children: [
+          { name: 'Transferencias', path: '/ingresos-historial-transferencias', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
+          { name: 'Proveedores', path: '/ingresos-historial-proveedores', icon: 'ph-storefront', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] }
+        ]
+      },
+      { name: 'Órdenes de Compra', path: '/ordenes-compra', icon: 'ph-shopping-bag', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+      { name: 'Egresos Finalizados', path: '/egresos-historial', icon: 'ph-clock-counter-clockwise', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Usuario'] },
     ]
   },
   {
@@ -60,8 +77,12 @@ const groups = [
     icon: 'ph-chart-line',
     items: [
       { name: 'Reportes de Pedidos', path: '/reportes-pedidos', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
-      { name: 'Top Fraccionados', path: '/reportes-produccion', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
-      { name: 'Trazabilidad de Producto', path: '/reporte-trazabilidad', icon: 'ph-line-segments', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] }
+      { name: 'Reporte Producción', path: '/reportes-produccion', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
+      { name: 'Despacho Semanal', path: '/reportes-despacho-semanal', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Proyección', path: '/reportes-proyeccion', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Trazabilidad de Producto', path: '/reporte-trazabilidad', icon: 'ph-line-segments', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Comparaciones de Variabilidad', path: '/comparaciones-variabilidad', icon: 'ph-scales', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+      { name: 'Diferencias WMS', path: '/wms-reporte-diferencias-ingreso', icon: 'ph-warning-octagon', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] }
     ]
   },
   {
@@ -144,7 +165,17 @@ watch(() => route.path, (newPath) => {
 // Filtrar dinámicamente los grupos y sus sub-ítems según los permisos del rol del usuario
 const menuGroups = computed(() => {
   return groups.map(group => {
-    const filteredItems = group.items.filter(item => {
+    const filteredItems = group.items.map(item => {
+      if (item.children && Array.isArray(item.children)) {
+        const filteredChildren = item.children.filter(child => authStore.hasPermission(child.path, child.roles))
+        return {
+          ...item,
+          children: filteredChildren
+        }
+      }
+      return item
+    }).filter(item => {
+      if (item.children) return item.children.length > 0
       return authStore.hasPermission(item.path, item.roles)
     })
     return {
@@ -160,6 +191,7 @@ const handleLogout = () => {
 }
 
 const isActive = (path) => {
+  if (!path) return false
   if (path === '/') return route.path === '/'
   return route.path === path || (route.path.startsWith(path + '/') && path !== '/')
 }
@@ -191,16 +223,38 @@ const isActive = (path) => {
           
           <!-- Lista de Sub-ítems (Estilo Árbol de Carpetas Windows 98) -->
           <ul v-show="openGroups[group.name]" class="group-items">
-            <li v-for="item in group.items" :key="item.path">
-              <router-link 
-                :to="item.path" 
-                class="nav-link" 
-                :class="{ active: isActive(item.path) }"
-                @click="emit('close')"
-              >
-                <i class="ph nav-icon" :class="item.icon"></i>
-                <span class="nav-text">{{ item.name }}</span>
-              </router-link>
+            <li v-for="item in group.items" :key="item.name">
+              <template v-if="!item.children">
+                <router-link 
+                  :to="item.path" 
+                  class="nav-link" 
+                  :class="{ active: isActive(item.path) }"
+                  @click="emit('close')"
+                >
+                  <i class="ph nav-icon" :class="item.icon"></i>
+                  <span class="nav-text">{{ item.name }}</span>
+                </router-link>
+              </template>
+
+              <template v-else>
+                <div class="nav-parent-label" style="padding: 0.3rem 0.5rem; font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem; text-transform: uppercase;">
+                  <i class="ph nav-icon" :class="item.icon"></i>
+                  <span>{{ item.name }}</span>
+                </div>
+                <ul class="subgroup-items" style="list-style: none; padding: 0 0 0 0.8rem; margin: 0; display: flex; flex-direction: column; gap: 2px;">
+                  <li v-for="child in item.children" :key="child.path">
+                    <router-link 
+                      :to="child.path" 
+                      class="nav-link" 
+                      :class="{ active: isActive(child.path) }"
+                      @click="emit('close')"
+                    >
+                      <i class="ph nav-icon" :class="child.icon"></i>
+                      <span class="nav-text">{{ child.name }}</span>
+                    </router-link>
+                  </li>
+                </ul>
+              </template>
             </li>
           </ul>
         </div>

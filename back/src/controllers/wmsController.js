@@ -187,7 +187,8 @@ const getEntidades = async (req, res, next) => {
 const getSitesDisponibles = async (req, res, next) => {
   try {
     const creds = extractWmsCredentials(req);
-    const sites = await wmsService.obtenerSitesDisponiblesWMS(creds);
+    const id_ubicacion = req.query.id_ubicacion || req.headers['x-ubicacion-id'] || req.ubicacionId;
+    const sites = await wmsService.obtenerSitesDisponiblesWMS(creds, id_ubicacion);
     res.json({ ok: true, sites });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
@@ -296,6 +297,29 @@ const getStockSucursales = async (req, res, next) => {
     const creds = extractWmsCredentials(req);
     const codigoProducto = req.query.codigoProducto || req.body?.codigoProducto || req.query.codigo || req.body?.codigo || '';
     const result = await wmsService.obtenerStockSucursalesWMS(codigoProducto, creds);
+    res.json({
+      ok: true,
+      ...result,
+      wmsSession: getActiveWmsSession()
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Consulta el stock matricial (productos x sucursales) para un grupo de siteIds
+ */
+const getStockSucursalesMatriz = async (req, res, next) => {
+  try {
+    const creds = extractWmsCredentials(req);
+    const siteIds = req.body?.siteIds || (req.query?.siteIds ? String(req.query.siteIds).split(',') : []);
+    const codigoProducto = req.body?.codigoProducto || req.query?.codigoProducto || '';
+
+    const result = await wmsService.obtenerStockMatrizSucursalesWMS({ siteIds, codigoProducto }, { ...creds, ubicacionId: req.ubicacionId || 1 });
     res.json({
       ok: true,
       ...result,
@@ -667,6 +691,107 @@ const obtenerPdfOrdenWMS = async (req, res) => {
   }
 };
 
+/**
+ * Consulta de Reporte de Trazabilidad por Producto directamente en la BBDD de BlockWMS
+ */
+const getTrazabilidadBlockWMS = async (req, res, next) => {
+  try {
+    const creds = extractWmsCredentials(req);
+    const codigo_producto = req.query.codigo_producto || req.query.codigo || (req.body ? req.body.codigo_producto || req.body.codigo : '');
+    const fecha_desde = req.query.fecha_desde || req.query.fechaDesde || (req.body ? req.body.fecha_desde || req.body.fechaDesde : '');
+    const fecha_hasta = req.query.fecha_hasta || req.query.fechaHasta || (req.body ? req.body.fecha_hasta || req.body.fechaHasta : '');
+
+    const result = await wmsService.obtenerTrazabilidadBlockWMS({
+      ...creds,
+      codigo_producto,
+      fecha_desde,
+      fecha_hasta
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('[wmsController] Error en getTrazabilidadBlockWMS:', error.message);
+    const isTimeout = error.message && error.message.toLowerCase().includes('timeout');
+    const msg = isTimeout 
+      ? 'El servidor de BlockWMS tardó más de lo esperado en procesar la consulta para este rango de fechas extenso. Intenta seleccionar un rango de fechas más acotado (ej: 7 o 14 días).'
+      : (error.message || 'Error al consultar trazabilidad en BlockWMS.');
+    
+    res.status(isTimeout ? 504 : 500).json({
+      ok: false,
+      error: msg
+    });
+  }
+};
+
+const getComparacionVariabilidad = async (req, res, next) => {
+  try {
+    if (req.setTimeout) req.setTimeout(300000);
+    if (res.setTimeout) res.setTimeout(300000);
+    const creds = extractWmsCredentials(req);
+    const codigo1 = req.query.codigo1 || req.query.codigo_producto1 || (req.body ? req.body.codigo1 : '');
+    const codigo2 = req.query.codigo2 || req.query.codigo_producto2 || (req.body ? req.body.codigo2 : '');
+    const fecha_desde = req.query.fecha_desde || req.query.fechaDesde || (req.body ? req.body.fecha_desde : '');
+    const fecha_hasta = req.query.fecha_hasta || req.query.fechaHasta || (req.body ? req.body.fecha_hasta : '');
+    const solo_ajustes = req.query.solo_ajustes !== undefined ? req.query.solo_ajustes === 'true' : true;
+
+    if (!codigo1 || !codigo2) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Debe especificar ambos códigos de producto (codigo1 y codigo2).'
+      });
+    }
+
+    const result = await wmsService.compararVariabilidadProductosWMS({
+      ...creds,
+      codigo1,
+      codigo2,
+      fechaDesde: fecha_desde,
+      fechaHasta: fecha_hasta,
+      soloAjustes: solo_ajustes
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('[wmsController] Error en getComparacionVariabilidad:', error.message);
+    const isTimeout = error.message && error.message.toLowerCase().includes('timeout');
+    const msg = isTimeout 
+      ? 'El servidor de BlockWMS tardó más de lo esperado en responder. Intenta seleccionar un rango de fechas más acotado.'
+      : (error.message || 'Error al comparar variabilidad de productos en BlockWMS.');
+    res.status(isTimeout ? 504 : 500).json({ ok: false, error: msg });
+  }
+};
+
+const guardarStockObjetivos = async (req, res, next) => {
+  try {
+    const items = req.body?.items || [];
+    const result = await wmsService.guardarStockObjetivosWMS(items);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+const calcularStockObjetivoHistorico = async (req, res, next) => {
+  try {
+    const params = req.body || {};
+    const result = await wmsService.calcularStockObjetivoHistoricoWMS(params);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+const generarPedidoReposicion = async (req, res, next) => {
+  try {
+    const payload = req.body || {};
+    payload.id_ubicacion = req.ubicacionId || 1;
+    const result = await wmsService.generarPedidoReposicionWMS(payload);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
 module.exports = {
   getConfig,
   saveConfig,
@@ -678,6 +803,7 @@ module.exports = {
   getStockPorUbicacion,
   getReporteDiferenciasIngreso,
   getStockSucursales,
+  getStockSucursalesMatriz,
   getOrdenesIngreso,
   getOrdenesIngresoPendientes,
   procesarRecepcionOrden,
@@ -689,5 +815,10 @@ module.exports = {
   ejecutarConsultaSql,
   syncStock,
   getMotivos,
-  ejecutarAjuste
+  ejecutarAjuste,
+  getTrazabilidadBlockWMS,
+  getComparacionVariabilidad,
+  guardarStockObjetivos,
+  calcularStockObjetivoHistorico,
+  generarPedidoReposicion
 };

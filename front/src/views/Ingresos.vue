@@ -453,6 +453,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
+import { formatDateTime as formatDate } from '../utils/dateFormat'
 
 const authStore = useAuthStore()
 
@@ -626,17 +627,6 @@ const historialStats = computed(() => {
 
   return { totalRegistros, totalCajas, totalPiezas, totalKilos }
 })
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
-    return d.toLocaleDateString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-  } catch (e) {
-    return dateStr
-  }
-}
 
 onMounted(() => {
   fetchInitialData()

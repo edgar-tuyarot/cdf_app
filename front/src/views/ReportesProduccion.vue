@@ -4,7 +4,7 @@
     <div class="page-header">
       <div class="header-content">
         <h2 class="page-title">
-          <i class="ph ph-chart-line text-green"></i> Reporte de Producción: Productos Más Fraccionados
+          <i class="ph ph-chart-line text-green"></i> Reporte Producción
         </h2>
         <p class="page-description">Ranking y estadísticas del volumen procesado, recortes y mermas por producto en la planta de producción.</p>
       </div>
@@ -60,53 +60,12 @@
       </div>
     </div>
 
-    <!-- Indicadores KPI Exclusivos de Producción -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
-      <div class="status-card success">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Total Kilos Fraccionados</span>
-            <span class="status-card-value text-green">{{ metrics.totalPesoBruto }} kg</span>
-            <span class="status-card-desc">Materia prima ingresada</span>
-          </div>
-          <i class="ph ph-scales status-card-icon"></i>
-        </div>
-      </div>
-
-      <div class="status-card info">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Producto #1 Más Fraccionado</span>
-            <span class="status-card-value text-blue" style="font-size: 1.1rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-              {{ metrics.topProductoNombre }}
-            </span>
-            <span class="status-card-desc">{{ metrics.topProductoKg }} kg fraccionados</span>
-          </div>
-          <i class="ph ph-trophy status-card-icon"></i>
-        </div>
-      </div>
-
-      <div class="status-card warning">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Recortes Generados</span>
-            <span class="status-card-value">{{ metrics.totalRecortes }} kg</span>
-            <span class="status-card-desc">Aprovechables</span>
-          </div>
-          <i class="ph ph-scissors status-card-icon"></i>
-        </div>
-      </div>
-
-      <div class="status-card critical">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Decomisos (Mermas)</span>
-            <span class="status-card-value text-red">{{ metrics.totalDecomisos }} kg</span>
-            <span class="status-card-desc">Descarte no aprovechable</span>
-          </div>
-          <i class="ph ph-trash status-card-icon"></i>
-        </div>
-      </div>
+    <!-- Indicadores de Producción -->
+    <div class="mb-4" style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; padding: 0.75rem 1rem; background: var(--bg-window); border: 1px solid var(--bevel-light); border-radius: 4px; font-size: 0.9rem;">
+      <span><strong>Total Kilos Fraccionados:</strong> {{ metrics.totalPesoBruto }} kg</span>
+      <span><strong>Producto #1:</strong> {{ metrics.topProductoNombre }} ({{ metrics.topProductoKg }} kg)</span>
+      <span><strong>Recortes Generados:</strong> {{ metrics.totalRecortes }} kg</span>
+      <span><strong>Decomisos (Mermas):</strong> {{ metrics.totalDecomisos }} kg</span>
     </div>
 
     <!-- Gráfico Horizontal: Top Productos Más Fraccionados (Chart.js) -->
@@ -211,6 +170,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import * as XLSX from 'xlsx'
 import Chart from 'chart.js/auto'
+import { formatDateDisplay as formatDate } from '../utils/dateFormat'
 
 const loading = ref(false)
 const procesos = ref([])
@@ -510,14 +470,6 @@ watch([rankedProducts], async () => {
   await nextTick()
   renderChart()
 })
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const ymd = parseDateToYYYYMMDD(dateStr)
-  if (!ymd) return '-'
-  const [year, month, day] = ymd.split('-')
-  return `${day}/${month}/${year}`
-}
 
 const exportToExcel = () => {
   try {

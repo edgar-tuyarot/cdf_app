@@ -1,13 +1,16 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
+import { useTheme } from './composables/useTheme'
 import MainLayout from './components/layout/MainLayout.vue'
 import WinDialog from './components/WinDialog.vue'
 
 const authStore = useAuthStore()
+const { initTheme } = useTheme()
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 onMounted(() => {
+  initTheme()
   if (authStore.isAuthenticated) {
     authStore.loadPermissions()
   }

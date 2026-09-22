@@ -137,6 +137,20 @@
       >
         <div v-if="selectedPedido" style="display: flex; flex-direction: column; width: 100%;">
           
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: var(--bg-secondary); border: 1.5px solid var(--bevel-dark); border-bottom: none;">
+            <span style="font-weight: 800; font-size: 0.9rem; color: var(--text-primary);">
+              Pedido Nº {{ selectedPedido.codigo }} - {{ selectedPedido.sucursal }}
+            </span>
+            <button 
+              class="btn btn-secondary" 
+              style="padding: 3px 10px; font-weight: 800; font-size: 0.82rem; display: flex; align-items: center; gap: 0.35rem; background: var(--bg-window);"
+              @click="openBarcodesModalForPedido(selectedPedido)"
+              title="Ver Códigos de Barra de los productos de este pedido"
+            >
+              <i class="ph ph-barcode" style="font-size: 1.1rem; color: #0284c7;"></i> Códigos de Barra
+            </button>
+          </div>
+
           <!-- Tabla Directa sin Contenedores de Tarjetas Anidadas -->
           <div class="table-container" style="border: 1.5px solid var(--bevel-dark); border-radius: 0; background: var(--bg-window); width: 100%;">
             <div v-if="loadingDetail" style="display: flex; justify-content: center; align-items: center; padding: 4rem; flex-direction: column; gap: 0.5rem; color: var(--text-secondary);">
@@ -289,6 +303,47 @@
             </label>
           </div>
 
+          <!-- Opción de Sustituir / Reemplazar Producto -->
+          <div style="border-top: 1px dashed var(--bevel-dark); padding-top: 0.75rem; margin-top: 0.25rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 800; cursor: pointer; color: #d97706;">
+              <input type="checkbox" v-model="isReemplazo" style="width: 16px; height: 16px; accent-color: #d97706;" />
+              <span><i class="ph ph-arrows-left-right"></i> Reemplazar por otro producto del catálogo</span>
+            </label>
+
+            <!-- Campo de búsqueda del producto sustituto -->
+            <div v-if="isReemplazo" class="mt-2 animate-fade" style="display: flex; flex-direction: column; gap: 0.35rem;">
+              <label style="font-size: 0.75rem; font-weight: bold; color: var(--text-secondary);">
+                Seleccionar Producto Sustituto *
+              </label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted);"></i>
+                <input 
+                  type="text" 
+                  v-model="replacementSearchQuery" 
+                  list="catalog-replacement-list" 
+                  @input="handleReplacementProductInput" 
+                  class="form-control" 
+                  placeholder="Escribe código o nombre para buscar..." 
+                  style="padding-left: 2rem; height: 38px; font-weight: 700;"
+                />
+              </div>
+              <datalist id="catalog-replacement-list">
+                <option 
+                  v-for="p in catalogProducts" 
+                  :key="p.codigo" 
+                  :value="p.codigo"
+                  v-show="p.codigo !== activeModalItem.codigo_producto"
+                >
+                  {{ p.nombre }}
+                </option>
+              </datalist>
+
+              <div v-if="selectedReplacementCode" style="font-size: 0.8rem; background: #eff6ff; color: #1d4ed8; padding: 0.4rem 0.6rem; font-weight: 700; border-left: 3px solid #2563eb; margin-top: 0.2rem;">
+                ✔ Sustituto seleccionado: <strong>{{ selectedReplacementCode }}</strong> - {{ catalogProducts.find(p => p.codigo === selectedReplacementCode)?.nombre }}
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- Footer del Modal -->
@@ -304,6 +359,116 @@
           >
             <i class="ph ph-spinner spinner" v-if="savingItem"></i>
             <i class="ph ph-floppy-disk" v-else></i> Grabar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- MODAL XL DE CÓDIGOS DE BARRA PARA PEDIDOS -->
+  <Teleport to="body">
+    <div v-if="showBarcodeModal" class="win-dialog-overlay" style="display: flex; align-items: center; justify-content: center; z-index: 9999;">
+      <div class="win-dialog" style="width: 850px; max-width: 95vw; background: var(--bg-window); border: 3px solid var(--bevel-dark); box-shadow: var(--window-shadow);">
+        
+        <!-- Header del Modal -->
+        <div class="win-dialog-header" style="background: #0b5394; color: white; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="ph ph-barcode" style="font-size: 1.4rem;"></i>
+            Código de Barras - Pedido Nº {{ selectedPedidoForBarcodes?.codigo || selectedPedidoForBarcodes?.id }}
+          </span>
+          <button @click="showBarcodeModal = false" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.3rem; display: flex; align-items: center;">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <!-- Subheader Info + Paginador -->
+        <div style="padding: 0.75rem 1.25rem; background: var(--bg-secondary); border-bottom: 1.5px solid var(--bevel-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="font-size: 0.88rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div>
+              <strong>Sucursal:</strong> {{ selectedPedidoForBarcodes?.sucursal || '-' }}
+              <span v-if="selectedPedidoForBarcodes?.fecha" style="margin-left: 0.75rem;">
+                <strong>Fecha:</strong> {{ formatDate(selectedPedidoForBarcodes.fecha) }}
+              </span>
+            </div>
+            <span style="font-size: 0.76rem; color: var(--text-secondary); background: var(--bg-window); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--bevel-dark); font-weight: bold;">
+              <i class="ph ph-keyboard" style="margin-right: 3px;"></i> Teclas ← / → para navegar
+            </span>
+          </div>
+          
+          <!-- Contador y Controles de Navegación -->
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button 
+              class="win-dialog-btn" 
+              @click="prevBarcode" 
+              :disabled="barcodeItems.length <= 1"
+              style="padding: 3px 10px; font-weight: 800; font-size: 0.85rem;"
+              title="Ver producto anterior (Tecla Flecha Izquierda)"
+            >
+              <i class="ph ph-caret-left"></i> Anterior
+            </button>
+
+            <span style="font-weight: 900; font-size: 0.9rem; color: #0284c7; background: #e0f2fe; padding: 3px 12px; border-radius: 12px; border: 1px solid #bae6fd;">
+              {{ currentBarcodeIndex + 1 }} de {{ barcodeItems.length }}
+            </span>
+
+            <button 
+              class="win-dialog-btn" 
+              @click="nextBarcode" 
+              :disabled="barcodeItems.length <= 1"
+              style="padding: 3px 10px; font-weight: 800; font-size: 0.85rem;"
+              title="Ver producto siguiente (Tecla Flecha Derecha)"
+            >
+              Siguiente <i class="ph ph-caret-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cuerpo del Modal (Tarjeta XL Clickeable) -->
+        <div style="padding: 1.5rem; text-align: center;">
+          <div 
+            v-if="currentBarcodeItem" 
+            @click="nextBarcode"
+            style="background: #ffffff; border: 3px solid #0284c7; border-radius: 10px; padding: 1.75rem 1.5rem; cursor: pointer; user-select: none; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative;"
+            title="¡Haz clic aquí para avanzar al siguiente producto!"
+          >
+            <!-- Indicator Badge -->
+            <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #0284c7; color: white; padding: 2px 14px; border-radius: 12px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+              <i class="ph ph-hand-pointing" style="margin-right: 4px;"></i> HAZ CLIC PARA VER EL SIGUIENTE
+            </div>
+
+            <!-- Código del Producto (Code 128) -->
+            <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.25rem;">
+              <div style="font-size: 1.15rem; font-weight: 900; color: #475569; letter-spacing: 0.05em; text-transform: uppercase;">
+                CÓDIGO PRODUCTO: <span style="color: #0284c7; font-family: monospace; font-size: 1.4rem;">{{ currentBarcodeItem.codigo }}</span>
+              </div>
+            </div>
+
+            <!-- Nombre del Producto -->
+            <div style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin: 0.5rem 0 1.25rem 0; line-height: 1.2;">
+              {{ currentBarcodeItem.nombre }}
+            </div>
+
+            <!-- Código de Barras SVG Gigante -->
+            <div style="background: #ffffff; padding: 1.25rem 1rem; border: 2.5px dashed #0284c7; border-radius: 10px; margin: 0 auto 1.25rem auto; max-width: 700px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+              <div v-html="generateBarcodeSVG(currentBarcodeItem.codigo, { scale: 4, height: 110, fontSize: 22, maxWidth: '650px' })"></div>
+            </div>
+
+            <!-- Cantidad Pedida -->
+            <div style="font-size: 1.1rem; font-weight: 900; color: #d97706; background: #fffbe6; padding: 0.4rem 1rem; border-radius: 6px; display: inline-block; border: 1px solid #fef08a;">
+              Cantidad Pedida: {{ currentBarcodeItem.cantidadDisplay }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer del Modal -->
+        <div class="win-dialog-footer" style="padding: 0.85rem 1.25rem; background: var(--bg-secondary); border-top: 1.5px solid var(--bevel-dark); display: flex; justify-content: space-between; align-items: center;">
+          <button class="win-dialog-btn" @click="imprimirCodigosModal" style="display: flex; align-items: center; gap: 0.35rem; font-weight: 800;">
+            <i class="ph ph-printer" style="font-size: 1.2rem; color: #0284c7;"></i> Imprimir Todos los Códigos
+          </button>
+          
+          <button class="win-dialog-btn win-dialog-btn-ok" @click="showBarcodeModal = false" style="font-weight: 800; padding: 6px 20px;">
+            Cerrar
           </button>
         </div>
 
@@ -374,8 +539,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useWinDialog } from '../composables/useWinDialog'
+import { formatDate } from '../utils/dateFormat'
 
 const { winConfirm } = useWinDialog()
 
@@ -388,6 +554,237 @@ const selectedPedido = ref(null)
 const showMobileDetail = ref(false)
 const activePrintPedido = ref(null)
 const confirming = ref(false)
+
+// Estado para Modal de Códigos de Barra
+const showBarcodeModal = ref(false)
+const selectedPedidoForBarcodes = ref(null)
+const barcodeItems = ref([])
+const currentBarcodeIndex = ref(0)
+
+const currentBarcodeItem = computed(() => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return null
+  return barcodeItems.value[currentBarcodeIndex.value] || barcodeItems.value[0]
+})
+
+const nextBarcode = () => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return
+  currentBarcodeIndex.value = (currentBarcodeIndex.value + 1) % barcodeItems.value.length
+}
+
+const prevBarcode = () => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return
+  currentBarcodeIndex.value = (currentBarcodeIndex.value - 1 + barcodeItems.value.length) % barcodeItems.value.length
+}
+
+const handleKeyDown = (e) => {
+  if (!showBarcodeModal.value) return
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    e.preventDefault()
+    nextBarcode()
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    e.preventDefault()
+    prevBarcode()
+  } else if (e.key === 'Escape') {
+    e.preventDefault()
+    showBarcodeModal.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
+
+const formatCantidadItemDisplay = (item) => {
+  const pzas = parseInt(item.pieza || item.cantidad_enviada || 0, 10)
+  const frac = parseFloat(item.fraccion || item.fraccion_enviada || 0)
+  const peso = parseFloat(item.peso || item.peso_enviado || 0)
+  const pesoPieza = parseFloat(item.Producto?.peso_pieza || 0)
+
+  let partes = []
+
+  // Si hay peso grabado explícito o enviado
+  if (peso > 0) {
+    partes.push(`${peso.toFixed(3)} kg`)
+  } else if (frac > 0) {
+    partes.push(`${frac.toFixed(3)} kg`)
+  } else if (pzas > 0 && pesoPieza > 0) {
+    partes.push(`${(pzas * pesoPieza).toFixed(3)} kg`)
+  }
+
+  // Agregar detalle de piezas/fracciones si existen
+  if (pzas > 0 && frac > 0) {
+    partes.push(`(${pzas} P y ${Math.round(frac)} F)`)
+  } else if (pzas > 0) {
+    partes.push(`(${pzas} Pzs)`)
+  } else if (frac > 0 && peso === 0) {
+    partes.push(`(${frac.toFixed(3)} Frac)`)
+  }
+
+  if (partes.length > 0) {
+    return partes.join(' ')
+  }
+  return '-'
+}
+
+const openBarcodesModalForPedido = (pedido) => {
+  if (!pedido || !pedido.items || pedido.items.length === 0) {
+    showAlert('El pedido seleccionado no posee ítems.', 'error')
+    return
+  }
+  selectedPedidoForBarcodes.value = pedido
+  currentBarcodeIndex.value = 0
+
+  const mapProds = new Map()
+  pedido.items.forEach(it => {
+    const cod = String(it.codigo_producto || it.Producto?.codigo || '-').trim()
+    if (!cod || cod === '-') return
+    const nom = it.Producto?.nombre || it.nombre || cod
+    const cantDisp = formatCantidadItemDisplay(it)
+
+    if (!mapProds.has(cod)) {
+      mapProds.set(cod, {
+        codigo: cod,
+        nombre: nom,
+        cantidadDisplay: cantDisp
+      })
+    }
+  })
+
+  barcodeItems.value = Array.from(mapProds.values())
+  showBarcodeModal.value = true
+}
+
+const imprimirCodigosModal = () => {
+  if (!barcodeItems.value || barcodeItems.value.length === 0) return
+
+  const win = window.open('', '_blank', 'width=1000,height=750')
+  if (!win) return
+
+  const codigoPedido = selectedPedidoForBarcodes.value?.codigo || selectedPedidoForBarcodes.value?.id || 'S/N'
+  const sucursal = selectedPedidoForBarcodes.value?.sucursal || '-'
+
+  const itemsHtml = barcodeItems.value.map(it => {
+    const svgCode = generateBarcodeSVG(it.codigo, { scale: 1.5, height: 40 })
+    return `
+      <div style="border: 1.5px solid #000; padding: 6px 4px; text-align: center; page-break-inside: avoid; border-radius: 4px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; min-height: 100px;">
+        <div style="font-size: 10px; font-weight: bold; font-family: monospace; color: #000;">CÓD: ${it.codigo}</div>
+        <div style="font-size: 11px; font-weight: bold; font-family: sans-serif; margin: 2px 0; color: #000; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${it.nombre}">${it.nombre}</div>
+        <div style="margin: 2px 0;">${svgCode}</div>
+        <div style="font-size: 10px; font-weight: bold; font-family: monospace; color: #d97706;">CANTIDAD: ${it.cantidadDisplay}</div>
+      </div>
+    `
+  }).join('')
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Códigos de Barra - Pedido ${codigoPedido}</title>
+        <style>
+          @page { size: A4; margin: 8mm; }
+          * { box-sizing: border-box; }
+          body { font-family: sans-serif; padding: 10px; color: #000; background: #fff; margin: 0; }
+          .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 6px; }
+          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+          @media print {
+            body { padding: 0; }
+            .header { margin-bottom: 8px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h3 style="margin: 0; font-size: 16px;">PEDIDO Nº ${codigoPedido}</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px;">Sucursal Destino: ${sucursal}</p>
+        </div>
+        <div class="grid">
+          ${itemsHtml}
+        </div>
+        <script>
+          window.onload = function() { window.print(); }
+        <\/script>
+      </body>
+    </html>
+  `)
+  win.document.close()
+}
+
+// Generador SVG de Código de Barras Code 128 (Usando únicamente el Código del Producto)
+const generateBarcodeSVG = (text, options = {}) => {
+  if (!text) return ''
+  const str = String(text).trim()
+  if (!str) return ''
+  
+  const patterns = [
+    "212222","222122","222221","121223","121322","131222","122213","122312","132212","221213",
+    "221312","231212","112232","122132","122231","113222","123122","123221","223211","221132",
+    "221231","213212","223112","312131","311222","321122","321221","312212","322112","322211",
+    "212123","212321","232121","111323","131123","131321","112313","132113","132311","211313",
+    "231113","231311","112133","112331","132131","113123","113321","133121","313121","211331",
+    "231131","213113","213311","213131","311123","311321","331121","312113","332111","332111",
+    "314111","221411","431111","111224","111422","121124","121421","141122","141221","112214",
+    "112412","122114","122411","142112","142211","241211","221114","411112","411211","211142",
+    "211241","211421","231112","112142","112241","114122","114221","124112","124211","411221",
+    "421121","412121","111143","111341","131141","114113","114311","411113","411311","113141",
+    "114131","311141","411131","211412","211214","211232","2331112"
+  ]
+
+  let codeBuffer = [104]
+  let checkSum = 104
+
+  for (let i = 0; i < str.length; i++) {
+    const charCode = str.charCodeAt(i)
+    let code = charCode - 32
+    if (code < 0 || code > 95) code = 0
+    codeBuffer.push(code)
+    checkSum += code * (i + 1)
+  }
+
+  const checksumVal = checkSum % 103
+  codeBuffer.push(checksumVal)
+  codeBuffer.push(106)
+
+  let bars = ""
+  for (let i = 0; i < codeBuffer.length; i++) {
+    bars += patterns[codeBuffer[i]]
+  }
+
+  const scale = options.scale || 3.5
+  const height = options.height || 95
+  const fontSize = options.fontSize || 20
+  const quietZone = 20
+
+  let x = quietZone
+  let rects = ""
+  let isBar = true
+
+  for (let i = 0; i < bars.length; i++) {
+    const width = parseInt(bars[i], 10) * scale
+    if (isBar) {
+      rects += `<rect x="${x}" y="4" width="${width}" height="${height}" fill="#000000"/>`
+    }
+    x += width
+    isBar = !isBar
+  }
+
+  const totalWidth = x + quietZone
+  const svgHeight = height + fontSize + 15
+
+  const showText = options.showText !== false
+  const textHtml = showText ? `<text x="${totalWidth / 2}" y="${height + fontSize + 8}" font-family="monospace" font-size="${fontSize}" font-weight="900" text-anchor="middle" fill="#000000">${str}</text>` : ''
+
+  const maxWidthCss = options.maxWidth || '100%'
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${svgHeight}" style="width: 100%; max-width: ${maxWidthCss}; height: auto; display: block; margin: 0 auto;">
+    <rect width="100%" height="100%" fill="#ffffff"/>
+    ${rects}
+    ${textHtml}
+  </svg>`
+}
 
 const catalogProducts = ref([])
 const armadoItems = ref([])
@@ -589,6 +986,20 @@ const getItemRowClass = (item) => {
   return ''
 }
 
+const isReemplazo = ref(false)
+const replacementSearchQuery = ref('')
+const selectedReplacementCode = ref('')
+
+const handleReplacementProductInput = () => {
+  const code = replacementSearchQuery.value.trim()
+  const found = catalogProducts.value.find(p => p.codigo === code || p.nombre.toLowerCase().includes(code.toLowerCase()))
+  if (found) {
+    selectedReplacementCode.value = found.codigo
+  } else {
+    selectedReplacementCode.value = ''
+  }
+}
+
 // Control de cambios en checkboxes de exclusión
 const handleSinStockChange = () => {
   if (itemForm.value.sin_stock) {
@@ -605,6 +1016,10 @@ const handleNoEnviaChange = () => {
 // Abrir el modal de carga para el producto seleccionado
 const openItemModal = (item) => {
   activeModalItem.value = item
+  isReemplazo.value = false
+  replacementSearchQuery.value = ''
+  selectedReplacementCode.value = ''
+
   const arm = getArmadoItem(item.codigo_producto)
   if (arm) {
     const totalCargado = parseFloat(arm.peso || 0) + parseFloat(arm.fraccion || 0)
@@ -622,22 +1037,47 @@ const openItemModal = (item) => {
   }
 }
 
+// Obtener nombre del usuario activo desde storage
+const getCurrentUserName = () => {
+  const userString = localStorage.getItem('usuario') || sessionStorage.getItem('usuario')
+  if (userString) {
+    try {
+      const u = JSON.parse(userString)
+      if (u && u.nombre) return u.nombre
+      if (u && u.usuario) return u.usuario
+    } catch (e) {
+      if (typeof userString === 'string' && userString.trim()) return userString
+    }
+  }
+  return 'Sistema'
+}
+
 // Grabar el envío de un producto específico en el pedido de armado
 const grabarItem = async (item) => {
   if (!item) return
+  if (isReemplazo.value && !selectedReplacementCode.value) {
+    showAlert('Debe seleccionar un producto sustituto válido del catálogo.', 'error')
+    return
+  }
+
   savingItem.value = true
   try {
     const isSpecial = itemForm.value.no_envia || itemForm.value.sin_stock
     const kilosVal = isSpecial ? 0 : (parseFloat(itemForm.value.kilos) || 0)
     const esFraccionado = parseFloat(item.fraccion || 0) > 0
 
+    const targetCode = (isReemplazo.value && selectedReplacementCode.value) ? selectedReplacementCode.value : item.codigo_producto
+    const codigoOriginal = isReemplazo.value ? item.codigo_producto : null
+
     const body = {
-      codigo_producto: item.codigo_producto,
+      codigo_producto: targetCode,
+      codigo_original_reemplazado: codigoOriginal,
       piezas: 0,
       peso: esFraccionado ? 0 : kilosVal,
       fraccion: esFraccionado ? kilosVal : 0,
       no_envia: itemForm.value.no_envia,
-      sin_stock: itemForm.value.sin_stock
+      sin_stock: itemForm.value.sin_stock,
+      usuario: getCurrentUserName()
     }
 
     const res = await fetch(`/api/pedidos/${selectedPedido.value.id}/armado`, {
@@ -649,8 +1089,11 @@ const grabarItem = async (item) => {
     })
 
     if (res.ok) {
-      showAlert('Cantidad enviada cargada correctamente.')
+      showAlert(isReemplazo.value ? 'Producto reemplazado y cargado con éxito.' : 'Cantidad enviada cargada correctamente.')
       activeModalItem.value = null
+      isReemplazo.value = false
+      replacementSearchQuery.value = ''
+      selectedReplacementCode.value = ''
       await fetchPedidoDetalle(selectedPedido.value.id)
       
       const pIndex = pedidos.value.findIndex(p => p.id === selectedPedido.value.id)
@@ -676,16 +1119,6 @@ const getStockActual = (codigo) => {
     return parseFloat(prod.stock || 0).toFixed(3)
   }
   return '0.000'
-}
-
-// Formatear fechas (DD/MM/YYYY)
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const parts = dateStr.split('T')[0].split('-')
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`
-  }
-  return dateStr
 }
 
 const getPrintArmadoItem = (codigo_producto) => {
@@ -759,17 +1192,7 @@ const confirmarPedido = async () => {
       }
     })
 
-    // Get current user name from storage
-    const userString = localStorage.getItem('usuario') || sessionStorage.getItem('usuario')
-    let userName = 'Sistema'
-    if (userString) {
-      try {
-        const u = JSON.parse(userString)
-        if (u && u.nombre) userName = u.nombre
-      } catch (e) {
-        if (typeof userString === 'string') userName = userString
-      }
-    }
+    const userName = getCurrentUserName()
 
     const res = await fetch(`/api/pedidos/${selectedPedido.value.id}/confirmar`, {
       method: 'POST',

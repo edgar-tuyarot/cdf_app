@@ -8,6 +8,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.get('/', productosController.obtenerProductos);
 router.post('/', productosController.crearProducto);
+router.post('/desactivar-inactivos', productosController.desactivarProductosInactivos);
 // Ruta para carga masiva (admite FormData con un archivo "file" o un JSON Array en el body)
 router.post('/upload', upload.single('file'), productosController.uploadExcel);
 router.post('/cargar-stock', upload.single('file'), productosController.cargarStockExcel);
@@ -27,6 +28,7 @@ router.get('/snapshots', productosController.obtenerSnapshots);
 router.post('/control-piezas', productosController.controlPiezas);
 router.get('/:codigo/movimientos', productosController.obtenerMovimientosPorProducto);
 router.get('/:codigo/sucursales', productosController.obtenerSucursalesHabilitadas);
+router.put('/:codigo/cambiar-codigo', productosController.cambiarCodigoProducto);
 router.put('/:id', productosController.actualizarProducto);
 router.delete('/:id', productosController.eliminarProducto);
 

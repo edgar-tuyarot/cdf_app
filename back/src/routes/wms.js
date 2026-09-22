@@ -28,6 +28,13 @@ router.post('/reporte-diferencias-ingreso', wmsController.getReporteDiferenciasI
 // Consulta de Stock por Sucursales (Consolidado por Sitio)
 router.get('/stock-sucursales', wmsController.getStockSucursales);
 router.post('/stock-sucursales', wmsController.getStockSucursales);
+router.get('/stock-matriz-sucursales', wmsController.getStockSucursalesMatriz);
+router.post('/stock-matriz-sucursales', wmsController.getStockSucursalesMatriz);
+
+// Gestión de Stock Objetivos y Reposición
+router.post('/guardar-stock-objetivos', wmsController.guardarStockObjetivos);
+router.post('/calcular-stock-objetivo-historico', wmsController.calcularStockObjetivoHistorico);
+router.post('/generar-pedido-reposicion', wmsController.generarPedidoReposicion);
 
 // Consulta de Órdenes de Ingreso por Rango de Fecha y Site
 router.get('/ordenes-ingreso', wmsController.getOrdenesIngreso);
@@ -51,4 +58,13 @@ router.get('/pdf-orden-wms', wmsController.obtenerPdfOrdenWMS);
 router.get('/tablas', wmsController.getTablas);
 router.post('/consulta-sql', wmsController.ejecutarConsultaSql);
 
+// Reporte de Trazabilidad por Producto directo en BlockWMS
+router.get('/trazabilidad-block', wmsController.getTrazabilidadBlockWMS);
+router.post('/trazabilidad-block', wmsController.getTrazabilidadBlockWMS);
+
+// Reporte de Comparación de Variabilidad de Ajustes entre 2 productos
+router.get('/comparacion-variabilidad', wmsController.getComparacionVariabilidad);
+router.post('/comparacion-variabilidad', wmsController.getComparacionVariabilidad);
+
 module.exports = router;
+

@@ -1,5 +1,6 @@
 const { Pedido, ProductoPedido, Producto, Fraccionado, DescuentoStock, ProductoVencimiento, Sucursal, PedidoSinStock, PedidoArmadoItem, ProductoStock, Ubicacion, sequelize } = require('../models');
 const { enviarMailConfirmacion } = require('../utils/email');
+const wmsService = require('../services/wmsService');
 
 // Función auxiliar para determinar el estado automático de un pedido según la carga de peso de sus ítems
 const determinarEstadoPedido = (items) => {
@@ -952,6 +953,26 @@ const procesarDescuentoStockEnviado = async (pedido, transaction, id_ubicacion =
           await v.save({ transaction });
         }
       }
+    } else if (kilosEnviadosTotal > 0) {
+      const vencimientos = await ProductoVencimiento.findAll({
+        where: { codigo_producto: op.codigo, id_ubicacion },
+        order: [['vencimiento', 'ASC']],
+        transaction
+      });
+
+      let remainingWeightToDeduct = kilosEnviadosTotal;
+      for (const v of vencimientos) {
+        if (remainingWeightToDeduct <= 0) break;
+        const currentPeso = parseFloat(v.peso) || 0;
+        if (currentPeso <= remainingWeightToDeduct) {
+          remainingWeightToDeduct -= currentPeso;
+          await v.destroy({ transaction });
+        } else {
+          v.peso = parseFloat((currentPeso - remainingWeightToDeduct).toFixed(3));
+          remainingWeightToDeduct = 0;
+          await v.save({ transaction });
+        }
+      }
     }
 
     if (kilosEnviadosTotal > 0) {
@@ -1333,7 +1354,7 @@ exports.confirmarPedidosDesdeExcel = async (req, res) => {
   }
 };
 
-// Obtener la demanda consolidada de todos los pedidos pendientes (Suma de todos los pedidos pendientes)
+// Obtener la demanda consolidada de todos los pedidos activos (excluyendo enviados y completados)
 exports.obtenerDemandaUltimoPedido = async (req, res) => {
   try {
     const id_ubicacion = req.ubicacionId || 1;
@@ -1350,7 +1371,7 @@ exports.obtenerDemandaUltimoPedido = async (req, res) => {
       INNER JOIN pedidos ped ON pp.id_pedido = ped.id
       LEFT JOIN productos prod ON pp.codigo_producto = prod.codigo
       LEFT JOIN productos_stock ps ON pp.codigo_producto = ps.codigo_producto AND ps.id_ubicacion = :id_ubicacion
-      WHERE ped.estado = 'Pendiente'
+      WHERE ped.estado NOT IN ('Enviado', 'Completado')
       GROUP BY pp.codigo_producto, prod.nombre, prod.peso_pieza, prod.peso_fraccion
       HAVING total_piezas_pedidas > 0 OR total_fracciones_pedidas > 0
       ORDER BY pp.codigo_producto;
@@ -1360,8 +1381,8 @@ exports.obtenerDemandaUltimoPedido = async (req, res) => {
     });
     res.json(resultados);
   } catch (error) {
-    console.error('Error al obtener demanda de pedidos pendientes:', error);
-    res.status(500).json({ error: 'Error interno al obtener demanda de pedidos pendientes.' });
+    console.error('Error al obtener demanda de pedidos activos:', error);
+    res.status(500).json({ error: 'Error interno al obtener demanda de pedidos activos.' });
   }
 };
 
@@ -1554,22 +1575,79 @@ exports.obtenerArmadoItems = async (req, res) => {
 
 // POST /api/pedidos/:id/armado
 // Crea o actualiza (upsert) un ítem en la tabla de armado
-// Body: { codigo_producto, piezas, peso, fraccion, no_envia, sin_stock }
+// Body: { codigo_producto, piezas, peso, fraccion, no_envia, sin_stock, codigo_original_reemplazado, usuario }
 exports.upsertArmadoItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { codigo_producto, piezas, peso, fraccion, no_envia, sin_stock } = req.body;
+    const { codigo_producto, piezas, peso, fraccion, no_envia, sin_stock, codigo_original_reemplazado, usuario } = req.body;
 
     if (!codigo_producto) {
       return res.status(400).json({ error: 'codigo_producto es requerido.' });
     }
 
     const id_pedido = parseInt(id, 10);
+    const userVal = usuario || (req.user ? (req.user.nombre || req.user.usuario) : null) || 'Sistema';
 
     // Verificar que el pedido exista
     const pedido = await Pedido.findByPk(id_pedido);
     if (!pedido) {
       return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
+    // Manejar caso de reemplazo de producto
+    if (codigo_original_reemplazado && codigo_original_reemplazado !== codigo_producto) {
+      // 1. Marcar el producto original como S/S y N/E en ProductoPedido y PedidoArmadoItem
+      const origProdPedido = await ProductoPedido.findOne({ where: { id_pedido, codigo_producto: codigo_original_reemplazado } });
+      if (origProdPedido) {
+        origProdPedido.peso_enviado = 0;
+        origProdPedido.cantidad_enviada = 0;
+        origProdPedido.fraccion_enviada = 0;
+        origProdPedido.sin_stock = true;
+        origProdPedido.no_envia = true;
+        origProdPedido.confirmado = true;
+        await origProdPedido.save();
+      }
+
+      await PedidoArmadoItem.upsert({
+        id_pedido,
+        codigo_producto: codigo_original_reemplazado,
+        piezas: 0,
+        peso: 0,
+        fraccion: 0,
+        no_envia: true,
+        sin_stock: true,
+        usuario: userVal,
+        fecha: new Date()
+      });
+
+      // 2. Garantizar que el nuevo producto (reemplazo) exista en Producto y ProductoPedido
+      let nuevoProd = await Producto.findByPk(codigo_producto);
+      if (!nuevoProd) {
+        nuevoProd = await Producto.create({
+          codigo: codigo_producto,
+          nombre: `PRODUCTO SUSTITUTO (${codigo_producto})`,
+          peso_pieza: 0,
+          cantidad_piezas: 0,
+          peso_fraccion: 0,
+          pesable: true
+        });
+      }
+
+      await ProductoPedido.findOrCreate({
+        where: { id_pedido, codigo_producto },
+        defaults: {
+          id_pedido,
+          codigo_producto,
+          pieza: 0,
+          fraccion: 0,
+          peso_enviado: 0,
+          cantidad_enviada: 0,
+          fraccion_enviada: 0,
+          confirmado: true,
+          no_envia: false,
+          sin_stock: false
+        }
+      });
     }
 
     const isNoEnvia = !!no_envia;
@@ -1597,6 +1675,7 @@ exports.upsertArmadoItem = async (req, res) => {
         fraccion: valFraccion,
         no_envia: isNoEnvia,
         sin_stock: isSinStock,
+        usuario: userVal,
         fecha: new Date()
       }
     });
@@ -1608,6 +1687,7 @@ exports.upsertArmadoItem = async (req, res) => {
       item.fraccion = valFraccion;
       item.no_envia = isNoEnvia;
       item.sin_stock = isSinStock;
+      item.usuario = userVal;
       item.fecha = new Date();
       await item.save();
     }
@@ -1644,3 +1724,287 @@ exports.limpiarArmadoItems = async (req, res) => {
     res.status(500).json({ error: 'Error al limpiar items de armado.' });
   }
 };
+
+// Función auxiliar para parsear de forma segura items de Block WMS (array o string JSON)
+function parseItemsBlock(items) {
+  if (!items) return [];
+  if (Array.isArray(items)) return items;
+  if (typeof items === 'string') {
+    try {
+      const parsed = JSON.parse(items);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
+// Función auxiliar para generar la matriz de conciliación entre el Pedido y el Egreso de Block WMS
+function generarMatrizConciliacion(pedido, itemsBlock) {
+  let parsedBlock = parseItemsBlock(itemsBlock);
+  if (parsedBlock.length === 0 && pedido && pedido.wms_datos_items) {
+    parsedBlock = parseItemsBlock(pedido.wms_datos_items);
+  }
+
+  const blockMap = new Map();
+  for (const bi of parsedBlock) {
+    const c = String(bi.codigo || bi.codigo_productos || '').trim().toUpperCase();
+    if (!c) continue;
+    if (!blockMap.has(c)) {
+      blockMap.set(c, {
+        codigo: c,
+        nombre: String(bi.producto || bi.nombre || '').trim(),
+        lotes: [],
+        despachada: 0,
+        ubicaciones: new Set()
+      });
+    }
+    const bObj = blockMap.get(c);
+    bObj.despachada += parseFloat(bi.despachada || bi.cantidad_actual || 0);
+    if (bi.lote && !bObj.lotes.includes(bi.lote)) bObj.lotes.push(bi.lote);
+    if (bi.ubicacion) bObj.ubicaciones.add(bi.ubicacion);
+  }
+
+  const result = [];
+  const processedBlockCodes = new Set();
+
+  const pedidoItems = (pedido.items || []);
+  for (const pi of pedidoItems) {
+    const codigo = String(pi.codigo_producto || '').trim().toUpperCase();
+    
+    // Buscar en blockMap por coincidencia exacta o sin ceros a la izquierda
+    let blockData = blockMap.get(codigo);
+    if (!blockData) {
+      const unpadded = codigo.replace(/^0+/, '');
+      if (unpadded) {
+        blockData = blockMap.get(unpadded);
+        if (!blockData) {
+          for (const [k, v] of blockMap.entries()) {
+            if (k.replace(/^0+/, '') === unpadded) {
+              blockData = v;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    if (blockData) {
+      processedBlockCodes.add(blockData.codigo);
+    }
+    processedBlockCodes.add(codigo);
+
+    const enviadoKg = blockData ? parseFloat(blockData.despachada.toFixed(3)) : 0;
+    const preparadoKg = parseFloat(pi.peso_enviado || 0);
+    const pzasPed = parseInt(pi.pieza || 0, 10);
+    const fracPed = parseFloat(pi.fraccion || 0);
+    const pzasEnv = parseInt(pi.cantidad_enviada || 0, 10);
+    const fracEnv = parseFloat(pi.fraccion_enviada || 0);
+
+    const diffKg = parseFloat((enviadoKg - preparadoKg).toFixed(3));
+    let estado = 'COINCIDE';
+
+    if (enviadoKg === 0 && (preparadoKg > 0 || pzasPed > 0 || fracPed > 0)) {
+      estado = 'FALTANTE_BLOCK';
+    } else if (Math.abs(diffKg) > 0.05) {
+      estado = 'DIFERENCIA';
+    }
+
+    result.push({
+      codigo,
+      nombre: pi.Producto?.nombre || blockData?.nombre || 'Producto sin nombre',
+      tipo_calculo_piezas: pi.Producto?.tipo_calculo_piezas || 'normal',
+      pedido_piezas: pzasPed,
+      pedido_fraccion: fracPed,
+      pedido_display: pzasPed > 0 ? `${pzasPed} pz${pzasPed > 1 ? 's' : ''}` : (fracPed > 0 ? `${fracPed.toFixed(3)} kg` : '-'),
+      preparado_piezas: pzasEnv,
+      preparado_fraccion: fracEnv,
+      preparado_kg: preparadoKg,
+      no_envia: !!pi.no_envia,
+      sin_stock: !!pi.sin_stock,
+      enviado_kg: enviadoKg,
+      lotes: blockData ? blockData.lotes.join(', ') : '',
+      ubicaciones: blockData ? Array.from(blockData.ubicaciones).join(', ') : '',
+      diferencia_kg: diffKg,
+      estado_conciliacion: estado
+    });
+  }
+
+  for (const [c, bObj] of blockMap.entries()) {
+    if (!processedBlockCodes.has(c)) {
+      result.push({
+        codigo: c,
+        nombre: bObj.nombre || 'Producto Extra en Block',
+        tipo_calculo_piezas: 'normal',
+        pedido_piezas: 0,
+        pedido_fraccion: 0,
+        pedido_display: '-',
+        preparado_piezas: 0,
+        preparado_fraccion: 0,
+        preparado_kg: 0,
+        no_envia: false,
+        sin_stock: false,
+        enviado_kg: parseFloat(bObj.despachada.toFixed(3)),
+        lotes: bObj.lotes.join(', '),
+        ubicaciones: Array.from(bObj.ubicaciones).join(', '),
+        diferencia_kg: parseFloat(bObj.despachada.toFixed(3)),
+        estado_conciliacion: 'EXTRA_BLOCK'
+      });
+    }
+  }
+
+  return result;
+}
+
+// POST /api/pedidos/:id/vincular-egreso
+// Vincula manualmente un egreso de Block WMS con el pedido
+exports.vincularEgresoPedido = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ordenCodigo, ordenData, siteId } = req.body;
+
+    if (!ordenCodigo && !ordenData) {
+      return res.status(400).json({ error: 'Debe ingresar el código de orden o enviar los datos del egreso de Block.' });
+    }
+
+    const pedido = await Pedido.findByPk(id, {
+      include: [{
+        model: ProductoPedido,
+        as: 'items',
+        include: [{
+          model: Producto,
+          as: 'Producto',
+          attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion', 'peso_unidad', 'tipo_calculo_piezas', 'pesable', 'codigo_barra']
+        }]
+      }]
+    });
+
+    if (!pedido) {
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
+    let egresoInfo = ordenData;
+    if (!egresoInfo && ordenCodigo) {
+      try {
+        const sId = siteId || req.headers['x-wms-site-id'] || '194326';
+        const wmsRes = await wmsService.obtenerOrdenesEgresoWMS({
+          siteId: sId,
+          tipoComprobante: 'TODOS'
+        }, req);
+
+        if (wmsRes && wmsRes.ok && Array.isArray(wmsRes.ordenes)) {
+          const cClean = String(ordenCodigo).trim().toUpperCase();
+          egresoInfo = wmsRes.ordenes.find(o => 
+            String(o.orden).trim().toUpperCase() === cClean || 
+            String(o.documento || '').trim().toUpperCase().includes(cClean)
+          );
+        }
+      } catch (wmsErr) {
+        console.warn('[vincularEgresoPedido] No se pudo consultar WMS:', wmsErr.message);
+      }
+    }
+
+    if (!egresoInfo) {
+      egresoInfo = {
+        orden: String(ordenCodigo).trim(),
+        documento: req.body.documento || '',
+        fechaCierre: req.body.fechaCierre || '',
+        totalKilosDespachados: parseFloat(req.body.totalKilosDespachados || 0),
+        items: req.body.items || []
+      };
+    }
+
+    const itemsBlockClean = parseItemsBlock(egresoInfo.items || req.body.items);
+
+    await pedido.update({
+      wms_orden_egreso: String(egresoInfo.orden || ordenCodigo).trim(),
+      wms_documento: String(egresoInfo.documento || '').trim(),
+      wms_fecha_egreso: String(egresoInfo.fechaCierre || '').trim(),
+      wms_despachado_kg: parseFloat(egresoInfo.totalKilosDespachados || 0),
+      wms_datos_items: itemsBlockClean
+    });
+
+    const conciliacion = generarMatrizConciliacion(pedido, itemsBlockClean);
+
+    res.json({
+      mensaje: 'Egreso de Block vinculado exitosamente al pedido.',
+      pedido,
+      conciliacion
+    });
+  } catch (error) {
+    console.error('Error al vincular egreso a pedido:', error);
+    res.status(500).json({ error: 'Error al vincular el egreso de Block al pedido.' });
+  }
+};
+
+// DELETE /api/pedidos/:id/desvincular-egreso
+// Desvincula el egreso de Block WMS del pedido
+exports.desvincularEgresoPedido = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pedido = await Pedido.findByPk(id);
+    if (!pedido) {
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
+    await pedido.update({
+      wms_orden_egreso: null,
+      wms_documento: null,
+      wms_fecha_egreso: null,
+      wms_despachado_kg: null,
+      wms_datos_items: null
+    });
+
+    res.json({ mensaje: 'Egreso de Block desvinculado del pedido.', pedido });
+  } catch (error) {
+    console.error('Error al desvincular egreso:', error);
+    res.status(500).json({ error: 'Error al desvincular el egreso.' });
+  }
+};
+
+// GET /api/pedidos/:id/conciliacion
+// Obtiene la matriz de conciliación entre el pedido y el egreso de Block WMS
+exports.obtenerConciliacion = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pedido = await Pedido.findByPk(id, {
+      include: [{
+        model: ProductoPedido,
+        as: 'items',
+        include: [{
+          model: Producto,
+          as: 'Producto',
+          attributes: ['codigo', 'nombre', 'peso_pieza', 'peso_fraccion', 'peso_unidad', 'tipo_calculo_piezas', 'pesable', 'codigo_barra']
+        }]
+      }]
+    });
+
+    if (!pedido) {
+      return res.status(404).json({ error: 'Pedido no encontrado.' });
+    }
+
+    const itemsBlock = parseItemsBlock(pedido.wms_datos_items);
+    const matriz = generarMatrizConciliacion(pedido, itemsBlock);
+
+    res.json({
+      ok: true,
+      pedido: {
+        id: pedido.id,
+        codigo: pedido.codigo,
+        sucursal: pedido.sucursal,
+        fecha: pedido.fecha,
+        estado: pedido.estado,
+        wms_orden_egreso: pedido.wms_orden_egreso,
+        wms_documento: pedido.wms_documento,
+        wms_fecha_egreso: pedido.wms_fecha_egreso,
+        wms_despachado_kg: pedido.wms_despachado_kg
+      },
+      conciliacion: matriz
+    });
+  } catch (error) {
+    console.error('Error al obtener conciliación:', error);
+    res.status(500).json({ error: 'Error al obtener la conciliación del pedido.' });
+  }
+};
+

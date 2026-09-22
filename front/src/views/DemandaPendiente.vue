@@ -4,7 +4,7 @@
       <div class="header-content">
         <h2 class="page-title">Demanda de Pedidos Pendientes</h2>
         <p class="page-description">
-          Visualiza la suma consolidada de todas las piezas y fracciones (unidades) demandadas en los pedidos que se encuentran en estado <strong>Pendiente</strong>.
+          Visualiza la suma consolidada de todas las piezas y fracciones (unidades) demandadas en todos los pedidos activos (excluyendo pedidos en estado Enviado).
         </p>
       </div>
       <div class="header-actions mt-2">

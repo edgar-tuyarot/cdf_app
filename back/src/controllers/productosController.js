@@ -445,24 +445,60 @@ exports.actualizarProducto = async (req, res) => {
   }
 };
 
-// Eliminar producto (Borrado Lógico)
+// Eliminar producto (Borrado Lógico o Definitivo)
 exports.eliminarProducto = async (req, res) => {
+  const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const producto = await Producto.findByPk(id);
+    const { permanente } = req.query; // ?permanente=true para borrado físico definitivo
 
+    const producto = await Producto.findByPk(id, { transaction });
     if (!producto) {
+      await transaction.rollback();
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    producto.activo = false;
-    producto.updated_at = new Date();
-    await producto.save();
+    const esPermanente = permanente === 'true' || permanente === true || req.body?.permanente === true;
 
-    res.json({ mensaje: 'Producto desactivado exitosamente', producto });
+    if (esPermanente) {
+      // 1. Limpiar auto-referencias de código fraccionado en otros productos
+      await sequelize.query(
+        `UPDATE productos SET codigo_fraccionado = NULL WHERE codigo_fraccionado = :codigo`,
+        { replacements: { codigo: id }, transaction }
+      );
+
+      // 2. Eliminar físicamente el producto (las 20 tablas hijas se limpian en cascada)
+      await sequelize.query(
+        `DELETE FROM productos WHERE codigo = :codigo`,
+        { replacements: { codigo: id }, transaction }
+      );
+
+      await transaction.commit();
+      return res.json({ 
+        ok: true, 
+        permanente: true,
+        mensaje: `Producto "${producto.nombre}" (${id}) eliminado definitivamente del sistema.` 
+      });
+    } else {
+      // Borrado Lógico
+      producto.activo = false;
+      producto.updated_at = new Date();
+      await producto.save({ transaction });
+
+      await transaction.commit();
+      return res.json({ 
+        ok: true, 
+        permanente: false,
+        mensaje: 'Producto desactivado exitosamente', 
+        producto 
+      });
+    }
   } catch (error) {
-    console.error('Error al desactivar producto (borrado lógico):', error);
-    res.status(500).json({ error: 'Error al desactivar el producto' });
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al eliminar producto:', error);
+    res.status(500).json({ error: 'Error al eliminar el producto: ' + error.message });
   }
 };
 
@@ -1964,4 +2000,174 @@ exports.eliminarVencimiento = async (req, res) => {
     res.status(500).json({ error: 'Error interno al eliminar lote de vencimiento.' });
   }
 };
+
+// Evaluación completa de todos los productos según fecha de última modificación / movimiento:
+// - Más de 30 días -> Inactivo (activo: false)
+// - Menor o igual a 30 días -> Activo (activo: true)
+exports.desactivarProductosInactivos = async (req, res) => {
+  try {
+    const id_ubicacion = req.ubicacionId;
+    const { Op } = require('sequelize');
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+    // 1. Obtener la fecha del último movimiento de stock por producto
+    const logDates = await MovimientoStock.findAll({
+      attributes: [
+        'codigo_producto',
+        [sequelize.fn('MAX', sequelize.col('fecha')), 'max_fecha']
+      ],
+      where: {
+        [Op.or]: [
+          { id_ubicacion },
+          { id_ubicacion: null }
+        ]
+      },
+      group: ['codigo_producto'],
+      raw: true
+    });
+
+    const logDateMap = {};
+    logDates.forEach(item => {
+      logDateMap[item.codigo_producto] = new Date(item.max_fecha);
+    });
+
+    // 2. Buscar TODOS los productos
+    const todosProductos = await Producto.findAll();
+
+    const codigosADesactivar = [];
+    const codigosAActivar = [];
+
+    todosProductos.forEach(p => {
+      const maxLogDate = logDateMap[p.codigo];
+      let lastActivityDate = p.updated_at ? new Date(p.updated_at) : null;
+
+      if (maxLogDate) {
+        if (!lastActivityDate || maxLogDate > lastActivityDate) {
+          lastActivityDate = maxLogDate;
+        }
+      }
+
+      const esInactivoPorFecha = !lastActivityDate || lastActivityDate < cutoffDate;
+
+      if (esInactivoPorFecha) {
+        // Si tiene más de 30 días sin movimientos y está activo -> Desactivar
+        if (p.activo !== false) {
+          codigosADesactivar.push(p.codigo);
+        }
+      } else {
+        // Si tiene movimientos dentro de los últimos 30 días y está desactivado -> Activar
+        if (p.activo === false) {
+          codigosAActivar.push(p.codigo);
+        }
+      }
+    });
+
+    if (codigosADesactivar.length > 0) {
+      await Producto.update(
+        { activo: false },
+        { where: { codigo: { [Op.in]: codigosADesactivar } } }
+      );
+    }
+
+    if (codigosAActivar.length > 0) {
+      await Producto.update(
+        { activo: true },
+        { where: { codigo: { [Op.in]: codigosAActivar } } }
+      );
+    }
+
+    res.json({
+      ok: true,
+      mensaje: `Evaluación de inactividad completada: ${codigosADesactivar.length} producto(s) desactivado(s) (>30 días) y ${codigosAActivar.length} producto(s) activado(s) (<=30 días).`,
+      desactivadosCount: codigosADesactivar.length,
+      activadosCount: codigosAActivar.length,
+      codigosDesactivados: codigosADesactivar,
+      codigosActivados: codigosAActivar
+    });
+
+  } catch (error) {
+    console.error('Error al evaluar inactividad de productos:', error);
+    res.status(500).json({ error: 'Error al evaluar inactividad de productos.' });
+  }
+};
+
+// PUT /api/productos/:codigo/cambiar-codigo
+// Modifica el código primario de un producto en cascada en toda la base de datos
+exports.cambiarCodigoProducto = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { codigo } = req.params;
+    const { nuevoCodigo } = req.body;
+
+    const oldClean = String(codigo || '').trim();
+    const newClean = String(nuevoCodigo || '').trim();
+
+    if (!oldClean) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El código actual es inválido.' });
+    }
+
+    if (!newClean) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Debe ingresar el nuevo código para el producto.' });
+    }
+
+    if (oldClean.toUpperCase() === newClean.toUpperCase()) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'El nuevo código debe ser distinto al actual.' });
+    }
+
+    const producto = await Producto.findByPk(oldClean, { transaction });
+    if (!producto) {
+      await transaction.rollback();
+      return res.status(404).json({ error: `Producto con código "${oldClean}" no encontrado.` });
+    }
+
+    // Verificar si el nuevo código ya existe
+    const yaExiste = await Producto.findByPk(newClean, { transaction });
+    if (yaExiste) {
+      await transaction.rollback();
+      return res.status(400).json({ error: `El código "${newClean}" ya se encuentra registrado por otro producto (${yaExiste.nombre}).` });
+    }
+
+    // 1. Modificar la clave primaria en productos (las 20 tablas hijas se actualizan automáticamente vía ON UPDATE CASCADE)
+    await sequelize.query(
+      `UPDATE productos SET codigo = :newClean, updated_at = NOW() WHERE codigo = :oldClean`,
+      {
+        replacements: { newClean, oldClean },
+        transaction
+      }
+    );
+
+    // 2. Modificar auto-referencias si este producto era código fraccionado de otro
+    await sequelize.query(
+      `UPDATE productos SET codigo_fraccionado = :newClean WHERE codigo_fraccionado = :oldClean`,
+      {
+        replacements: { newClean, oldClean },
+        transaction
+      }
+    );
+
+    await transaction.commit();
+
+    const productoActualizado = await Producto.findByPk(newClean);
+
+    res.json({
+      ok: true,
+      mensaje: `Código de producto modificado exitosamente de "${oldClean}" a "${newClean}".`,
+      codigoAnterior: oldClean,
+      codigoNuevo: newClean,
+      producto: productoActualizado
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al cambiar código de producto:', error);
+    res.status(500).json({ error: 'Error al cambiar código de producto: ' + error.message });
+  }
+};
+
 

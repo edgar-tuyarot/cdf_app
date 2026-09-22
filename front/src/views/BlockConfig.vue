@@ -416,6 +416,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { getWmsHeaders } from '../utils/wmsHeaders'
 
 const activeTab = ref('config')
 
@@ -432,15 +433,6 @@ const loginForm = ref({
   usuario: '',
   password: ''
 })
-
-const getWmsHeaders = () => {
-  if (!wmsSession.value || !wmsSession.value.sessionId) return {}
-  return {
-    'X-WMS-Session-Id': wmsSession.value.sessionId || '',
-    'X-WMS-Site-Id': wmsSession.value.siteId || '194326',
-    'X-WMS-Host': wmsSession.value.host || 'http://192.168.10.2'
-  }
-}
 
 const checkLocalSession = () => {
   const saved = localStorage.getItem('wms_session')

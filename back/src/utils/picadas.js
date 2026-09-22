@@ -1,11 +1,15 @@
 const { StockAPicada } = require('../models');
 
 /**
- * Suma peso al stock de picadas para un código dado.
- * Si no existe, lo crea.
- * @param {string} codigo
- * @param {number|string} peso
- * @returns {Promise<object>} El registro actualizado o creado
+ * Servicio utilitario para gestión y acumulación de mermas/recortes hacia Picadas.
+ *
+ * Suma peso al stock acumulado de picadas para un código de producto dado.
+ * Si el registro no existe en la tabla `stock_a_picadas`, lo inicializa.
+ *
+ * @param {string} codigo - Código del producto origen o subproducto.
+ * @param {number|string} peso - Peso en kilogramos a incorporar al lote de picadas.
+ * @returns {Promise<object>} Instancia de StockAPicada actualizada o recién creada.
+ * @throws {Error} Si el parámetro `codigo` está ausente o vacío.
  */
 async function sumarAPicadas(codigo, peso) {
   if (!codigo) throw new Error('El código es obligatorio');

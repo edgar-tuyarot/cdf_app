@@ -1,4 +1,4 @@
-const { Fraccionado, Producto, LogConversion, ProductoStock, Ubicacion, sequelize } = require('../models');
+const { Fraccionado, Producto, LogConversion, ProductoStock, ProductoVencimiento, Ubicacion, sequelize } = require('../models');
 const wmsService = require('../services/wmsService');
 
 // Obtener todos los fraccionados con los nombres de sus productos asociados
@@ -196,6 +196,30 @@ exports.procesarFraccionamiento = async (req, res) => {
       fecha: new Date()
     }, { transaction });
 
+    // 5. Deducción por FEFO en ProductoVencimiento para el producto original
+    const pesoADescontarVenc = valPesoADescontar > 0 ? valPesoADescontar : valPesoAFraccionar;
+    if (pesoADescontarVenc > 0) {
+      const vencimientos = await ProductoVencimiento.findAll({
+        where: { codigo_producto: fraccionado.codigo_producto_original, id_ubicacion },
+        order: [['vencimiento', 'ASC']],
+        transaction
+      });
+
+      let remainingWeightToDeduct = pesoADescontarVenc;
+      for (const v of vencimientos) {
+        if (remainingWeightToDeduct <= 0) break;
+        const currentPeso = parseFloat(v.peso) || 0;
+        if (currentPeso <= remainingWeightToDeduct) {
+          remainingWeightToDeduct -= currentPeso;
+          await v.destroy({ transaction });
+        } else {
+          v.peso = parseFloat((currentPeso - remainingWeightToDeduct).toFixed(3));
+          remainingWeightToDeduct = 0;
+          await v.save({ transaction });
+        }
+      }
+    }
+
     // 5. Limpiar los pesos del registro fraccionado (poner a 0)
     fraccionado.peso_a_fraccionar = 0;
     fraccionado.peso_a_descontar = 0;
@@ -224,9 +248,12 @@ exports.procesarFraccionamiento = async (req, res) => {
       }
 
       if (wmsItems.length > 0) {
+        // Para conversiones en CD Chaco, el sitio en Block WMS es estrictamente 194326 (Distribución Chaco - Depot 026)
+        const siteId = '194326';
+
         const wmsCreds = {
           sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
-          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
+          siteId,
           host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
         };
 
@@ -332,6 +359,30 @@ exports.procesarFraccionamientoLote = async (req, res) => {
         fecha: new Date()
       }, { transaction });
 
+      // Deducción por FEFO en ProductoVencimiento para el producto original
+      const pesoADescontarLoteVenc = valPesoADescontar > 0 ? valPesoADescontar : valPesoAFraccionar;
+      if (pesoADescontarLoteVenc > 0) {
+        const vencimientos = await ProductoVencimiento.findAll({
+          where: { codigo_producto: fraccionado.codigo_producto_original, id_ubicacion },
+          order: [['vencimiento', 'ASC']],
+          transaction
+        });
+
+        let remainingWeightToDeduct = pesoADescontarLoteVenc;
+        for (const v of vencimientos) {
+          if (remainingWeightToDeduct <= 0) break;
+          const currentPeso = parseFloat(v.peso) || 0;
+          if (currentPeso <= remainingWeightToDeduct) {
+            remainingWeightToDeduct -= currentPeso;
+            await v.destroy({ transaction });
+          } else {
+            v.peso = parseFloat((currentPeso - remainingWeightToDeduct).toFixed(3));
+            remainingWeightToDeduct = 0;
+            await v.save({ transaction });
+          }
+        }
+      }
+
       // Guardar ítems para la orden de WMS
       if (valPesoADescontar > 0) {
         wmsItemsCache.push({
@@ -369,9 +420,12 @@ exports.procesarFraccionamientoLote = async (req, res) => {
     // Emitir Orden de Ajuste en Lote para BlockWMS
     if (wmsItemsCache.length > 0) {
       try {
+        // Para conversiones en CD Chaco, el sitio en Block WMS es estrictamente 194326 (Distribución Chaco - Depot 026)
+        const siteId = '194326';
+
         const wmsCreds = {
           sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
-          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
+          siteId,
           host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
         };
 
@@ -418,5 +472,127 @@ exports.obtenerLogsConversiones = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener logs de conversiones:', error);
     res.status(500).json({ error: 'Error al obtener logs de conversiones' });
+  }
+};
+
+// Revertir una conversión del log (solo app local, restablece plantilla y ajusta stock)
+exports.revertirLogConversion = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const id_ubicacion = req.ubicacionId;
+
+    // 1. Buscar el registro en el log de conversiones
+    const log = await LogConversion.findOne({ where: { id, id_ubicacion }, transaction });
+    if (!log) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Registro de conversión en el log no encontrado o no pertenece a su ubicación.' });
+    }
+
+    const valPesoFraccionado = parseFloat(log.peso_fraccionado) || 0;
+    const valPesoDescontado = parseFloat(log.peso_descontado) || 0;
+    const codigoDestino = log.codigo_fraccionado;
+    const codigoOrigen = log.codigo_producto_original;
+
+    // 2. Revertir stock del producto destino en ProductoStock (restar peso_fraccionado)
+    if (valPesoFraccionado > 0) {
+      const [pStockDestino] = await ProductoStock.findOrCreate({
+        where: { codigo_producto: codigoDestino, id_ubicacion },
+        defaults: { stock: 0.0000 },
+        transaction
+      });
+      const stockActualDestino = parseFloat(pStockDestino.stock) || 0;
+      pStockDestino.stock = Math.max(0, stockActualDestino - valPesoFraccionado);
+      await pStockDestino.save({
+        transaction,
+        tipo_movimiento: 'REVERSION_CONVERSION',
+        concepto: `Reversión de conversión (Log #${log.id}): Deducción de ${valPesoFraccionado.toFixed(3)} kg del producto destino (Comprobante: ${log.comprobante})`
+      });
+    }
+
+    // 3. Restablecer stock/vencimiento del producto origen (sumar peso_descontado)
+    const pesoARestaurarOrigen = valPesoDescontado > 0 ? valPesoDescontado : valPesoFraccionado;
+    if (pesoARestaurarOrigen > 0) {
+      // Buscar o crear un lote de vencimiento para el producto origen
+      let loteVenc = await ProductoVencimiento.findOne({
+        where: { codigo_producto: codigoOrigen, id_ubicacion },
+        order: [['vencimiento', 'ASC']],
+        transaction
+      });
+
+      if (loteVenc) {
+        loteVenc.peso = parseFloat((parseFloat(loteVenc.peso || 0) + pesoARestaurarOrigen).toFixed(3));
+        await loteVenc.save({ transaction });
+      } else {
+        // Si no tenía lote de vencimiento activo, crear uno por defecto (vencimiento a 30 días)
+        const fechaDefecto = new Date();
+        fechaDefecto.setDate(fechaDefecto.getDate() + 30);
+        const yyyy = fechaDefecto.getFullYear();
+        const mm = String(fechaDefecto.getMonth() + 1).padStart(2, '0');
+        const dd = String(fechaDefecto.getDate()).padStart(2, '0');
+        const vencStr = `${yyyy}-${mm}-${dd}`;
+
+        await ProductoVencimiento.create({
+          codigo_producto: codigoOrigen,
+          vencimiento: vencStr,
+          piezas: 0,
+          peso: pesoARestaurarOrigen,
+          id_ubicacion
+        }, { transaction });
+      }
+
+      // También asegurar actualización del ProductoStock origen
+      const [pStockOrigen] = await ProductoStock.findOrCreate({
+        where: { codigo_producto: codigoOrigen, id_ubicacion },
+        defaults: { stock: 0.0000 },
+        transaction
+      });
+      const stockActualOrigen = parseFloat(pStockOrigen.stock) || 0;
+      pStockOrigen.stock = stockActualOrigen + pesoARestaurarOrigen;
+      await pStockOrigen.save({
+        transaction,
+        skipAuditLog: true
+      });
+    }
+
+    // 4. Restaurar la plantilla de conversión (Fraccionado) para que aparezca disponible nuevamente
+    let fraccionado = await Fraccionado.findOne({
+      where: {
+        codigo_producto_original: codigoOrigen,
+        codigo_fraccionado: codigoDestino,
+        id_ubicacion
+      },
+      transaction
+    });
+
+    if (fraccionado) {
+      fraccionado.peso_a_fraccionar = valPesoFraccionado;
+      fraccionado.peso_a_descontar = valPesoDescontado;
+      await fraccionado.save({ transaction });
+    } else {
+      fraccionado = await Fraccionado.create({
+        id_ubicacion,
+        codigo_producto_original: codigoOrigen,
+        codigo_fraccionado: codigoDestino,
+        peso_a_fraccionar: valPesoFraccionado,
+        peso_a_descontar: valPesoDescontado
+      }, { transaction });
+    }
+
+    // 5. Eliminar el registro del LogConversion revertido
+    await log.destroy({ transaction });
+
+    await transaction.commit();
+
+    res.json({
+      mensaje: `Conversión del comprobante ${log.comprobante} revertida exitosamente. La plantilla volvió a habilitarse con sus pesos originales.`,
+      fraccionadoRestaurado: fraccionado
+    });
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    console.error('Error al revertir conversión del log:', error);
+    res.status(500).json({ error: 'Error interno al revertir la conversión.' });
   }
 };

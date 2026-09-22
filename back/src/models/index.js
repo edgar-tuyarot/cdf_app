@@ -98,6 +98,46 @@ const SucursalProductoPermiso = sequelize.define('SucursalProductoPermiso', {
   timestamps: false
 });
 
+const SucursalProductoStockObjetivo = sequelize.define('SucursalProductoStockObjetivo', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  site_id: { type: DataTypes.STRING, allowNull: true },
+  id_sucursal: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'sucursales',
+      key: 'id'
+    },
+    onDelete: 'CASCADE'
+  },
+  codigo_producto: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    references: {
+      model: 'productos',
+      key: 'codigo'
+    },
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE'
+  },
+  stock_minimo: {
+    type: DataTypes.DECIMAL(10, 3),
+    allowNull: false,
+    defaultValue: 0
+  },
+  stock_objetivo: {
+    type: DataTypes.DECIMAL(10, 3),
+    allowNull: false,
+    defaultValue: 0
+  }
+}, {
+  tableName: 'sucursal_producto_stock_objetivos',
+  timestamps: true,
+  indexes: [
+    { unique: true, fields: ['site_id', 'codigo_producto'] }
+  ]
+});
+
 const Proveedor = sequelize.define('Proveedor', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   nombre: { type: DataTypes.STRING, allowNull: false }
@@ -241,6 +281,39 @@ const Pedido = sequelize.define('Pedido', {
       key: 'id'
     },
     onDelete: 'SET NULL'
+  },
+  wms_orden_egreso: { type: DataTypes.STRING(50), allowNull: true },
+  wms_documento: { type: DataTypes.STRING(100), allowNull: true },
+  wms_fecha_egreso: { type: DataTypes.STRING(20), allowNull: true },
+  wms_despachado_kg: { type: DataTypes.DECIMAL(10, 3), allowNull: true, defaultValue: 0 },
+  wms_datos_items: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    get() {
+      const rawValue = this.getDataValue('wms_datos_items');
+      if (!rawValue) return [];
+      if (Array.isArray(rawValue)) return rawValue;
+      if (typeof rawValue === 'string') {
+        try {
+          const parsed = JSON.parse(rawValue);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return [];
+    },
+    set(val) {
+      if (typeof val === 'string') {
+        try {
+          this.setDataValue('wms_datos_items', JSON.parse(val));
+        } catch (e) {
+          this.setDataValue('wms_datos_items', val);
+        }
+      } else {
+        this.setDataValue('wms_datos_items', val);
+      }
+    }
   }
 }, {
   tableName: 'pedidos',
@@ -768,6 +841,7 @@ const PedidoArmadoItem = sequelize.define('PedidoArmadoItem', {
   fraccion: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
   no_envia: { type: DataTypes.BOOLEAN, defaultValue: false },
   sin_stock: { type: DataTypes.BOOLEAN, defaultValue: false },
+  usuario: { type: DataTypes.STRING, allowNull: true, defaultValue: 'Sistema' },
   fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
   tableName: 'pedido_armado_items',
@@ -1131,10 +1205,106 @@ const Registro = sequelize.define('Registro', {
     }
 
     try {
+      const armadoTableDef = await queryInterface.describeTable('pedido_armado_items');
+      if (!armadoTableDef.usuario) {
+        await queryInterface.addColumn('pedido_armado_items', 'usuario', {
+          type: DataTypes.STRING,
+          allowNull: true,
+          defaultValue: 'Sistema'
+        });
+        console.log('[Migration] Columna "usuario" agregada exitosamente a "pedido_armado_items".');
+      }
+    } catch (e) {}
+
+    try {
       await StockSnapshot.sync();
       console.log('[Migration] Tabla "stock_snapshots" verificada/creada exitosamente.');
     } catch (e) {
       console.error('[Migration] Error al verificar tabla stock_snapshots:', e);
+    }
+
+    try {
+      const objTableDef = await queryInterface.describeTable('sucursal_producto_stock_objetivos').catch(() => null);
+      if (objTableDef && !objTableDef.site_id) {
+        await queryInterface.addColumn('sucursal_producto_stock_objetivos', 'site_id', {
+          type: DataTypes.STRING,
+          allowNull: true
+        });
+        console.log('[Migration] Columna "site_id" agregada exitosamente a "sucursal_producto_stock_objetivos".');
+      }
+      await SucursalProductoStockObjetivo.sync();
+
+      // Asegurar que la relación con productos tenga ON UPDATE CASCADE
+      try {
+        const [rc] = await sequelize.query(`
+          SELECT CONSTRAINT_NAME, UPDATE_RULE 
+          FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+          WHERE TABLE_NAME = 'sucursal_producto_stock_objetivos'
+            AND REFERENCED_TABLE_NAME = 'productos'
+            AND CONSTRAINT_SCHEMA = DATABASE();
+        `);
+        if (rc && rc.length > 0 && rc[0].UPDATE_RULE !== 'CASCADE') {
+          const cName = rc[0].CONSTRAINT_NAME;
+          await sequelize.query(`ALTER TABLE sucursal_producto_stock_objetivos DROP FOREIGN KEY \`${cName}\`;`);
+          await sequelize.query(`
+            ALTER TABLE sucursal_producto_stock_objetivos 
+            ADD CONSTRAINT \`${cName}\` 
+            FOREIGN KEY (codigo_producto) REFERENCES productos(codigo) 
+            ON DELETE CASCADE ON UPDATE CASCADE;
+          `);
+          console.log(`[Migration] Foreign key "${cName}" actualizada a ON UPDATE CASCADE.`);
+        }
+      } catch (fkErr) {
+        // Ignorar si ya está aplicada o no se puede consultar
+      }
+
+      console.log('[Migration] Tabla "sucursal_producto_stock_objetivos" verificada/creada exitosamente.');
+    } catch (e) {
+      console.error('[Migration] Error al verificar tabla sucursal_producto_stock_objetivos:', e);
+    }
+
+    try {
+      const pedidosTableDef = await queryInterface.describeTable('pedidos').catch(() => null);
+      if (pedidosTableDef) {
+        if (!pedidosTableDef.wms_orden_egreso) {
+          await queryInterface.addColumn('pedidos', 'wms_orden_egreso', {
+            type: DataTypes.STRING(50),
+            allowNull: true
+          });
+          console.log('[Migration] Columna "wms_orden_egreso" agregada a "pedidos".');
+        }
+        if (!pedidosTableDef.wms_documento) {
+          await queryInterface.addColumn('pedidos', 'wms_documento', {
+            type: DataTypes.STRING(100),
+            allowNull: true
+          });
+          console.log('[Migration] Columna "wms_documento" agregada a "pedidos".');
+        }
+        if (!pedidosTableDef.wms_fecha_egreso) {
+          await queryInterface.addColumn('pedidos', 'wms_fecha_egreso', {
+            type: DataTypes.STRING(20),
+            allowNull: true
+          });
+          console.log('[Migration] Columna "wms_fecha_egreso" agregada a "pedidos".');
+        }
+        if (!pedidosTableDef.wms_despachado_kg) {
+          await queryInterface.addColumn('pedidos', 'wms_despachado_kg', {
+            type: DataTypes.DECIMAL(10, 3),
+            allowNull: true,
+            defaultValue: 0
+          });
+          console.log('[Migration] Columna "wms_despachado_kg" agregada a "pedidos".');
+        }
+        if (!pedidosTableDef.wms_datos_items) {
+          await queryInterface.addColumn('pedidos', 'wms_datos_items', {
+            type: DataTypes.JSON,
+            allowNull: true
+          });
+          console.log('[Migration] Columna "wms_datos_items" agregada a "pedidos".');
+        }
+      }
+    } catch (e) {
+      console.error('[Migration] Error al verificar columnas WMS en pedidos:', e);
     }
   } catch (err) {
     // Continuar de forma silenciosa
@@ -1166,6 +1336,7 @@ module.exports = {
   LogConversion,
   PedidoArmadoItem,
   SucursalProductoPermiso,
+  SucursalProductoStockObjetivo,
   RolPermiso,
   Bulto,
   OrdenCompra,

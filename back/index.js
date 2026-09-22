@@ -19,7 +19,7 @@ app.use((req, res, next) => {
 });
 
 // Rutas Modulares
-const productosRoutes = require('././src/routes/productos');
+const productosRoutes = require('./src/routes/productos');
 const procesosRoutes = require('./src/routes/procesos');
 const fraccionadosRoutes = require('./src/routes/fraccionados');
 const pedidosRoutes = require('./src/routes/pedidos');
@@ -37,29 +37,41 @@ const ordenesCompraRoutes = require('./src/routes/ordenesCompra');
 const stockDebugRoutes = require('./src/routes/stockDebug');
 const wmsRoutes = require('./src/routes/wms');
 const registrosRoutes = require('./src/routes/registros');
+const reportesRoutes = require('./src/routes/reportes');
 const productosController = require('./src/controllers/productosController');
 
+// --- Catálogo y Stock ---
 app.use('/api/productos', productosRoutes);
+// Endpoint directo de consulta rápida de movimientos de stock
 app.get('/api/movimientos-stock', productosController.obtenerMovimientosStock);
+
+// --- Operaciones de Planta y Producción ---
 app.use('/api/procesos', procesosRoutes);
 app.use('/api/fraccionados', fraccionadosRoutes);
 app.use('/api/pedidos', pedidosRoutes);
+app.use('/api/ingreso-sucursales', ingresoSucursalesRoutes);
+
+// --- Maestros / Configuración de Entidades ---
 app.use('/api/colaboradores', colaboradoresRoutes);
 app.use('/api/sucursales', sucursalesRoutes);
 app.use('/api/proveedores', proveedoresRoutes);
 app.use('/api/bultos', bultosRoutes);
-app.use('/api/ingreso-sucursales', ingresoSucursalesRoutes);
-app.use('/api/ingresos-sucursales', ingresoSucursalesRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/produccion', dashboardRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/permisos', permisosRoutes);
 app.use('/api/ubicaciones', ubicacionesRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/permisos', permisosRoutes);
+
+// --- Compras, Auditoría y Reportes ---
 app.use('/api/ordenes-compra', ordenesCompraRoutes);
+app.use('/api/registros', registrosRoutes);
+app.use('/api/reportes', reportesRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+// Alias mantenido para compatibilidad con métricas de operario en Dashboard.vue
+app.use('/api/produccion', dashboardRoutes);
+
+// --- Integración Externa Block WMS y Diagnóstico ---
 app.use('/api/stock', stockDebugRoutes);
 app.use('/api/wms', wmsRoutes);
-app.use('/api/registros', registrosRoutes);
+app.use('/api/auth', authRoutes);
 
 // Servir frontend compilado en producción (dist)
 const path = require('path');

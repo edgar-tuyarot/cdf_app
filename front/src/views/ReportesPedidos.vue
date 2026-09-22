@@ -73,59 +73,15 @@
       </div>
     </div>
 
-    <!-- Indicadores KPI -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
-      <div class="status-card info">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Kg Pedidos</span>
-            <span class="status-card-value text-blue">{{ metrics.totalKgSolicitadosNeto }} kg</span>
-          </div>
-          <i class="ph ph-shopping-cart status-card-icon"></i>
-        </div>
-      </div>
-
-      <div class="status-card success">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Kg Enviados</span>
-            <span class="status-card-value text-green">{{ metrics.totalKgEnviados }} kg</span>
-          </div>
-          <i class="ph ph-truck status-card-icon"></i>
-        </div>
-      </div>
-
-      <div class="status-card critical">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Kg Sin Stock</span>
-            <span class="status-card-value text-red">{{ metrics.totalKgSinStock }} kg</span>
-          </div>
-          <i class="ph ph-prohibited status-card-icon"></i>
-        </div>
-      </div>
-
-      <div class="status-card warning">
-        <div class="status-card-body">
-          <div class="status-card-info">
-            <span class="status-card-title">Balance Neto</span>
-            <span class="status-card-value">{{ metrics.totalBalance }} kg</span>
-          </div>
-          <i class="ph ph-scales status-card-icon"></i>
-        </div>
-      </div>
-    </div>
-
-    <!-- GRÁFICO UNIFICADO: 3 LÍNEAS (AZUL: PEDIDOS NETOS, VERDE: ENVIADOS, ROJO: SIN STOCK) -->
+    <!-- GRÁFICO LINEAL DE PEDIDOS (EJE Y: KG, EJE X: FECHAS) -->
     <div class="card mb-4">
-      <div class="card-header" style="background: #0f172a; color: white; display: flex; justify-content: space-between; align-items: center;">
+      <div class="card-header" style="background: #0f172a; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <span class="card-title" style="color: white; font-weight: bold;">
-          <i class="ph ph-chart-line-up" style="margin-right: 0.4rem; color: #60a5fa;"></i> Gráfico Unificado: Pedidos Netos (Azul) vs Enviado (Verde) vs Sin Stock (Rojo)
+          <i class="ph ph-chart-line-up" style="margin-right: 0.4rem; color: #60a5fa;"></i> Evolución de Pedidos (Kg) por Fecha
         </span>
         <div style="display: flex; gap: 1.25rem; font-size: 0.85rem;" class="text-xs">
-          <span>Pedido Neto: <strong style="color: #93c5fd;">{{ metrics.totalKgSolicitadosNeto }} kg</strong></span>
+          <span>Pedido: <strong style="color: #93c5fd;">{{ metrics.totalKgSolicitadosNeto }} kg</strong></span>
           <span>Enviado: <strong style="color: #6ee7b7;">{{ metrics.totalKgEnviados }} kg</strong></span>
-          <span>Sin Stock: <strong style="color: #fca5a5;">{{ metrics.totalKgSinStock }} kg</strong></span>
         </div>
       </div>
       <div class="card-body" style="padding: 1.25rem;">
@@ -182,7 +138,7 @@
           <tbody v-for="group in groupedOrders" :key="group.codigoPedido">
             <!-- Fila Clicable de Encabezado de Pedido (Contraer / Desplegar) -->
             <tr 
-              @click="toggleOrderCollapse(group.codigoPedido)" 
+              @click="toggleOrderExpand(group.codigoPedido)" 
               style="background: #1e293b; color: white; font-weight: bold; cursor: pointer; user-select: none;"
               title="Clic para desplegar o contraer este pedido"
             >
@@ -191,7 +147,7 @@
                   <span style="display: flex; align-items: center; gap: 0.5rem;">
                     <i 
                       class="ph" 
-                      :class="isOrderCollapsed(group.codigoPedido) ? 'ph-caret-right text-blue' : 'ph-caret-down text-blue'" 
+                      :class="isOrderExpanded(group.codigoPedido) ? 'ph-caret-down text-blue' : 'ph-caret-right text-blue'" 
                       style="font-size: 1.1rem; transition: transform 0.2s ease;"
                     ></i>
                     <i class="ph ph-receipt" style="color: #60a5fa; font-size: 1rem;"></i>
@@ -209,8 +165,8 @@
               </td>
             </tr>
 
-            <!-- Renderizado de los Ítems y Subtotal solo si NO está contraído -->
-            <template v-if="!isOrderCollapsed(group.codigoPedido)">
+            <!-- Renderizado de los Ítems y Subtotal solo si está desplegado -->
+            <template v-if="isOrderExpanded(group.codigoPedido)">
               <!-- Filas de Ítems del Pedido -->
               <tr v-for="(item, idx) in group.items" :key="idx">
                 <td><strong>{{ formatDate(item.fecha) }}</strong></td>
@@ -300,6 +256,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import * as XLSX from 'xlsx'
 import Chart from 'chart.js/auto'
+import { formatDateDisplay as formatDate } from '../utils/dateFormat'
 
 const loading = ref(false)
 const pedidos = ref([])
@@ -313,7 +270,8 @@ let chartUnifiedInstance = null
 const sortKey = ref('fecha')
 const sortOrder = ref('desc')
 
-const collapsedOrders = ref(new Set())
+// Conjunto de IDs de pedidos expandidos (por defecto vacío = todos contraídos)
+const expandedOrders = ref(new Set())
 
 const alert = ref({
   show: false,
@@ -419,27 +377,27 @@ const setSort = (key) => {
   }
 }
 
-// Funciones para contraer y desplegar pedidos
-const toggleOrderCollapse = (codigoPedido) => {
-  if (collapsedOrders.value.has(codigoPedido)) {
-    collapsedOrders.value.delete(codigoPedido)
+// Funciones para contraer y desplegar pedidos (por defecto todos contraídos)
+const toggleOrderExpand = (codigoPedido) => {
+  if (expandedOrders.value.has(codigoPedido)) {
+    expandedOrders.value.delete(codigoPedido)
   } else {
-    collapsedOrders.value.add(codigoPedido)
+    expandedOrders.value.add(codigoPedido)
   }
 }
 
-const isOrderCollapsed = (codigoPedido) => {
-  return collapsedOrders.value.has(codigoPedido)
+const isOrderExpanded = (codigoPedido) => {
+  return expandedOrders.value.has(codigoPedido)
 }
 
 const expandAllOrders = () => {
-  collapsedOrders.value.clear()
+  groupedOrders.value.forEach(g => {
+    expandedOrders.value.add(g.codigoPedido)
+  })
 }
 
 const collapseAllOrders = () => {
-  groupedOrders.value.forEach(g => {
-    collapsedOrders.value.add(g.codigoPedido)
-  })
+  expandedOrders.value.clear()
 }
 
 // Desglosar cada pedido con cálculo de balance = kgSolicitados - kgEnviados
@@ -718,7 +676,7 @@ const metrics = computed(() => {
   }
 })
 
-// Renderizado del Gráfico Unificado con 3 Líneas (Chart.js)
+// Renderizado del Gráfico Lineal de Pedidos (Chart.js)
 const renderChart = () => {
   if (!chartUnifiedCanvas.value) return
   if (chartUnifiedInstance) chartUnifiedInstance.destroy()
@@ -728,51 +686,51 @@ const renderChart = () => {
   const ctx = chartUnifiedCanvas.value.getContext('2d')
 
   chartUnifiedInstance = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: formattedDates.length > 0 ? formattedDates : ['Sin datos'],
       datasets: [
         {
           label: 'Kg Pedidos',
           data: formattedDates.length > 0 ? valuesPedidos : [0],
-          backgroundColor: 'rgb(37, 99, 235)',
+          borderColor: 'rgb(37, 99, 235)',
+          backgroundColor: 'rgba(37, 99, 235, 0.08)',
+          borderWidth: 2.5,
           fill: true,
-          tension: 0.3,
-          pointRadius: 5,
+          tension: 0.25,
+          pointRadius: 4,
           pointBackgroundColor: '#1d4ed8',
-          pointHoverRadius: 7
+          pointHoverRadius: 6
         },
         {
           label: 'Kg Enviados',
           data: formattedDates.length > 0 ? valuesEnviados : [0],
-          backgroundColor: 'rgb(16, 185, 129)',
+          borderColor: 'rgb(16, 185, 129)',
+          backgroundColor: 'rgba(16, 185, 129, 0.08)',
+          borderWidth: 2.5,
           fill: true,
-          tension: 0.3,
-          pointRadius: 5,
+          tension: 0.25,
+          pointRadius: 4,
           pointBackgroundColor: '#047857',
-          pointHoverRadius: 7
-        },
-        {
-          label: 'Kg Sin Stock',
-          data: formattedDates.length > 0 ? valuesSinStock : [0],
-          backgroundColor: 'rgb(239, 68, 68)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 5,
-          pointBackgroundColor: '#dc2626',
-          pointHoverRadius: 7
+          pointHoverRadius: 6
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
         legend: {
           display: true,
           position: 'top',
           labels: {
-            font: { family: 'Inter', weight: 'bold', size: 13 }
+            font: { family: 'Inter', weight: 'bold', size: 12 },
+            boxWidth: 16,
+            padding: 15
           }
         },
         tooltip: {
@@ -783,12 +741,23 @@ const renderChart = () => {
       },
       scales: {
         x: {
-          title: { display: true, text: 'Fecha de Pedido (Eje X)', font: { family: 'Inter', weight: 'bold' } },
-          grid: { color: '#cbd5e1' }
+          title: { 
+            display: true, 
+            text: 'Fechas', 
+            font: { family: 'Inter', weight: 'bold', size: 12 },
+            color: '#475569'
+          },
+          grid: { color: 'rgba(203, 213, 225, 0.5)' }
         },
         y: {
           beginAtZero: true,
-          title: { display: true, text: 'Kilogramos (Eje Y)', font: { family: 'Inter', weight: 'bold' } }
+          title: { 
+            display: true, 
+            text: 'Kilogramos (kg)', 
+            font: { family: 'Inter', weight: 'bold', size: 12 },
+            color: '#475569'
+          },
+          grid: { color: 'rgba(203, 213, 225, 0.5)' }
         }
       }
     }
@@ -800,14 +769,6 @@ watch([filteredItems], async () => {
   await nextTick()
   renderChart()
 })
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  const ymd = parseDateToYYYYMMDD(dateStr)
-  if (!ymd) return '-'
-  const [year, month, day] = ymd.split('-')
-  return `${day}/${month}/${year}`
-}
 
 const exportToExcel = () => {
   try {

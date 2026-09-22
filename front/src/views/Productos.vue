@@ -9,19 +9,32 @@
         </div>
         <div class="header-actions mt-2">
           <input v-if="isAdmin" type="file" ref="stockFileInput" accept=".xlsx, .xls" style="display: none" @change="handleStockFileUpload" />
-          <button v-if="isAdmin" class="btn btn-secondary" style="background: #1a7f37; color: #fff; border: 1px solid #15692e;" @click="triggerStockFileInput" :disabled="uploadingStock">
+          <button v-if="isAdmin" class="btn btn-secondary" @click="triggerStockFileInput" :disabled="uploadingStock">
             <i class="ph ph-spinner spinner" v-if="uploadingStock"></i>
-            <i class="ph ph-package" v-else></i> Cargar Stock (Excel)
+            <i class="ph ph-package text-orange" v-else></i> Cargar Stock (Excel)
           </button>
-          <button v-if="isAdmin" class="btn btn-secondary" style="background: #0284c7; color: #fff; border: 1px solid #0369a1; display: flex; align-items: center; gap: 0.25rem;" @click="runStockSync" :disabled="syncingBlock">
+          <button v-if="isAdmin" class="btn btn-secondary" @click="runStockSync" :disabled="syncingBlock">
             <i class="ph ph-spinner spinner" v-if="syncingBlock"></i>
-            <i class="ph ph-arrows-clockwise" v-else></i> Sync Block
+            <i class="ph ph-arrows-clockwise text-orange" v-else></i> Sync Block
           </button>
-          <button v-if="!isSucursal" class="btn btn-secondary" style="background: #275214; color: #fff; border: 1px solid #1c3d0e; display: flex; align-items: center; gap: 0.25rem;" @click="exportToExcel" :disabled="loading || productos.length === 0">
-            <i class="ph ph-file-xls"></i> Exportar Vencimientos
+          <button 
+            v-if="isAdmin && productosNoEncontradosBlock.length > 0" 
+            class="btn btn-warning" 
+            @click="showModalNoEncontradosBlock = true"
+            style="font-weight: 700; display: inline-flex; align-items: center; gap: 0.3rem;"
+            title="Ver productos encontrados en BlockWMS que no existen en la base de datos"
+          >
+            <i class="ph ph-warning-diamond"></i> {{ productosNoEncontradosBlock.length }} No en BD
           </button>
-          <button class="btn btn-secondary" style="background: #3d85c6; color: #fff; border: 1px solid #2b6194; display: flex; align-items: center; gap: 0.25rem;" @click="exportTableToExcel" :disabled="loading || filteredAndSortedProductos.length === 0">
-            <i class="ph ph-table"></i> Exportar Tabla
+          <button v-if="!isSucursal" class="btn btn-secondary" @click="exportToExcel" :disabled="loading || productos.length === 0">
+            <i class="ph ph-file-xls text-orange"></i> Exportar Vencimientos
+          </button>
+          <button class="btn btn-secondary" @click="exportTableToExcel" :disabled="loading || filteredAndSortedProductos.length === 0">
+            <i class="ph ph-table text-orange"></i> Exportar Tabla
+          </button>
+          <button v-if="isAdmin" class="btn btn-secondary" @click="desactivarInactivos" :disabled="deactivatingInactivos" title="Evaluar inactividad (Desactivar >30 días / Activar <=30 días)">
+            <i class="ph ph-spinner spinner" v-if="deactivatingInactivos"></i>
+            <i class="ph ph-clock-afternoon text-orange" v-else></i> Evaluar Inactividad (30 días)
           </button>
           <button v-if="isAdmin" class="btn btn-primary" @click="openModal()">
             <i class="ph ph-plus"></i> Nuevo Producto
@@ -50,16 +63,6 @@
               </select>
             </div>
 
-            <!-- Filtro por Sucursal Habilitada -->
-            <div style="display: flex; align-items: center; gap: 0.25rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-              <i class="ph ph-storefront" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
-              <select v-model="filterSucursal" style="border: none; outline: none; font-size: 0.8rem; background: transparent; color: var(--text-primary); cursor: pointer; padding-right: 5px;">
-                <option value="" style="background-color: var(--bg-window); color: var(--text-primary);">Todas las Sucursales</option>
-                <option v-for="suc in sucursales" :key="suc.id" :value="suc.id" style="background-color: var(--bg-window); color: var(--text-primary);">
-                  {{ suc.sucursal }}
-                </option>
-              </select>
-            </div>
 
             <!-- Buscador -->
             <div class="search-box" style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
@@ -93,7 +96,10 @@
                   Nombre 
                   <i v-if="sortKey === 'nombre'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
                 </th>
-                <th>Proveedor</th>
+                <th @click="sortBy('proveedor')" class="sortable">
+                  Proveedor 
+                  <i v-if="sortKey === 'proveedor'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
+                </th>
                 <th @click="sortBy('stock')" class="sortable text-right">
                   {{ isSucursal ? 'KG Stock' : 'Stock' }} 
                   <i v-if="sortKey === 'stock'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i>
@@ -168,11 +174,14 @@
 
         <div style="display: flex; gap: 0.5rem; align-items: center;">
           <template v-if="isAdmin && !isViewingOnly && isEditing">
-            <button v-if="form.activo !== false" type="button" class="btn btn-danger" @click="handleFormDeactivate">
-              <i class="ph ph-trash me-1"></i> Desactivar Producto
+            <button v-if="form.activo !== false" type="button" class="btn btn-warning" @click="handleFormDeactivate" style="font-weight: 600;">
+              <i class="ph ph-eye-slash me-1"></i> Desactivar
             </button>
-            <button v-else type="button" class="btn btn-success" @click="handleFormReactivate">
-              <i class="ph ph-check me-1"></i> Activar Producto
+            <button v-else type="button" class="btn btn-success" @click="handleFormReactivate" style="font-weight: 600;">
+              <i class="ph ph-check me-1"></i> Activar
+            </button>
+            <button type="button" class="btn btn-danger" @click="openModalEliminarDefinitivo" style="font-weight: 700;">
+              <i class="ph ph-trash me-1"></i> Eliminar Definitivo
             </button>
           </template>
 
@@ -267,8 +276,20 @@
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
               <div class="form-group">
-                <label class="form-label">Código *</label>
-                <input type="text" v-model="form.codigo" class="form-control" :disabled="isEditing || !isAdmin" required />
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                  <label class="form-label" style="margin-bottom: 0;">Código *</label>
+                  <button 
+                    v-if="isEditing && isAdmin && !isViewingOnly" 
+                    type="button" 
+                    class="btn btn-sm btn-secondary" 
+                    style="padding: 1px 7px; font-size: 0.72rem; height: 21px; display: inline-flex; align-items: center; gap: 0.25rem; font-weight: 700; color: #0284c7;"
+                    @click="openModalCambiarCodigo"
+                    title="Modificar el código de este producto en todo el sistema"
+                  >
+                    <i class="ph ph-pencil-simple"></i> Cambiar
+                  </button>
+                </div>
+                <input type="text" v-model="form.codigo" class="form-control font-mono" :disabled="isEditing || !isAdmin" required />
               </div>
               
               <div class="form-group">
@@ -430,6 +451,190 @@
       </div>
     </Teleport>
 
+    <!-- Modal Cambiar Código de Producto -->
+    <Teleport to="body">
+      <div v-if="showModalCambiarCodigo" class="win-dialog-overlay" @mousedown.self="closeModalCambiarCodigo">
+        <div class="win-dialog" style="max-width: 440px; width: 92vw;">
+          <div class="win-dialog-titlebar" style="background-color: var(--accent-primary);">
+            <span class="win-dialog-titlebar-text" style="color: white; font-weight: bold; display: flex; align-items: center; gap: 0.35rem;">
+              <i class="ph ph-pencil-simple"></i> Cambiar Código de Producto
+            </span>
+            <button class="win-dialog-close" style="color: white;" @click="closeModalCambiarCodigo"><i class="ph ph-x"></i></button>
+          </div>
+          <div class="win-dialog-body" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--bevel-dark); padding: 0.6rem 0.75rem; font-size: 0.82rem; line-height: 1.4;">
+              <div><strong>Producto:</strong> {{ form.nombre }}</div>
+              <div><strong>Código Actual:</strong> <span class="font-mono" style="font-weight: bold; color: var(--accent-primary);">{{ form.codigo }}</span></div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="font-weight: bold; font-size: 0.82rem;">Nuevo Código *</label>
+              <input 
+                type="text" 
+                v-model="nuevoCodigoInput" 
+                class="form-control font-mono" 
+                placeholder="Ej: 1057A" 
+                required 
+                style="font-size: 0.95rem; font-weight: bold; text-transform: uppercase;"
+                @keyup.enter="confirmarCambioCodigo"
+                :disabled="cambiandoCodigo"
+              />
+            </div>
+
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 2px; padding: 0.5rem 0.65rem; color: #991b1b; font-size: 0.75rem; display: flex; gap: 0.4rem; align-items: flex-start; line-height: 1.35;">
+              <i class="ph ph-warning" style="font-size: 1.1rem; flex-shrink: 0; margin-top: 1px;"></i>
+              <span>
+                <strong>Atención:</strong> Esta acción modificará el código del producto y actualizará automáticamente <strong>todo su historial</strong> en la base de datos (stock, pedidos, vencimientos, movimientos y recetas).
+              </span>
+            </div>
+          </div>
+          <div class="win-dialog-footer" style="padding: 0.75rem 1.25rem;">
+            <button class="win-dialog-btn win-dialog-btn-ok" @click="confirmarCambioCodigo" :disabled="cambiandoCodigo || !nuevoCodigoInput.trim()">
+              <i class="ph ph-spinner spinner" v-if="cambiandoCodigo"></i>
+              {{ cambiandoCodigo ? 'Cambiando...' : 'Confirmar Cambio' }}
+            </button>
+            <button class="win-dialog-btn" @click="closeModalCambiarCodigo" :disabled="cambiandoCodigo">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal Confirmación Eliminación Definitiva -->
+    <Teleport to="body">
+      <div v-if="showModalEliminarDefinitivo" class="win-dialog-overlay" @mousedown.self="showModalEliminarDefinitivo = false">
+        <div class="win-dialog" style="max-width: 480px; width: 92vw;">
+          <div class="win-dialog-titlebar" style="background-color: #dc2626;">
+            <span class="win-dialog-titlebar-text" style="color: white; font-weight: bold; display: flex; align-items: center; gap: 0.35rem;">
+              <i class="ph ph-warning-octagon"></i> Eliminar Producto Definitivamente
+            </span>
+            <button class="win-dialog-close" style="color: white;" @click="showModalEliminarDefinitivo = false"><i class="ph ph-x"></i></button>
+          </div>
+          <div class="win-dialog-body" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
+            <div style="background: var(--bg-secondary); border: 1px solid var(--bevel-dark); padding: 0.6rem 0.75rem; font-size: 0.82rem; line-height: 1.4;">
+              <div><strong>Producto:</strong> {{ form.nombre }}</div>
+              <div><strong>Código:</strong> <span class="font-mono" style="font-weight: bold; color: #dc2626;">{{ form.codigo }}</span></div>
+            </div>
+
+            <div style="background: #fef2f2; border: 1.5px solid #f87171; border-radius: 4px; padding: 0.75rem; color: #991b1b; font-size: 0.8rem; display: flex; gap: 0.5rem; align-items: flex-start; line-height: 1.4;">
+              <i class="ph ph-warning-circle" style="font-size: 1.4rem; flex-shrink: 0; color: #dc2626;"></i>
+              <div>
+                <strong>¿Estás completamente seguro de borrarlo?</strong><br>
+                Esta acción es <strong>definitiva e irreversible</strong>. Se eliminará el producto del catálogo y <strong>todo su historial en la base de datos</strong> (stock en todas las sucursales, lotes/vencimientos, movimientos y recetas).
+              </div>
+            </div>
+          </div>
+          <div class="win-dialog-footer" style="padding: 0.75rem 1.25rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <button class="btn btn-danger" @click="confirmarEliminarDefinitivo" :disabled="eliminandoDefinitivo" style="font-weight: 700;">
+              <i class="ph ph-spinner spinner" v-if="eliminandoDefinitivo"></i>
+              <i class="ph ph-trash" v-else></i>
+              {{ eliminandoDefinitivo ? 'Eliminando...' : 'Sí, Eliminar Definitivamente' }}
+            </button>
+            <button class="win-dialog-btn" @click="showModalEliminarDefinitivo = false" :disabled="eliminandoDefinitivo">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Modal Productos de BlockWMS no encontrados en la BBDD -->
+    <Teleport to="body">
+      <div v-if="showModalNoEncontradosBlock" class="win-dialog-overlay" @mousedown.self="showModalNoEncontradosBlock = false">
+        <div class="win-dialog" style="max-width: 860px; width: 95vw; max-height: 90vh; display: flex; flex-direction: column;">
+          <div class="win-dialog-titlebar" style="background-color: #d97706;">
+            <span class="win-dialog-titlebar-text" style="color: white; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;">
+              <i class="ph ph-warning-diamond"></i> Productos en BlockWMS no encontrados en la BBDD ({{ productosNoEncontradosBlock.length }})
+            </span>
+            <button class="win-dialog-close" style="color: white;" @click="showModalNoEncontradosBlock = false"><i class="ph ph-x"></i></button>
+          </div>
+
+          <div class="win-dialog-body" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.9rem; overflow-y: auto; flex: 1;">
+            
+            <!-- Banner Informativo -->
+            <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 4px; padding: 0.75rem 1rem; color: #92400e; font-size: 0.84rem; display: flex; gap: 0.6rem; align-items: flex-start; line-height: 1.45;">
+              <i class="ph ph-info" style="font-size: 1.3rem; flex-shrink: 0; color: #d97706; margin-top: 2px;"></i>
+              <div>
+                Durante la sincronización con BlockWMS se encontraron <strong>{{ productosNoEncontradosBlock.length }} productos con stock</strong> en el depósito que <strong>no están registrados en la base de datos</strong> de la aplicación.
+                <div style="margin-top: 0.25rem; color: #78350f;">
+                  Podés agregarlos directamente al catálogo usando el botón <strong>"+ Crear"</strong> en cada fila o exportar la lista a Excel.
+                </div>
+              </div>
+            </div>
+
+            <!-- Barra de Búsqueda y Estadísticas -->
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+              <div class="search-box" style="display: flex; align-items: center; gap: 0.35rem; background: var(--bg-window); border: 1px solid var(--bevel-dark); padding: 0.2rem 0.5rem; height: 28px; width: 280px;">
+                <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
+                <input 
+                  type="text" 
+                  v-model="searchNoEncontradosQuery" 
+                  placeholder="Filtrar por código, nombre, EAN..." 
+                  style="border: none; outline: none; font-size: 0.82rem; background: transparent; width: 100%; color: var(--text-primary);"
+                />
+              </div>
+
+              <div style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">
+                Stock total no vinculado: <strong style="color: #d97706;">{{ totalKilosNoEncontrados.toFixed(3) }} kg/ud</strong>
+              </div>
+            </div>
+
+            <!-- Tabla de Productos No Encontrados -->
+            <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--bevel-dark); background: white;">
+              <table class="data-table" style="font-size: 0.82rem; width: 100%; border-collapse: collapse;">
+                <thead style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 1;">
+                  <tr>
+                    <th style="width: 14%; text-align: left;">Código Block</th>
+                    <th style="width: 38%; text-align: left;">Descripción (BlockWMS)</th>
+                    <th style="width: 14%; text-align: right;">Stock Block</th>
+                    <th style="width: 14%; text-align: left;">EAN / Barra</th>
+                    <th style="width: 10%; text-align: left;">Lotes / Ubic.</th>
+                    <th style="width: 10%; text-align: center;">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in filteredNoEncontrados" :key="item.codigo" style="border-bottom: 1px solid #e2e8f0;">
+                    <td class="font-mono" style="font-weight: 700; color: #0284c7;">{{ item.codigo }}</td>
+                    <td style="font-weight: 600;">{{ item.nombre }}</td>
+                    <td class="text-right" style="font-weight: 700; color: #16a34a;">{{ Number(item.cantidad_fisica).toFixed(3) }}</td>
+                    <td class="font-mono text-muted" style="font-size: 0.76rem;">{{ item.ean !== '-' ? item.ean : '—' }}</td>
+                    <td style="font-size: 0.74rem; color: var(--text-muted);" :title="`Lotes: ${item.lote} | Ubic: ${item.ubicacion}`">
+                      {{ item.lote !== '-' ? item.lote : (item.ubicacion !== '-' ? item.ubicacion : '—') }}
+                    </td>
+                    <td class="text-center">
+                      <button 
+                        v-if="isAdmin" 
+                        class="btn btn-sm btn-primary" 
+                        style="padding: 2px 8px; font-size: 0.72rem; height: 22px; display: inline-flex; align-items: center; gap: 0.2rem; font-weight: 700;"
+                        @click="crearProductoDesdeBlock(item)"
+                        title="Crear este producto en el catálogo con los datos de Block"
+                      >
+                        <i class="ph ph-plus"></i> Crear
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="filteredNoEncontrados.length === 0">
+                    <td colspan="6" class="text-center text-muted" style="padding: 1.5rem;">
+                      No hay productos que coincidan con el filtro.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+          <div class="win-dialog-footer" style="padding: 0.75rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+            <button class="btn btn-secondary" @click="exportarNoEncontradosExcel" style="font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+              <i class="ph ph-file-xls text-orange" style="font-size: 1rem;"></i> Exportar a Excel
+            </button>
+            <button class="win-dialog-btn" @click="showModalNoEncontradosBlock = false">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Planilla de Stock para Impresión (Sólo visible al imprimir) -->
     <div id="print-stock-sheet" class="only-print-layout" v-if="!showModal">
       <div class="print-sheet-header">
@@ -520,6 +725,115 @@ const syncingBlock = ref(false)
 const fileInput = ref(null)
 const stockFileInput = ref(null)
 
+// Estados para Cambiar Código de Producto
+const showModalCambiarCodigo = ref(false)
+const nuevoCodigoInput = ref('')
+const cambiandoCodigo = ref(false)
+
+const openModalCambiarCodigo = () => {
+  nuevoCodigoInput.value = ''
+  showModalCambiarCodigo.value = true
+}
+
+const closeModalCambiarCodigo = () => {
+  showModalCambiarCodigo.value = false
+  nuevoCodigoInput.value = ''
+}
+
+const confirmarCambioCodigo = async () => {
+  const nuevo = String(nuevoCodigoInput.value || '').trim()
+  const actual = String(form.value.codigo || '').trim()
+  if (!nuevo) {
+    showAlert('Debes ingresar un nuevo código.', 'error')
+    return
+  }
+  if (nuevo.toUpperCase() === actual.toUpperCase()) {
+    showAlert('El nuevo código no puede ser igual al actual.', 'error')
+    return
+  }
+
+  cambiandoCodigo.value = true
+  try {
+    const res = await fetch(`/api/productos/${encodeURIComponent(actual)}/cambiar-codigo`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nuevoCodigo: nuevo })
+    })
+    const data = await res.json()
+    if (res.ok) {
+      showAlert(data.mensaje || `Código cambiado a "${data.codigoNuevo}".`, 'success')
+      form.value.codigo = data.codigoNuevo
+      closeModalCambiarCodigo()
+      await fetchProductos()
+    } else {
+      showAlert(data.error || 'Error al cambiar código del producto.', 'error')
+    }
+  } catch (err) {
+    console.error('Error al cambiar código:', err)
+    showAlert('Error de conexión al cambiar código.', 'error')
+  } finally {
+    cambiandoCodigo.value = false
+  }
+}
+
+// Estados para Productos de BlockWMS no encontrados en la BBDD
+const productosNoEncontradosBlock = ref([])
+const showModalNoEncontradosBlock = ref(false)
+const searchNoEncontradosQuery = ref('')
+
+const filteredNoEncontrados = computed(() => {
+  const q = searchNoEncontradosQuery.value.trim().toLowerCase()
+  if (!q) return productosNoEncontradosBlock.value
+  return productosNoEncontradosBlock.value.filter(p => {
+    return (p.codigo && p.codigo.toLowerCase().includes(q)) ||
+           (p.nombre && p.nombre.toLowerCase().includes(q)) ||
+           (p.ean && p.ean.toLowerCase().includes(q))
+  })
+})
+
+const totalKilosNoEncontrados = computed(() => {
+  return productosNoEncontradosBlock.value.reduce((sum, p) => sum + (parseFloat(p.cantidad_fisica) || 0), 0)
+})
+
+const crearProductoDesdeBlock = (item) => {
+  showModalNoEncontradosBlock.value = false
+  openModal()
+  form.value.codigo = String(item.codigo || '').trim()
+  form.value.nombre = String(item.nombre || '').trim()
+  form.value.stock = parseFloat(item.cantidad_fisica) || 0
+  form.value.codigo_barra = item.ean && item.ean !== '-' ? String(item.ean).trim() : ''
+}
+
+const exportarNoEncontradosExcel = () => {
+  if (productosNoEncontradosBlock.value.length === 0) return
+
+  let csvContent = '\uFEFF' // BOM para Excel
+  csvContent += 'Código Block;Descripción;Stock Físico Block;EAN / Código Barras;Lotes;Ubicaciones\n'
+
+  productosNoEncontradosBlock.value.forEach(p => {
+    const cod = p.codigo || ''
+    const nom = p.nombre || ''
+    const stk = p.cantidad_fisica || 0
+    const ean = p.ean !== '-' ? p.ean : ''
+    const lot = p.lote !== '-' ? p.lote : ''
+    const ubi = p.ubicacion !== '-' ? p.ubicacion : ''
+    csvContent += `"${cod}";"${nom}";"${stk}";"${ean}";"${lot}";"${ubi}"\n`
+  })
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  const dateStr = new Date().toISOString().split('T')[0]
+  link.setAttribute('download', `Productos_Block_No_Encontrados_${dateStr}.csv`)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  showAlert('Listado de productos no encontrados exportado correctamente', 'success')
+}
+
 const runStockSync = async () => {
   syncingBlock.value = true
   showAlert('Iniciando sincronización de stock con BlockWMS...', 'info')
@@ -543,6 +857,14 @@ const runStockSync = async () => {
       const msg = data.message || data.mensaje || 'Sincronización de stock con BlockWMS completada exitosamente.'
       showAlert(msg, 'success')
       await fetchProductos()
+
+      // Verificar y abrir modal si hay productos en Block que no están en la BBDD
+      const missing = data.report?.noEncontrados || []
+      productosNoEncontradosBlock.value = missing
+      if (missing.length > 0) {
+        searchNoEncontradosQuery.value = ''
+        showModalNoEncontradosBlock.value = true
+      }
     } else {
       throw new Error(data.error || 'Error en la sincronización con BlockWMS.')
     }
@@ -562,7 +884,6 @@ const alert = ref({
 const searchQuery = ref('')
 const showTodosProductos = ref(false)
 const filterStatus = ref('todos')
-const filterSucursal = ref('')
 const sortKey = ref('nombre')
 const sortOrder = ref(1) // 1 = asc, -1 = desc
 
@@ -579,15 +900,6 @@ const getPiezasEstimadas = (p) => {
 // Filtro y ordenación reactiva de productos
 const filteredAndSortedProductos = computed(() => {
   let result = [...productos.value]
-
-  // Filtro por sucursal habilitada
-  if (filterSucursal.value) {
-    const sucursalId = parseInt(filterSucursal.value, 10)
-    result = result.filter(p => {
-      if (!p.SucursalPermisos || p.SucursalPermisos.length === 0) return false
-      return p.SucursalPermisos.some(perm => perm.id_sucursal === sucursalId)
-    })
-  }
 
   // Filtro por proveedor
   if (filterProveedor.value) {
@@ -621,6 +933,12 @@ const filteredAndSortedProductos = computed(() => {
         const pzA = getPiezasEstimadasNum(a)
         const pzB = getPiezasEstimadasNum(b)
         return (pzA - pzB) * sortOrder.value
+      }
+
+      if (sortKey.value === 'proveedor') {
+        const nameA = a.Proveedor?.nombre || ''
+        const nameB = b.Proveedor?.nombre || ''
+        return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' }) * sortOrder.value
       }
 
       let valA = a[sortKey.value]
@@ -884,6 +1202,39 @@ const handleFormReactivate = async () => {
   closeModal()
 }
 
+// Estados y Métodos para Eliminación Definitiva
+const showModalEliminarDefinitivo = ref(false)
+const eliminandoDefinitivo = ref(false)
+
+const openModalEliminarDefinitivo = () => {
+  showModalEliminarDefinitivo.value = true
+}
+
+const confirmarEliminarDefinitivo = async () => {
+  const cod = form.value.codigo
+  if (!cod) return
+  eliminandoDefinitivo.value = true
+  try {
+    const res = await fetch(`/api/productos/${encodeURIComponent(cod)}?permanente=true`, {
+      method: 'DELETE'
+    })
+    const data = await res.json()
+    if (res.ok) {
+      showAlert(data.mensaje || 'Producto eliminado definitivamente del sistema.')
+      showModalEliminarDefinitivo.value = false
+      closeModal()
+      await fetchProductos()
+    } else {
+      showAlert(data.error || 'Error al eliminar el producto.', 'error')
+    }
+  } catch (err) {
+    console.error('Error al eliminar definitivamente:', err)
+    showAlert('Error de conexión al eliminar producto.', 'error')
+  } finally {
+    eliminandoDefinitivo.value = false
+  }
+}
+
 const triggerFileInput = () => {
   if (fileInput.value) {
     fileInput.value.click()
@@ -965,6 +1316,34 @@ const printStockSheet = () => {
   window.print()
 }
 
+const deactivatingInactivos = ref(false)
+
+const desactivarInactivos = async () => {
+  if (!confirm('¿Deseas evaluar el estado de todos los productos? Se desactivarán los productos sin movimientos en más de 30 días y se reactivarán los productos con movimientos recientes (<=30 días).')) {
+    return
+  }
+
+  deactivatingInactivos.value = true
+  try {
+    const res = await fetch('/api/productos/desactivar-inactivos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    const data = await res.json()
+    if (res.ok) {
+      showAlert(data.mensaje || 'Productos inactivos desactivados correctamente', 'success')
+      await fetchProductos()
+    } else {
+      showAlert(data.error || 'Error al desactivar productos inactivos', 'error')
+    }
+  } catch (err) {
+    console.error('Error al desactivar productos inactivos:', err)
+    showAlert('Error de conexión con el servidor', 'error')
+  } finally {
+    deactivatingInactivos.value = false
+  }
+}
+
 const exportToExcel = () => {
   if (filteredAndSortedProductos.value.length === 0) return
 
@@ -1011,9 +1390,9 @@ const exportTableToExcel = () => {
   let csvContent = '\uFEFF' // BOM para Excel
   
   if (!isSucursal.value) {
-    csvContent += 'Código;Nombre;Stock;Unidad;Piezas Est.;Piezas;Última Modificación\n'
+    csvContent += 'Código;Nombre;Proveedor;Stock;Unidad;Piezas Est.;Piezas;Última Modificación\n'
   } else {
-    csvContent += 'Código;Nombre;Stock;Unidad;Piezas Est.;Piezas\n'
+    csvContent += 'Código;Nombre;Proveedor;Stock;Unidad;Piezas Est.;Piezas\n'
   }
 
   filteredAndSortedProductos.value.forEach(p => {
@@ -1021,11 +1400,12 @@ const exportTableToExcel = () => {
     const unidad = p.tipo_calculo_piezas !== 'unidad' ? 'kg' : 'ud'
     const piezasEst = getPiezasEstimadas(p)
     const piezas = p.cantidad_piezas || 0
+    const provNombre = p.Proveedor?.nombre || '-'
     
     if (!isSucursal.value) {
-      csvContent += `"${p.codigo}";"${p.nombre}";"${stockVal}";"${unidad}";"${piezasEst}";"${piezas}";"${formatDateTime(p.updated_at)}"\n`
+      csvContent += `"${p.codigo}";"${p.nombre}";"${provNombre}";"${stockVal}";"${unidad}";"${piezasEst}";"${piezas}";"${formatDateTime(p.updated_at)}"\n`
     } else {
-      csvContent += `"${p.codigo}";"${p.nombre}";"${stockVal}";"${unidad}";"${piezasEst}";"${piezas}"\n`
+      csvContent += `"${p.codigo}";"${p.nombre}";"${provNombre}";"${stockVal}";"${unidad}";"${piezasEst}";"${piezas}"\n`
     }
   })
 
@@ -1035,10 +1415,10 @@ const exportTableToExcel = () => {
   link.setAttribute('href', url)
   
   let filterSuffix = ''
-  if (filterSucursal.value) {
-    const foundSuc = sucursalNameById(filterSucursal.value)
-    if (foundSuc) {
-      filterSuffix = `_${foundSuc.replace(/\s+/g, '_')}`
+  if (filterProveedor.value) {
+    const foundProv = proveedores.value.find(p => p.id === parseInt(filterProveedor.value, 10))
+    if (foundProv) {
+      filterSuffix = `_${foundProv.nombre.replace(/\s+/g, '_')}`
     }
   }
   

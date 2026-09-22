@@ -181,8 +181,11 @@ const permissionGroups = [
     icon: 'ph-chart-bar',
     items: [
       { name: 'Reportes de Pedidos', path: 'reportes-pedidos' },
-      { name: 'Top Fraccionados', path: 'reportes-produccion' },
-      { name: 'Trazabilidad de Producto', path: 'reporte-trazabilidad' }
+      { name: 'Reporte Producción', path: 'reportes-produccion' },
+      { name: 'Despacho Semanal', path: 'reportes-despacho-semanal' },
+      { name: 'Proyección', path: 'reportes-proyeccion' },
+      { name: 'Trazabilidad de Producto', path: 'reporte-trazabilidad' },
+      { name: 'Comparaciones de Variabilidad', path: 'comparaciones-variabilidad' }
     ]
   },
   {

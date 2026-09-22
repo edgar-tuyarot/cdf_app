@@ -512,8 +512,8 @@
             </h4>
 
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <!-- Control Masivo de Vencimiento -->
-              <div style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-secondary); padding: 0.35rem 0.65rem; border: 1.5px solid var(--bevel-dark); border-radius: 4px; font-size: 0.8rem; flex-wrap: wrap;">
+              <!-- Control Masivo de Vencimiento (Solo para Proveedores) -->
+              <div v-if="!isOrdenTR" style="display: flex; align-items: center; gap: 0.4rem; background: var(--bg-secondary); padding: 0.35rem 0.65rem; border: 1.5px solid var(--bevel-dark); border-radius: 4px; font-size: 0.8rem; flex-wrap: wrap;">
                 <strong style="color: var(--text-primary); display: flex; align-items: center; gap: 0.3rem;">
                   <i class="ph ph-calendar-plus" style="color: #0284c7; font-size: 1.05rem;"></i> Vencimiento Masivo:
                 </strong>
@@ -557,8 +557,8 @@
                   </th>
                   <th style="padding: 0.5rem 0.75rem; text-align: center; width: 110px; white-space: nowrap;">Código SKU</th>
                   <th style="padding: 0.5rem 0.75rem; text-align: left; min-width: 200px;">Producto / Descripción</th>
-                  <th style="padding: 0.5rem 0.75rem; text-align: center; width: 110px; white-space: nowrap;">Lote</th>
-                  <th style="padding: 0.5rem 0.75rem; text-align: center; width: 160px; white-space: nowrap;">Vencimiento</th>
+                  <th v-if="!isOrdenTR" style="padding: 0.5rem 0.75rem; text-align: center; width: 110px; white-space: nowrap;">Lote</th>
+                  <th v-if="!isOrdenTR" style="padding: 0.5rem 0.75rem; text-align: center; width: 160px; white-space: nowrap;">Vencimiento</th>
                   <th style="padding: 0.5rem 0.75rem; text-align: right; width: 120px; white-space: nowrap;">Recibido (kg)</th>
                   <th style="padding: 0.5rem 0.75rem; text-align: left; width: 120px;">Ubicación</th>
                 </tr>
@@ -579,7 +579,7 @@
                   <td style="padding: 0.5rem 0.75rem; font-weight: 700;">
                     {{ item.producto }}
                   </td>
-                  <td style="padding: 0.5rem 0.75rem; text-align: center; font-family: monospace; font-size: 0.82rem; white-space: nowrap;">
+                  <td v-if="!isOrdenTR" style="padding: 0.5rem 0.75rem; text-align: center; font-family: monospace; font-size: 0.82rem; white-space: nowrap;">
                     <span v-if="item.lote && item.lote !== '-'" style="font-weight: 800; color: #475569;">
                       {{ item.lote }}
                     </span>
@@ -588,7 +588,7 @@
                     </span>
                     <span v-else style="color: var(--text-secondary);">-</span>
                   </td>
-                  <td style="padding: 0.4rem 0.5rem; text-align: center;">
+                  <td v-if="!isOrdenTR" style="padding: 0.4rem 0.5rem; text-align: center;">
                     <input 
                       type="date" 
                       v-model="item.vencimiento" 
@@ -636,11 +636,11 @@
               </div>
 
               <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                <span>Lote: <strong>{{ item.lote && item.lote !== '-' ? item.lote : (item.vencimiento ? generarLoteVencimiento(item.vencimiento) : '-') }}</strong></span>
+                <span v-if="!isOrdenTR">Lote: <strong>{{ item.lote && item.lote !== '-' ? item.lote : (item.vencimiento ? generarLoteVencimiento(item.vencimiento) : '-') }}</strong></span>
                 <span>Ubicación: <strong>{{ item.ubicacion }}</strong></span>
               </div>
 
-              <div style="margin-top: 0.5rem; background: var(--bg-secondary); padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: 4px;">
+              <div v-if="!isOrdenTR" style="margin-top: 0.5rem; background: var(--bg-secondary); padding: 0.5rem; border: 1.5px solid var(--bevel-dark); border-radius: 4px;">
                 <label style="font-size: 0.78rem; font-weight: 800; color: var(--text-primary); display: block; margin-bottom: 0.25rem;">
                   📅 Fecha de Vencimiento:
                 </label>
@@ -688,22 +688,42 @@
               🖨️ Imprimir PDF
             </button>
 
-            <!-- Botón Sumar a Recortes: visible únicamente para órdenes 26_IN_PT_SU_TR / Transferencias entre sucursales -->
-            <button 
-              v-if="isOrdenTR"
-              type="button" 
-              class="win-dialog-btn"
-              style="background: #0284c7; color: #fff; border: 1px solid #0369a1; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem;"
-              @click="impactarSeleccion(selectedOrdenModal, 'recorte')"
-              :disabled="loadingRecortes || selectedItemIds.length === 0"
-            >
-              <i class="ph ph-spinner spinner" v-if="loadingRecortes"></i>
-              <i class="ph ph-scissors" v-else></i>
-              📥 Sumar Selección a Recortes ({{ selectedKilosTotal.toFixed(3) }} kg)
-            </button>
+            <!-- Botones para Órdenes de Ingreso desde Sucursales (26_IN_PT_SU_TR / Transferencias) -->
+            <template v-if="isOrdenTR">
+              <!-- Botón Para Picadas -->
+              <button 
+                type="button" 
+                class="btn"
+                style="background: var(--accent-orange); color: #ffffff; border: 1.5px solid var(--bevel-dark); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 4px; cursor: pointer; box-shadow: var(--raised-shadow);"
+                @click="impactarSeleccion(selectedOrdenModal, 'recorte')"
+                :disabled="loadingRecortes || selectedItemIds.length === 0"
+              >
+                <i class="ph ph-spinner spinner" v-if="loadingRecortes"></i>
+                <i class="ph ph-scissors" v-else></i>
+                Para Picadas ({{ selectedKilosTotal.toFixed(3) }} kg)
+              </button>
+
+              <!-- Botón Para Decomiso -->
+              <button 
+                type="button" 
+                class="btn"
+                style="background: var(--accent-danger); color: #ffffff; border: 1.5px solid var(--bevel-dark); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 4px; cursor: pointer; box-shadow: var(--raised-shadow);"
+                @click="impactarSeleccion(selectedOrdenModal, 'decomiso')"
+                :disabled="loadingRecortes || selectedItemIds.length === 0"
+              >
+                <i class="ph ph-spinner spinner" v-if="loadingRecortes"></i>
+                <i class="ph ph-trash" v-else></i>
+                Para Decomiso ({{ selectedKilosTotal.toFixed(3) }} kg)
+              </button>
+            </template>
           </div>
 
-          <button type="button" class="win-dialog-btn win-dialog-btn-ok" @click="selectedOrdenModal = null" style="font-weight: 800;">
+          <button 
+            type="button" 
+            class="btn" 
+            style="background: var(--bg-window); color: var(--text-primary); border: 1.5px solid var(--bevel-dark); font-weight: 800; font-size: 0.85rem; padding: 0.45rem 0.9rem; border-radius: 4px; cursor: pointer;" 
+            @click="selectedOrdenModal = null"
+          >
             Cerrar Detalle
           </button>
         </div>

@@ -444,15 +444,15 @@
 
         </div>
 
-        <!-- Modal Footer con botones para Sumar Ingreso o Decomiso -->
+        <!-- Modal Footer con botones para Sumar Ingreso o Decomiso en Egresos -->
         <div style="padding: 0.85rem 1.25rem; border-top: 2px solid var(--bevel-dark); background: var(--bg-secondary); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
           
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
             <!-- Botón Sumar como Ingreso / Recorte -->
             <button 
               type="button" 
-              class="win-dialog-btn"
-              style="background: #0284c7; color: #fff; border: 1px solid #0369a1; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem;"
+              class="btn"
+              style="background: var(--accent-primary); color: #ffffff; border: 1.5px solid var(--bevel-dark); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 4px; cursor: pointer; box-shadow: var(--raised-shadow);"
               @click="impactarSeleccion(selectedOrdenModal, 'recorte')"
               :disabled="loadingImpacto || selectedItemIds.length === 0"
             >
@@ -464,8 +464,8 @@
             <!-- Botón Sumar como Decomiso -->
             <button 
               type="button" 
-              class="win-dialog-btn"
-              style="background: #ef4444; color: #fff; border: 1px solid #dc2626; font-weight: 800; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.85rem;"
+              class="btn"
+              style="background: var(--accent-danger); color: #ffffff; border: 1.5px solid var(--bevel-dark); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 4px; cursor: pointer; box-shadow: var(--raised-shadow);"
               @click="impactarSeleccion(selectedOrdenModal, 'decomiso')"
               :disabled="loadingImpacto || selectedItemIds.length === 0"
             >
@@ -473,13 +473,97 @@
               <i class="ph ph-trash" v-else></i>
               🗑️ Sumar Selección a Decomiso ({{ selectedKilosTotal.toFixed(3) }} kg)
             </button>
+
+            <!-- Botón Vincular a Pedido de Sucursal -->
+            <button 
+              type="button" 
+              class="btn"
+              style="background: #0284c7; color: #ffffff; border: 1.5px solid var(--bevel-dark); font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.9rem; border-radius: 4px; cursor: pointer; box-shadow: var(--raised-shadow);"
+              @click="abrirModalVincularAPedido(selectedOrdenModal)"
+            >
+              <i class="ph ph-link"></i>
+              🔗 Vincular a Pedido
+            </button>
           </div>
 
-          <button type="button" class="win-dialog-btn win-dialog-btn-ok" @click="selectedOrdenModal = null" style="font-weight: 800;">
+          <button 
+            type="button" 
+            class="btn"
+            style="background: var(--bg-window); color: var(--text-primary); border: 1.5px solid var(--bevel-dark); font-weight: 800; font-size: 0.85rem; padding: 0.45rem 0.9rem; border-radius: 4px; cursor: pointer;" 
+            @click="selectedOrdenModal = null"
+          >
             Cerrar Detalle
           </button>
         </div>
 
+      </div>
+    </div>
+
+    <!-- MODAL SELECCIONAR PEDIDO PARA VINCULAR (DESDE EGRESOS HISTORIAL) -->
+    <div v-if="showModalVincularPedido" class="modal-backdrop" @click.self="showModalVincularPedido = false" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 1rem;">
+      <div class="modal-card" style="background: var(--bg-window); border: 3px solid var(--bevel-dark); max-width: 700px; width: 100%; max-height: 85vh; display: flex; flex-direction: column;">
+        <div style="padding: 0.85rem 1.25rem; background: #0284c7; color: white; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+            <i class="ph ph-link"></i> Vincular Egreso #{{ ordenParaVincular?.orden }} a un Pedido
+          </h3>
+          <button @click="showModalVincularPedido = false" style="background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem;">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <div style="padding: 1rem 1.25rem; background: var(--bg-secondary); border-bottom: 1.5px solid var(--bevel-light); font-size: 0.85rem;">
+          <strong>Destino Egreso:</strong> {{ ordenParaVincular?.destino }} | 
+          <strong>Total Kilos:</strong> {{ (ordenParaVincular?.totalKilosDespachados || 0).toFixed(3) }} kg
+        </div>
+
+        <div style="padding: 1rem; overflow-y: auto; flex: 1;">
+          <div v-if="loadingPedidosCandidatos" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            <i class="ph ph-spinner spinner" style="font-size: 2rem; color: #0284c7; margin-bottom: 0.5rem;"></i>
+            <div>Cargando pedidos disponibles...</div>
+          </div>
+
+          <div v-else-if="pedidosCandidatos.length === 0" style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.88rem;">
+            No se encontraron pedidos recientes para vincular.
+          </div>
+
+          <div v-else style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div 
+              v-for="p in pedidosCandidatos" 
+              :key="p.id"
+              style="padding: 0.75rem 1rem; border: 1.5px solid var(--bevel-dark); background: var(--bg-window); border-radius: 4px; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;"
+            >
+              <div>
+                <div style="font-weight: 800; font-size: 0.95rem; color: #0284c7; font-family: monospace;">
+                  {{ p.codigo }}
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-primary); margin-top: 2px;">
+                  <strong>Sucursal:</strong> {{ p.sucursal || '-' }} | <strong>Fecha:</strong> {{ p.fecha }} | <strong>Estado:</strong> {{ p.estado }}
+                </div>
+                <div v-if="p.wms_orden_egreso" style="font-size: 0.75rem; color: #d97706; font-weight: bold; margin-top: 2px;">
+                  ⚠️ Ya vinculado a Block #{{ p.wms_orden_egreso }} (se reemplazará)
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                class="btn btn-primary"
+                style="padding: 0.4rem 0.9rem; font-weight: 800; font-size: 0.82rem; white-space: nowrap;"
+                :disabled="vinculandoPedidoId === p.id"
+                @click="confirmarVinculacionDesdeEgreso(p)"
+              >
+                <i class="ph ph-spinner spinner" v-if="vinculandoPedidoId === p.id"></i>
+                <i class="ph ph-link" v-else></i>
+                Vincular
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 0.75rem 1.25rem; background: var(--bg-secondary); border-top: 1.5px solid var(--bevel-dark); text-align: right;">
+          <button type="button" class="btn" style="background: var(--bg-window); border: 1.5px solid var(--bevel-dark); font-weight: 800; padding: 0.35rem 0.85rem;" @click="showModalVincularPedido = false">
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
 
@@ -576,6 +660,65 @@ const loadingImpacto = ref(false)
 const recortesSuccessMsg = ref('')
 const selectedItemIds = ref([])
 
+const showModalVincularPedido = ref(false)
+const ordenParaVincular = ref(null)
+const loadingPedidosCandidatos = ref(false)
+const pedidosCandidatos = ref([])
+const vinculandoPedidoId = ref(null)
+
+const abrirModalVincularAPedido = async (orden) => {
+  if (!orden) return
+  ordenParaVincular.value = orden
+  showModalVincularPedido.value = true
+  loadingPedidosCandidatos.value = true
+  pedidosCandidatos.value = []
+
+  try {
+    const res = await fetch('/api/pedidos')
+    if (res.ok) {
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        pedidosCandidatos.value = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 30)
+      }
+    }
+  } catch (err) {
+    console.error('Error al cargar pedidos candidatos:', err)
+  } finally {
+    loadingPedidosCandidatos.value = false
+  }
+}
+
+const confirmarVinculacionDesdeEgreso = async (pedido) => {
+  if (!pedido || !ordenParaVincular.value) return
+  vinculandoPedidoId.value = pedido.id
+
+  try {
+    const res = await fetch(`/api/pedidos/${pedido.id}/vincular-egreso`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ordenCodigo: ordenParaVincular.value.orden,
+        ordenData: ordenParaVincular.value,
+        siteId: selectedSiteId.value
+      })
+    })
+
+    const data = await res.json()
+    if (res.ok) {
+      recortesSuccessMsg.value = `¡Egreso #${ordenParaVincular.value.orden} vinculado exitosamente al Pedido ${pedido.codigo}!`
+      showModalVincularPedido.value = false
+      setTimeout(() => { recortesSuccessMsg.value = '' }, 6000)
+    } else {
+      alert(data.error || 'Error al vincular con el pedido')
+    }
+  } catch (err) {
+    console.error('Error al vincular egreso a pedido:', err)
+    alert('Error de conexión al vincular')
+  } finally {
+    vinculandoPedidoId.value = null
+  }
+}
+
 const verDetalleOrden = (orden) => {
   selectedOrdenModal.value = orden
   recortesSuccessMsg.value = ''
@@ -617,10 +760,10 @@ const impactarSeleccion = async (orden, destino) => {
   if (itemsSeleccionados.length === 0) return
 
   const esDecomiso = destino === 'decomiso'
-  const destinoEtiqueta = esDecomiso ? 'DECOMISO' : 'INGRESO (RECORTE)'
+  const destinoEtiqueta = esDecomiso ? 'DECOMISO' : 'PICADAS'
   const kilosKgs = selectedKilosTotal.value.toFixed(3)
 
-  if (!confirm(`¿Está seguro de sumar los ${kilosKgs} kg de los ${itemsSeleccionados.length} producto(s) seleccionados como ${destinoEtiqueta}?`)) {
+  if (!confirm(`¿Está seguro de sumar los ${kilosKgs} kg de los ${itemsSeleccionados.length} producto(s) seleccionados para ${destinoEtiqueta}?`)) {
     return
   }
 
