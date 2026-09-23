@@ -213,6 +213,13 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
     },
     {
+      path: '/proximo-despacho-stock',
+      name: 'proximo-despacho-stock',
+      component: () => import('../views/ProximoDespachoStock.vue'),
+      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
+    },
+
+    {
       path: '/stock-debug',
       name: 'stock-debug',
       component: () => import('../views/StockDebug.vue'),

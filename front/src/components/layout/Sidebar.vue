@@ -82,9 +82,11 @@ const groups = [
       { name: 'Proyección', path: '/reportes-proyeccion', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
       { name: 'Trazabilidad de Producto', path: '/reporte-trazabilidad', icon: 'ph-line-segments', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
       { name: 'Comparaciones de Variabilidad', path: '/comparaciones-variabilidad', icon: 'ph-scales', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-      { name: 'Diferencias WMS', path: '/wms-reporte-diferencias-ingreso', icon: 'ph-warning-octagon', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] }
+      { name: 'Diferencias WMS', path: '/wms-reporte-diferencias-ingreso', icon: 'ph-warning-octagon', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
+      { name: 'Próximo Despacho [DEV]', path: '/proximo-despacho-stock', icon: 'ph-trend-up', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] }
     ]
   },
+
   {
     name: 'Configuración',
     icon: 'ph-gear',
