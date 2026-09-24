@@ -85,6 +85,9 @@
             <div style="background: #fff; padding: 0.75rem; border: 1px solid #cbd5e1;">
               <span style="font-size: 0.75rem; color: var(--text-muted); display: block; text-transform: uppercase; font-weight: bold;">ID de Sitio / Site</span>
               <strong style="font-size: 0.95rem; color: var(--text-primary); font-family: monospace;">{{ wmsSession.siteId }}</strong>
+              <div v-if="wmsSession.siteNombre" style="font-size: 0.75rem; color: #16a34a; font-weight: bold; margin-top: 2px;">
+                {{ wmsSession.siteNombre }}
+              </div>
             </div>
 
             <div style="background: #fff; padding: 0.75rem; border: 1px solid #cbd5e1;">
@@ -107,7 +110,7 @@
         <!-- FORMULARIO DE LOGIN (Deslogueado) -->
         <div v-else>
           <p class="text-muted mb-4">
-            Ingrese su usuario y contraseña de BlockWMS. Al autenticar, la cookie de inicio de sesión <code>PHPSESSID</code> y el identificador de sitio se guardarán <strong>únicamente en el navegador local</strong> para realizar las operaciones.
+            Ingrese su usuario y contraseña de BlockWMS. El sistema <strong>detectará automáticamente el sitio o sucursal</strong> asignado a su cuenta en BlockWMS.
           </p>
 
           <form @submit.prevent="handleWmsLogin">
@@ -123,13 +126,15 @@
                 />
               </div>
               <div class="form-group">
-                <label class="form-label">ID de Entidad Site:</label>
+                <label class="form-label" style="display: flex; justify-content: space-between; align-items: baseline;">
+                  <span>ID de Entidad Site:</span>
+                  <small style="color: var(--text-muted); font-size: 0.75rem; font-weight: normal;">(Opcional - Se autodetecta)</small>
+                </label>
                 <input 
                   type="text" 
                   v-model="loginForm.siteId" 
                   class="form-control" 
-                  placeholder="194326" 
-                  required 
+                  placeholder="Automático según usuario (o ej: 194326)" 
                 />
               </div>
             </div>
@@ -429,7 +434,7 @@ const showPassword = ref(false)
 
 const loginForm = ref({
   host: 'http://192.168.10.2',
-  siteId: '194326',
+  siteId: '',
   usuario: '',
   password: ''
 })
@@ -471,8 +476,10 @@ const handleWmsLogin = async () => {
       wmsSession.value = data
       localStorage.setItem('wms_session', JSON.stringify(data))
       loginOk.value = true
-      loginMessage.value = `¡Sesión iniciada exitosamente! Logueado como ${data.usuario}`
+      const siteDetalle = data.siteNombre ? `${data.siteId} (${data.siteNombre})` : (data.siteId || 'Sin sitio')
+      loginMessage.value = `¡Sesión iniciada exitosamente! Logueado como ${data.usuario} en Sitio ${siteDetalle}`
       loginForm.value.password = ''
+      loginForm.value.siteId = data.siteId || ''
     } else {
       throw new Error(data.error || 'Error al autenticar contra BlockWMS.')
     }

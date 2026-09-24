@@ -289,18 +289,69 @@ const loginWMS = async (creds = {}) => {
     }
 
     activeSessionId = sessionId;
+
+    // --- Detección automática del sitio/ubicación asignado al usuario en BlockWMS ---
+    let detectedSiteId = String(siteId || '').trim();
+    let detectedSiteNombre = '';
+    let userFullName = '';
+
+    try {
+      const cleanUser = String(usuario).replace(/'/g, "''");
+      const userSql = `SELECT TOP 1 l.id_logins, l.username, l.nombre, l.apellido, l.id_entidades_sites, e.razon_social as site_nombre, e.codigo_entidades as site_codigo FROM Logins l LEFT JOIN entidades e ON l.id_entidades_sites = e.id_entidades WHERE (l.username = '${cleanUser}' OR l.username LIKE '${cleanUser}%') AND l.borrado = 0`;
+      
+      const queryParams = new URLSearchParams({
+        query: userSql,
+        start: '0',
+        length: '1'
+      });
+
+      const userRes = await axios.post(`${host}/proc_paginado_query.php`, queryParams, {
+        headers: {
+          'Cookie': `PHPSESSID=${sessionId}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0'
+        },
+        timeout: 10000
+      });
+
+      let userData = userRes.data;
+      if (typeof userData === 'string') {
+        try { userData = JSON.parse(userData); } catch (e) {}
+      }
+      const userRow = Array.isArray(userData) ? userData[0] : (userData?.data?.[0] || null);
+
+      if (userRow) {
+        if (userRow.nombre || userRow.apellido) {
+          userFullName = `${userRow.nombre || ''} ${userRow.apellido || ''}`.trim();
+        }
+        if (userRow.id_entidades_sites && String(userRow.id_entidades_sites) !== '0') {
+          detectedSiteId = String(userRow.id_entidades_sites).trim();
+          detectedSiteNombre = String(userRow.site_nombre || '').trim();
+          console.log(`[wmsService] Sitio detectado automáticamente en BlockWMS para '${usuario}': ${detectedSiteId} (${detectedSiteNombre || 'Sin nombre'})`);
+        }
+      }
+    } catch (qErr) {
+      console.warn('[wmsService] No se pudo consultar el sitio automático del usuario en Logins:', qErr.message);
+    }
+
+    if (!detectedSiteId) {
+      detectedSiteId = String(creds.siteId || process.env.WMS_SITE_ID || '194326').trim();
+    }
+
     try {
       const currentConfig = cargarConfiguracion();
-      guardarConfiguracion({ ...currentConfig, sessionId, usuario, host, siteId });
+      guardarConfiguracion({ ...currentConfig, sessionId, usuario, host, siteId: detectedSiteId });
     } catch (cfgErr) {}
 
-    console.log(`[wmsService] Login exitoso y verificado en BlockWMS para usuario '${usuario}'. PHPSESSID: ${maskSecret(sessionId)}`);
+    console.log(`[wmsService] Login exitoso y verificado en BlockWMS para usuario '${usuario}' (Sitio: ${detectedSiteId}). PHPSESSID: ${maskSecret(sessionId)}`);
 
     return {
       ok: true,
       sessionId,
-      siteId,
+      siteId: detectedSiteId,
+      siteNombre: detectedSiteNombre,
       usuario,
+      nombreCompleto: userFullName,
       host,
       loginTime: new Date().toISOString()
     };
