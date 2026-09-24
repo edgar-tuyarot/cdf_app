@@ -835,22 +835,31 @@ const exportarNoEncontradosExcel = () => {
 }
 
 const runStockSync = async () => {
+  const savedSession = localStorage.getItem('wms_session')
+  if (!savedSession) {
+    showAlert('No hay una sesión activa de BlockWMS. Por favor inicie sesión en Configuración de BlockWMS antes de sincronizar stock.', 'warning')
+    return
+  }
+
+  let headers = { 'Content-Type': 'application/json' }
+  try {
+    const sess = JSON.parse(savedSession)
+    if (sess && sess.sessionId) {
+      headers['X-WMS-Session-Id'] = sess.sessionId
+      headers['X-WMS-Site-Id'] = sess.siteId || '194326'
+      headers['X-WMS-Host'] = sess.host || 'http://192.168.10.2'
+    } else {
+      showAlert('No hay una sesión activa de BlockWMS. Por favor inicie sesión en Configuración de BlockWMS.', 'warning')
+      return
+    }
+  } catch (e) {
+    showAlert('La sesión guardada de BlockWMS es inválida. Por favor vuelva a iniciar sesión en Configuración.', 'warning')
+    return
+  }
+
   syncingBlock.value = true
   showAlert('Iniciando sincronización de stock con BlockWMS...', 'info')
   try {
-    let headers = { 'Content-Type': 'application/json' }
-    const savedSession = localStorage.getItem('wms_session')
-    if (savedSession) {
-      try {
-        const sess = JSON.parse(savedSession)
-        if (sess.sessionId) {
-          headers['X-WMS-Session-Id'] = sess.sessionId
-          headers['X-WMS-Site-Id'] = sess.siteId || '194326'
-          headers['X-WMS-Host'] = sess.host || 'http://192.168.10.2'
-        }
-      } catch (e) {}
-    }
-
     const res = await fetch('/api/wms/sync-stock', { method: 'POST', headers })
     const data = await res.json()
     if (res.ok && data.ok) {

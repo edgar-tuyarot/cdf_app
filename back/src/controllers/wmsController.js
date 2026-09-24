@@ -58,13 +58,29 @@ const login = async (req, res, next) => {
   }
 };
 
+/**
+ * Cerrar sesión en BlockWMS y limpiar credenciales activas del servidor
+ */
+const logout = async (req, res, next) => {
+  try {
+    const result = wmsService.logoutWMS();
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getActiveWmsSession = () => {
   const cfg = wmsService.cargarConfiguracion();
+  const activeSess = cfg.sessionId || wmsService.getActiveSessionId() || '';
+  if (!activeSess) {
+    return null;
+  }
   return {
-    sessionId: cfg.sessionId || '',
+    sessionId: activeSess,
     siteId: cfg.siteId || '194326',
     host: cfg.host || 'http://192.168.10.2',
-    usuario: cfg.usuario || 'edgar'
+    usuario: cfg.usuario || ''
   };
 };
 
@@ -796,6 +812,7 @@ module.exports = {
   getConfig,
   saveConfig,
   login,
+  logout,
   testLogin: login,
   getProductos,
   getEntidades,

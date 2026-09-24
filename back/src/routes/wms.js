@@ -6,6 +6,7 @@ const wmsController = require('../controllers/wmsController');
 router.get('/config', wmsController.getConfig);
 router.post('/config', wmsController.saveConfig);
 router.post('/login', wmsController.login);
+router.post('/logout', wmsController.logout);
 router.post('/test-login', wmsController.testLogin);
 
 // Servicio de consulta de productos externos en JSON y ubicaciones/sites

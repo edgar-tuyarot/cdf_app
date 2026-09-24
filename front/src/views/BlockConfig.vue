@@ -491,11 +491,19 @@ const handleWmsLogin = async () => {
   }
 }
 
-const logoutWmsSession = () => {
+const logoutWmsSession = async () => {
+  loadingLogin.value = true
+  try {
+    await fetch('/api/wms/logout', { method: 'POST' })
+  } catch (e) {
+    console.warn('Error al llamar /api/wms/logout:', e)
+  } finally {
+    loadingLogin.value = false
+  }
   localStorage.removeItem('wms_session')
   wmsSession.value = null
   loginOk.value = false
-  loginMessage.value = 'Sesión cerrada exitosamente. Los datos de sesión fueron eliminados del navegador.'
+  loginMessage.value = 'Sesión cerrada exitosamente tanto en el navegador como en el servidor.'
 }
 
 const testSession = async () => {

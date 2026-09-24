@@ -365,18 +365,39 @@ const loginWMS = async (creds = {}) => {
 };
 
 /**
+ * Cierra la sesión activa en el servidor y limpia la configuración guardada.
+ */
+const logoutWMS = () => {
+  activeSessionId = '';
+  try {
+    const currentConfig = cargarConfiguracion();
+    guardarConfiguracion({ ...currentConfig, sessionId: '' });
+  } catch (e) {
+    console.warn('[wmsService] Error al limpiar sessionId en logout:', e.message);
+  }
+  console.log('[wmsService] Sesión de BlockWMS cerrada y eliminada en el servidor.');
+  return { ok: true, message: 'Sesión de BlockWMS cerrada exitosamente en el servidor.' };
+};
+
+const getActiveSessionId = () => activeSessionId;
+
+/**
  * Garantiza una sesión PHPSESSID activa y válida contra BlockWMS.
- * Si caducó, se reloguea automáticamente de forma transparente.
+ * Si no hay sesión o se cerró, arroja error. Si la sesión activa expiró, la renueva automáticamente.
  */
 const ensureValidWmsSession = async (opts = {}) => {
   const config = cargarConfiguracion();
-  let sessionId = (opts.sessionId || activeSessionId || config.sessionId || process.env.PHP_SESSION_ID || '').trim();
+  let sessionId = (opts.sessionId || activeSessionId || config.sessionId || '').trim();
   const host = (opts.host || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
-  const usuario = (opts.usuario || config.usuario || process.env.WMS_USER || 'edgar').trim();
-  const password = opts.password !== undefined ? opts.password : (config.password || process.env.WMS_PASS || '1435');
+  const usuario = (opts.usuario || config.usuario || '').trim();
+  const password = opts.password !== undefined ? opts.password : (config.password || '');
+
+  if (!sessionId) {
+    throw new Error('No hay una sesión activa de BlockWMS. Por favor inicie sesión en la pantalla de Configuración de BlockWMS.');
+  }
 
   let isValid = false;
-  if (sessionId && !opts.forceRefresh) {
+  if (!opts.forceRefresh) {
     try {
       const verifyRes = await axios.get(`${host}/index.php`, {
         headers: {
@@ -395,14 +416,19 @@ const ensureValidWmsSession = async (opts = {}) => {
   }
 
   if (!isValid) {
-    console.log('[wmsService] PHPSESSID no válida o expirada. Ejecutando re-autenticación automática en BlockWMS...');
-    try {
-      const loginRes = await loginWMS({ usuario, password, host, siteId: opts.siteId || config.siteId });
-      sessionId = loginRes.sessionId;
-      activeSessionId = sessionId;
-      guardarConfiguracion({ ...config, sessionId, usuario, host });
-    } catch (err) {
-      console.warn('[wmsService] Re-autenticación automática falló:', err.message);
+    if (usuario && password) {
+      console.log('[wmsService] PHPSESSID expirada en BlockWMS. Renovando sesión automáticamente...');
+      try {
+        const loginRes = await loginWMS({ usuario, password, host, siteId: opts.siteId || config.siteId });
+        sessionId = loginRes.sessionId;
+        activeSessionId = sessionId;
+        guardarConfiguracion({ ...config, sessionId, usuario, host, siteId: loginRes.siteId || config.siteId });
+      } catch (err) {
+        console.warn('[wmsService] Renovación de sesión falló:', err.message);
+        throw new Error('La sesión de BlockWMS ha expirado y no se pudo renovar automáticamente. Por favor vuelva a iniciar sesión.');
+      }
+    } else {
+      throw new Error('La sesión de BlockWMS ha expirado. Por favor inicie sesión en la pantalla de Configuración de BlockWMS.');
     }
   }
 
@@ -1016,18 +1042,7 @@ const ejecutarAjusteMultipleWMS = async (params = {}) => {
   try {
     const config = cargarConfiguracion();
     const host = (paramHost || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
-    const siteId = paramSiteId || config.siteId || process.env.WMS_SITE_ID || '194326';
-    let sessionId = (paramSessionId || activeSessionId || config.sessionId || process.env.PHP_SESSION_ID || '').trim();
-
-    if (!sessionId && config.usuario && config.password) {
-      console.log('[wmsService] No hay sessionId activa. Intentando login automático en BlockWMS...');
-      try {
-        const loginRes = await loginWMS(config);
-        sessionId = loginRes.sessionId;
-      } catch (loginErr) {
-        console.warn('[wmsService] Login automático falló:', loginErr.message);
-      }
-    }
+    const sessionId = await ensureValidWmsSession({ sessionId: paramSessionId, host: paramHost, siteId });
 
     // Headers AJAX idénticos al navegador
     const headers = {
@@ -1281,15 +1296,10 @@ const ejecutarAjusteMultipleWMS = async (params = {}) => {
 /**
  * Obtiene el listado completo de entidades (clientes / sucursales / depósitos) activas en BlockWMS
  */
-const obtenerEntidadesWMS = async () => {
+const obtenerEntidadesWMS = async (opts = {}) => {
   const config = cargarConfiguracion();
-  const host = config.host || 'http://192.168.10.2';
-  let sessionId = activeSessionId || (process.env.PHP_SESSION_ID || '').trim() || config.sessionId;
-
-  if (!sessionId && config.usuario && config.password) {
-    const loginRes = await loginWMS();
-    sessionId = loginRes.sessionId;
-  }
+  const host = (opts.host || config.host || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
 
   const sql = "SELECT id_entidades, codigo_entidades, razon_social FROM entidades WHERE activo = 1 ORDER BY razon_social ASC";
   const headers = { 'Cookie': `PHPSESSID=${sessionId}` };
@@ -1323,13 +1333,8 @@ const obtenerEntidadesWMS = async () => {
  */
 const obtenerSitesDisponiblesWMS = async (opts = {}, id_ubicacion = null) => {
   const config = cargarConfiguracion();
-  const host = config.host || 'http://192.168.10.2';
-  let sessionId = activeSessionId || (process.env.PHP_SESSION_ID || '').trim() || config.sessionId;
-
-  if (!sessionId && config.usuario && config.password) {
-    const loginRes = await loginWMS();
-    sessionId = loginRes.sessionId;
-  }
+  const host = (opts.host || config.host || 'http://192.168.10.2').replace(/\/+$/, '');
+  const sessionId = await ensureValidWmsSession(opts);
 
   const headers = {
     'Cookie': sessionId ? `PHPSESSID=${sessionId}` : '',
@@ -3070,5 +3075,7 @@ module.exports = {
   compararVariabilidadProductosWMS,
   guardarStockObjetivosWMS,
   calcularStockObjetivoHistoricoWMS,
-  generarPedidoReposicionWMS
+  generarPedidoReposicionWMS,
+  logoutWMS,
+  getActiveSessionId
 };
