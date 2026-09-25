@@ -225,40 +225,6 @@ const getStockPorUbicacion = async (req, res, next) => {
   }
 };
 
-/**
- * Consulta el reporte de diferencias en órdenes de ingreso (recepción) desde BlockWMS
- */
-const getReporteDiferenciasIngreso = async (req, res, next) => {
-  try {
-    const creds = extractWmsCredentials(req);
-    const filtros = {
-      fechaAltaDesde: req.query.fechaAltaDesde || req.body?.fechaAltaDesde || '1900-01-01',
-      fechaAltaHasta: req.query.fechaAltaHasta || req.body?.fechaAltaHasta || '1900-01-01',
-      fechaCierreDesde: req.query.fechaCierreDesde || req.body?.fechaCierreDesde || new Date().toISOString().split('T')[0],
-      fechaCierreHasta: req.query.fechaCierreHasta || req.body?.fechaCierreHasta || new Date().toISOString().split('T')[0],
-      codigoOrdenes: req.query.codigoOrdenes || req.body?.codigoOrdenes || '',
-      codigoProveedor: req.query.codigoProveedor || req.body?.codigoProveedor || '',
-      codigoProducto: req.query.codigoProducto || req.body?.codigoProducto || '',
-      diferencia: req.query.diferencia !== undefined ? req.query.diferencia : (req.body?.diferencia !== undefined ? req.body.diferencia : '-1'),
-      lote: req.query.lote || req.body?.lote || '',
-      operador: req.query.operador || req.body?.operador || '-1',
-      asn: req.query.asn || req.body?.asn || '',
-      wave: req.query.wave || req.body?.wave || ''
-    };
-
-    const result = await wmsService.obtenerReporteDiferenciasIngresoWMS(filtros, creds);
-    res.json({
-      ok: true,
-      ...result,
-      wmsSession: getActiveWmsSession()
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      error: error.message
-    });
-  }
-};
 
 /**
  * Obtener listado de todas las tablas y vistas de BlockWMS
@@ -707,75 +673,6 @@ const obtenerPdfOrdenWMS = async (req, res) => {
   }
 };
 
-/**
- * Consulta de Reporte de Trazabilidad por Producto directamente en la BBDD de BlockWMS
- */
-const getTrazabilidadBlockWMS = async (req, res, next) => {
-  try {
-    const creds = extractWmsCredentials(req);
-    const codigo_producto = req.query.codigo_producto || req.query.codigo || (req.body ? req.body.codigo_producto || req.body.codigo : '');
-    const fecha_desde = req.query.fecha_desde || req.query.fechaDesde || (req.body ? req.body.fecha_desde || req.body.fechaDesde : '');
-    const fecha_hasta = req.query.fecha_hasta || req.query.fechaHasta || (req.body ? req.body.fecha_hasta || req.body.fechaHasta : '');
-
-    const result = await wmsService.obtenerTrazabilidadBlockWMS({
-      ...creds,
-      codigo_producto,
-      fecha_desde,
-      fecha_hasta
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error('[wmsController] Error en getTrazabilidadBlockWMS:', error.message);
-    const isTimeout = error.message && error.message.toLowerCase().includes('timeout');
-    const msg = isTimeout 
-      ? 'El servidor de BlockWMS tardó más de lo esperado en procesar la consulta para este rango de fechas extenso. Intenta seleccionar un rango de fechas más acotado (ej: 7 o 14 días).'
-      : (error.message || 'Error al consultar trazabilidad en BlockWMS.');
-    
-    res.status(isTimeout ? 504 : 500).json({
-      ok: false,
-      error: msg
-    });
-  }
-};
-
-const getComparacionVariabilidad = async (req, res, next) => {
-  try {
-    if (req.setTimeout) req.setTimeout(300000);
-    if (res.setTimeout) res.setTimeout(300000);
-    const creds = extractWmsCredentials(req);
-    const codigo1 = req.query.codigo1 || req.query.codigo_producto1 || (req.body ? req.body.codigo1 : '');
-    const codigo2 = req.query.codigo2 || req.query.codigo_producto2 || (req.body ? req.body.codigo2 : '');
-    const fecha_desde = req.query.fecha_desde || req.query.fechaDesde || (req.body ? req.body.fecha_desde : '');
-    const fecha_hasta = req.query.fecha_hasta || req.query.fechaHasta || (req.body ? req.body.fecha_hasta : '');
-    const solo_ajustes = req.query.solo_ajustes !== undefined ? req.query.solo_ajustes === 'true' : true;
-
-    if (!codigo1 || !codigo2) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Debe especificar ambos códigos de producto (codigo1 y codigo2).'
-      });
-    }
-
-    const result = await wmsService.compararVariabilidadProductosWMS({
-      ...creds,
-      codigo1,
-      codigo2,
-      fechaDesde: fecha_desde,
-      fechaHasta: fecha_hasta,
-      soloAjustes: solo_ajustes
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error('[wmsController] Error en getComparacionVariabilidad:', error.message);
-    const isTimeout = error.message && error.message.toLowerCase().includes('timeout');
-    const msg = isTimeout 
-      ? 'El servidor de BlockWMS tardó más de lo esperado en responder. Intenta seleccionar un rango de fechas más acotado.'
-      : (error.message || 'Error al comparar variabilidad de productos en BlockWMS.');
-    res.status(isTimeout ? 504 : 500).json({ ok: false, error: msg });
-  }
-};
 
 const guardarStockObjetivos = async (req, res, next) => {
   try {
@@ -818,7 +715,6 @@ module.exports = {
   getEntidades,
   getSitesDisponibles,
   getStockPorUbicacion,
-  getReporteDiferenciasIngreso,
   getStockSucursales,
   getStockSucursalesMatriz,
   getOrdenesIngreso,
@@ -833,8 +729,6 @@ module.exports = {
   syncStock,
   getMotivos,
   ejecutarAjuste,
-  getTrazabilidadBlockWMS,
-  getComparacionVariabilidad,
   guardarStockObjetivos,
   calcularStockObjetivoHistorico,
   generarPedidoReposicion

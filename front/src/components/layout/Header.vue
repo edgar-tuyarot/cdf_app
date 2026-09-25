@@ -2,12 +2,10 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
-import { useVariabilidadStore } from '../../stores/variabilidad'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const variabilidadStore = useVariabilidadStore()
 const emit = defineEmits(['toggle-menu'])
 
 const isColaborador = computed(() => authStore.user?.rol?.toLowerCase() === 'colaborador')
@@ -23,7 +21,6 @@ const pageTitle = computed(() => {
   if (path.startsWith('/ingreso-recortes')) return 'Ingreso de Recortes'
   if (path.startsWith('/decomisos')) return 'Decomisos'
   if (path.startsWith('/demanda-pendiente')) return 'Demanda Pendiente'
-  if (path.startsWith('/comparaciones-variabilidad')) return 'Comparaciones de Variabilidad'
   if (path === '/') return isColaborador.value ? 'Menú Principal' : 'Dashboard'
   return 'CDF CRM'
 })
@@ -46,26 +43,6 @@ const pageTitle = computed(() => {
     
     <div class="header-right">
       <div class="header-actions">
-        <!-- Indicador de Tarea en Segundo Plano: Comparación de Variabilidad -->
-        <router-link 
-          v-if="variabilidadStore.loading" 
-          to="/comparaciones-variabilidad" 
-          class="bg-task-pill running"
-          title="Comparación de variabilidad ejecutándose en segundo plano. Clic para ver."
-        >
-          <i class="ph ph-spinner spinner"></i>
-          <span>Variabilidad: {{ variabilidadStore.formattedTimer }}s</span>
-        </router-link>
-
-        <router-link 
-          v-else-if="variabilidadStore.justCompleted && route.path !== '/comparaciones-variabilidad'" 
-          to="/comparaciones-variabilidad" 
-          class="bg-task-pill ready"
-          title="Comparación de variabilidad finalizada con éxito. Clic para ver."
-        >
-          <i class="ph ph-check-circle"></i>
-          <span>Variabilidad Lista</span>
-        </router-link>
       </div>
     </div>
   </header>

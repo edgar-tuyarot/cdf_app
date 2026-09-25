@@ -24,7 +24,6 @@ router.post('/ingresar-proveedor', productosController.ingresarProveedor);
 router.post('/ingresar-proveedor-lote', productosController.ingresarProveedorLote);
 router.get('/ingresos-proveedores', productosController.obtenerIngresosProveedores);
 router.get('/movimientos-stock', productosController.obtenerMovimientosStock);
-router.get('/snapshots', productosController.obtenerSnapshots);
 router.post('/control-piezas', productosController.controlPiezas);
 router.get('/:codigo/movimientos', productosController.obtenerMovimientosPorProducto);
 router.get('/:codigo/sucursales', productosController.obtenerSucursalesHabilitadas);

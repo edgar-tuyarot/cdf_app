@@ -1,52 +1,59 @@
-const { Producto, ProductoVencimiento, IngresoProveedor, Proveedor, Generador, Sucursal, Proceso, LogConversion, Bulto, Fraccionado, SucursalProductoPermiso, Ubicacion, ProductoStock, MovimientoStock, sequelize } = require('../models');
+const { Producto, ProductoVencimiento, IngresoProveedor, Proveedor, Usuario, Sucursal, Proceso, LogConversion, Fraccionado, SucursalProductoPermiso, Ubicacion, ProductoStock, MovimientoStock, sequelize } = require('../models');
 const wmsService = require('../services/wmsService');
 const { calcularPiezasProducto } = require('../utils/calculoPiezas');
 
-// Helper to sync Fraccionado template mapping
-const syncFraccionadoTemplate = async (codigoProductoOriginal, codigoFraccionado, id_ubicacion, transaction) => {
-  if (codigoFraccionado) {
-    // 1. Check if a Fraccionado record exists
-    const existing = await Fraccionado.findOne({
-      where: {
-        codigo_producto_original: codigoProductoOriginal,
-        codigo_fraccionado: codigoFraccionado,
-        id_ubicacion
-      },
-      transaction
-    });
+// Helper to sync Fraccionado template mapping across all locations
+const syncFraccionadoTemplate = async (codigoProductoOriginal, codigoFraccionado, ubicacionOrTx, maybeTx) => {
+  const transaction = (maybeTx !== undefined) ? maybeTx : (ubicacionOrTx && typeof ubicacionOrTx.commit === 'function' ? ubicacionOrTx : null);
+  const { Op } = require('sequelize');
+  const ubicaciones = await Ubicacion.findAll({ transaction });
+  const ubicacionIds = ubicaciones.length > 0 ? ubicaciones.map(u => u.id) : [1];
 
-    if (!existing) {
-      // 2. Create the template mapping
-      await Fraccionado.create({
-        codigo_producto_original: codigoProductoOriginal,
-        codigo_fraccionado: codigoFraccionado,
-        peso_a_fraccionar: 0,
-        peso_a_descontar: 0,
-        id_ubicacion
-      }, { transaction });
-    }
-
-    // 3. Delete any other templates for this mother product pointing to different fractioned codes
-    const { Op } = require('sequelize');
-    await Fraccionado.destroy({
-      where: {
-        codigo_producto_original: codigoProductoOriginal,
-        codigo_fraccionado: {
-          [Op.ne]: codigoFraccionado
+  for (const id_ubicacion of ubicacionIds) {
+    if (codigoFraccionado && String(codigoFraccionado).trim() !== '') {
+      const cleanDestino = String(codigoFraccionado).trim();
+      const existing = await Fraccionado.findOne({
+        where: {
+          codigo_producto_original: codigoProductoOriginal,
+          id_ubicacion
         },
-        id_ubicacion
-      },
-      transaction
-    });
-  } else {
-    // If it was cleared, remove all Fraccionado records for this mother product
-    await Fraccionado.destroy({
-      where: {
-        codigo_producto_original: codigoProductoOriginal,
-        id_ubicacion
-      },
-      transaction
-    });
+        transaction
+      });
+
+      if (!existing) {
+        await Fraccionado.create({
+          codigo_producto_original: codigoProductoOriginal,
+          codigo_fraccionado: cleanDestino,
+          peso_a_fraccionar: 0,
+          peso_a_descontar: 0,
+          id_ubicacion
+        }, { transaction });
+      } else if (existing.codigo_fraccionado !== cleanDestino) {
+        existing.codigo_fraccionado = cleanDestino;
+        await existing.save({ transaction });
+      }
+
+      // Eliminar registros inconsistentes si existieran
+      await Fraccionado.destroy({
+        where: {
+          codigo_producto_original: codigoProductoOriginal,
+          codigo_fraccionado: {
+            [Op.ne]: cleanDestino
+          },
+          id_ubicacion
+        },
+        transaction
+      });
+    } else {
+      // Si se desvinculó o borró el código fraccionado, eliminar las plantillas
+      await Fraccionado.destroy({
+        where: {
+          codigo_producto_original: codigoProductoOriginal,
+          id_ubicacion
+        },
+        transaction
+      });
+    }
   }
 };
 
@@ -144,7 +151,7 @@ exports.crearProducto = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const { 
-      codigo, nombre, stock, peso_pieza, cantidad_piezas, 
+      codigo, nombre, stock, peso_pieza, peso_caja_vacia, cantidad_piezas, 
       vencimientos, peso_fraccion, peso_unidad, tipo_calculo_piezas, kg_fraccionados, kg_decomiso, kg_recorte,
       vencimientosList, destacado, codigo_barra, pesable, activo,
       codigo_fraccionado, sucursalesHabilitadas, proveedor_id
@@ -162,6 +169,7 @@ exports.crearProducto = async (req, res) => {
     }
 
     const pesoP = parseFloat(peso_pieza) || 0;
+    const taraCaja = parseFloat(peso_caja_vacia) || 0;
     const kgB = parseFloat(peso_fraccion) || 0;
     const pesoU = parseFloat(peso_unidad) || 1.000;
 
@@ -188,6 +196,7 @@ exports.crearProducto = async (req, res) => {
       codigo,
       nombre,
       peso_pieza: pesoP,
+      peso_caja_vacia: taraCaja,
       peso_fraccion: kgB,
       peso_unidad: pesoU,
       tipo_calculo_piezas: tipoCalc,
@@ -613,21 +622,19 @@ exports.obtenerRecortes = async (req, res) => {
 exports.convertirRecorte = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const { items, comprobante, usuario } = req.body;
-
-    if (!comprobante) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'El número de comprobante es obligatorio.' });
-    }
+    const { items, usuario } = req.body;
+    let { comprobante } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       await transaction.rollback();
       return res.status(400).json({ error: 'Debe enviar un array "items" con los productos a convertir.' });
     }
 
-    const resultDetails = [];
+    const itemsValidados = [];
+    const wmsItems = [];
     let totalKilosConvertidos = 0;
 
+    // 1. Validar productos y stock de recortes
     for (const item of items) {
       const { codigo, kilos } = item;
       if (!codigo || kilos === undefined || kilos === null) {
@@ -661,11 +668,73 @@ exports.convertirRecorte = async (req, res) => {
         });
       }
 
+      itemsValidados.push({
+        codigo,
+        productoOrigen,
+        prodStock,
+        valorKilos,
+        recorteActual
+      });
+
+      wmsItems.push({
+        codigoProducto: codigo,
+        cantidad: valorKilos,
+        operador: 'resta',
+        idMotivo: '49' // 49 = Baja fiambreria para picaditas
+      });
+
+      totalKilosConvertidos += valorKilos;
+    }
+
+    if (totalKilosConvertidos > 0) {
+      wmsItems.push({
+        codigoProducto: '7718', // 7718 = FIAM PICADITAS X KG
+        cantidad: totalKilosConvertidos,
+        operador: 'suma',
+        idMotivo: '28' // 28 = Elaboración del Sector
+      });
+    }
+
+    // 2. Emitir Orden de Ajuste en BlockWMS sincrónicamente PRIMERO
+    let idOrdenWms = null;
+    if (wmsItems.length > 0) {
+      const siteId = '194326';
+      const wmsCreds = {
+        sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
+        siteId,
+        host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
+      };
+
+      try {
+        console.log(`[WMS-Picadas] Iniciando emisión sincrónica en BlockWMS para picaditas (${wmsItems.length} renglones)...`);
+        const resWms = await wmsService.ejecutarAjusteMultipleWMS({
+          items: wmsItems,
+          observaciones: `Conversión Picaditas (${items.length} items)`,
+          ...wmsCreds
+        });
+        if (resWms && resWms.idOrdenes) {
+          idOrdenWms = String(resWms.idOrdenes);
+          console.log(`[WMS-Picadas] Orden de ajuste #${idOrdenWms} generada y confirmada con éxito en BlockWMS.`);
+        }
+      } catch (errWms) {
+        console.error('[WMS-Picadas] Error al emitir orden en BlockWMS:', errWms.message);
+        await transaction.rollback();
+        return res.status(500).json({ error: `Error en BlockWMS: ${errWms.message || 'No se pudo comunicar con BlockWMS'}` });
+      }
+    }
+
+    const numComprobante = idOrdenWms || comprobante || `PIC-${Date.now().toString().slice(-6)}`;
+    const resultDetails = [];
+
+    // 3. Aplicar cambios locales en base de datos
+    for (const validItem of itemsValidados) {
+      const { codigo, productoOrigen, prodStock, valorKilos, recorteActual } = validItem;
+
       prodStock.recorte = Math.max(0, recorteActual - valorKilos);
       await prodStock.save({ 
         transaction,
         tipo_movimiento: 'CONVERSION',
-        concepto: `Conversión: Egreso de recorte (Comprobante: ${comprobante})`
+        concepto: `Conversión: Egreso de recorte (Orden Block: ${numComprobante})`
       });
 
       // Crear el log de conversión en log_conversiones
@@ -675,12 +744,12 @@ exports.convertirRecorte = async (req, res) => {
         peso_descontado: valorKilos,
         codigo_fraccionado: '7718',
         peso_fraccionado: valorKilos,
-        comprobante: comprobante,
+        comprobante: numComprobante,
+        id_orden_wms: idOrdenWms,
         usuario: usuario || 'Sistema',
         fecha: new Date()
       }, { transaction });
 
-      totalKilosConvertidos += valorKilos;
       resultDetails.push({
         codigo: codigo,
         nombre: productoOrigen.nombre,
@@ -709,59 +778,15 @@ exports.convertirRecorte = async (req, res) => {
     await destStock.save({
       transaction,
       tipo_movimiento: 'CONVERSION',
-      concepto: `Conversión lote: Ingreso de kilos por recortes (Comprobante: ${comprobante})`
+      concepto: `Conversión lote: Ingreso de kilos por recortes (Orden Block: ${numComprobante})`
     });
 
     await transaction.commit();
 
-    // Emitir automáticamente Orden de Ajuste en BlockWMS para Picaditas:
-    // Bajas ID 49 ("Baja fiambrería para picaditas") de originales y Alta ID 28 ("Elaboración del Sector") para 7718
-    try {
-      const wmsItems = [];
-      for (const item of items) {
-        const valKilos = parseFloat(item.kilos) || 0;
-        if (item.codigo && valKilos > 0) {
-          wmsItems.push({
-            codigoProducto: item.codigo,
-            cantidad: valKilos,
-            operador: 'resta',
-            idMotivo: '49' // 49 = Baja fiambreria para picaditas
-          });
-        }
-      }
-
-      if (totalKilosConvertidos > 0) {
-        wmsItems.push({
-          codigoProducto: '7718', // 7718 = FIAM PICADITAS X KG
-          cantidad: totalKilosConvertidos,
-          operador: 'suma',
-          idMotivo: '28' // 28 = Elaboración del Sector
-        });
-      }
-
-      if (wmsItems.length > 0) {
-        const wmsCreds = {
-          sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
-          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
-          host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
-        };
-
-        wmsService.ejecutarAjusteMultipleWMS({
-          items: wmsItems,
-          observaciones: `Conversión Picaditas (Comprobante: ${comprobante})`,
-          ...wmsCreds
-        }).then(resWms => {
-          console.log(`[WMS-Picadas] Orden de ajuste #${resWms.idOrdenes} generada en BlockWMS.`);
-        }).catch(errWms => {
-          console.warn('[WMS-Picadas] Advertencia al emitir orden en BlockWMS:', errWms.message);
-        });
-      }
-    } catch (errWms) {
-      console.warn('[WMS-Picadas] Error WMS:', errWms.message);
-    }
-
     res.json({
-      mensaje: 'Lote de recortes convertido exitosamente',
+      mensaje: `Lote de recortes convertido exitosamente (Orden Block #${idOrdenWms || numComprobante})`,
+      id_orden_wms: idOrdenWms,
+      comprobante: numComprobante,
       detalles: resultDetails,
       totalKilosConvertidos,
       productoDestino: {
@@ -776,7 +801,7 @@ exports.convertirRecorte = async (req, res) => {
       await transaction.rollback();
     }
     console.error('Error al convertir lote de recortes:', error);
-    res.status(500).json({ error: 'Error interno al procesar la conversión del lote.' });
+    res.status(500).json({ error: error.message || 'Error al convertir lote de recortes' });
   }
 };
 
@@ -823,20 +848,18 @@ exports.obtenerDecomisos = async (req, res) => {
 exports.descontarDecomiso = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    const { items, comprobante, usuario } = req.body;
-
-    if (!comprobante) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'El número de comprobante es obligatorio.' });
-    }
+    const { items, usuario } = req.body;
+    let { comprobante } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       await transaction.rollback();
       return res.status(400).json({ error: 'Debe enviar un array "items" con los decomisos a descontar.' });
     }
 
-    const resultDetails = [];
+    const itemsValidados = [];
+    const wmsItems = [];
 
+    // 1. Validar productos y stock de decomisos
     for (const item of items) {
       const { codigo, kilos } = item;
       if (!codigo || kilos === undefined || kilos === null) {
@@ -870,11 +893,62 @@ exports.descontarDecomiso = async (req, res) => {
         });
       }
 
+      itemsValidados.push({
+        codigo,
+        producto,
+        prodStock,
+        valorKilos,
+        decomisoActual
+      });
+
+      wmsItems.push({
+        codigoProducto: codigo,
+        cantidad: valorKilos,
+        operador: 'resta',
+        idMotivo: '55' // 55 = Decomiso
+      });
+    }
+
+    // 2. Emitir Orden de Ajuste en BlockWMS sincrónicamente PRIMERO
+    let idOrdenWms = null;
+    if (wmsItems.length > 0) {
+      const siteId = '194326';
+      const wmsCreds = {
+        sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
+        siteId,
+        host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
+      };
+
+      try {
+        console.log(`[WMS-Decomisos] Iniciando emisión sincrónica en BlockWMS para decomisos (${wmsItems.length} renglones)...`);
+        const resWms = await wmsService.ejecutarAjusteMultipleWMS({
+          items: wmsItems,
+          observaciones: `Baja por Decomiso (${items.length} items)`,
+          ...wmsCreds
+        });
+        if (resWms && resWms.idOrdenes) {
+          idOrdenWms = String(resWms.idOrdenes);
+          console.log(`[WMS-Decomisos] Orden de ajuste #${idOrdenWms} generada y confirmada con éxito en BlockWMS.`);
+        }
+      } catch (errWms) {
+        console.error('[WMS-Decomisos] Error al emitir orden en BlockWMS:', errWms.message);
+        await transaction.rollback();
+        return res.status(500).json({ error: `Error en BlockWMS: ${errWms.message || 'No se pudo comunicar con BlockWMS'}` });
+      }
+    }
+
+    const numComprobante = idOrdenWms || comprobante || `DEC-${Date.now().toString().slice(-6)}`;
+    const resultDetails = [];
+
+    // 3. Aplicar cambios locales en base de datos
+    for (const validItem of itemsValidados) {
+      const { codigo, producto, prodStock, valorKilos, decomisoActual } = validItem;
+
       prodStock.decomiso = Math.max(0, decomisoActual - valorKilos);
       await prodStock.save({
         transaction,
         tipo_movimiento: 'DECOMISO',
-        concepto: `Baja / Descarte de decomiso (Comprobante: ${comprobante})`,
+        concepto: `Baja / Descarte de decomiso (Orden Block: ${numComprobante})`,
         kg_decomiso: -valorKilos,
         usuario: usuario || 'Sistema'
       });
@@ -888,45 +962,10 @@ exports.descontarDecomiso = async (req, res) => {
 
     await transaction.commit();
 
-    // Emitir automáticamente Orden de Ajuste en BlockWMS para Decomisos:
-    // Bajas ID 55 ("Decomiso")
-    try {
-      const wmsItems = [];
-      for (const item of items) {
-        const valKilos = parseFloat(item.kilos) || 0;
-        if (item.codigo && valKilos > 0) {
-          wmsItems.push({
-            codigoProducto: item.codigo,
-            cantidad: valKilos,
-            operador: 'resta',
-            idMotivo: '55' // 55 = Decomiso
-          });
-        }
-      }
-
-      if (wmsItems.length > 0) {
-        const wmsCreds = {
-          sessionId: req.headers['x-wms-session-id'] || req.body?.sessionId || '',
-          siteId: req.headers['x-wms-site-id'] || req.body?.siteId || '194326',
-          host: req.headers['x-wms-host'] || req.body?.host || 'http://192.168.10.2'
-        };
-
-        wmsService.ejecutarAjusteMultipleWMS({
-          items: wmsItems,
-          observaciones: `Baja por Decomiso (Comprobante: ${comprobante})`,
-          ...wmsCreds
-        }).then(resWms => {
-          console.log(`[WMS-Decomisos] Orden de ajuste #${resWms.idOrdenes} generada en BlockWMS.`);
-        }).catch(errWms => {
-          console.warn('[WMS-Decomisos] Advertencia al emitir orden en BlockWMS:', errWms.message);
-        });
-      }
-    } catch (errWms) {
-      console.warn('[WMS-Decomisos] Error WMS:', errWms.message);
-    }
-
     res.json({
-      mensaje: 'Lote de decomisos descontado exitosamente',
+      mensaje: `Lote de decomisos descontado exitosamente (Orden Block #${idOrdenWms || numComprobante})`,
+      id_orden_wms: idOrdenWms,
+      comprobante: numComprobante,
       detalles: resultDetails
     });
   } catch (error) {
@@ -934,7 +973,7 @@ exports.descontarDecomiso = async (req, res) => {
       await transaction.rollback();
     }
     console.error('Error al descontar lote de decomisos:', error);
-    res.status(500).json({ error: 'Error interno al descontar el lote de decomisos.' });
+    res.status(500).json({ error: error.message || 'Error interno al descontar el lote de decomisos.' });
   }
 };
 
@@ -976,25 +1015,17 @@ exports.ingresarRecorte = async (req, res) => {
       concepto: `Ingreso de recortes desde sucursal ${sucursal || 'Desconocida'}`
     });
 
-    // Buscar el generador correspondiente a la sucursal
-    let generadorId = null;
-    if (sucursal) {
-      const suc = await Sucursal.findOne({
-        where: { sucursal: sucursal },
-        transaction
-      });
-      if (suc) {
-        const gen = await Generador.findOne({
-          where: { tipo: 'sucursal', id_asociado: suc.id },
-          transaction
-        });
-        if (gen) generadorId = gen.id;
-      }
+    // Resolver usuario_id
+    let usuarioId = req.usuarioId || (req.usuario ? req.usuario.id : null);
+    if (!usuarioId && req.body.usuario) {
+      const u = await Usuario.findOne({ where: { nombre: req.body.usuario }, transaction });
+      if (u) usuarioId = u.id;
     }
 
     // 3. Crear un registro en la tabla de procesos como trazabilidad histórica
     await Proceso.create({
-      generador_id: generadorId,
+      id_ubicacion,
+      usuario_id: usuarioId,
       proceso: 'Ingreso de Recorte',
       fecha: fecha || new Date(),
       codigo: codigo,
@@ -1198,41 +1229,11 @@ exports.obtenerVencimientosCercanos = async (req, res) => {
 exports.ingresarProveedor = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
-    let { codigo, piezas, vencimiento, proveedor_id, peso, usuario, bulto_id, cantidad_bultos } = req.body;
+    let { codigo, piezas, vencimiento, proveedor_id, peso, usuario, cajas, cantidad_bultos } = req.body;
 
-    if (bulto_id) {
-      const { Bulto } = require('../models');
-      const bultoObj = await Bulto.findByPk(bulto_id, { transaction });
-      if (!bultoObj) {
-        await transaction.rollback();
-        return res.status(404).json({ error: `El bulto con ID ${bulto_id} no existe.` });
-      }
-      codigo = bultoObj.codigo_producto;
-      proveedor_id = bultoObj.id_proveedor;
-      piezas = parseInt(cantidad_bultos, 10) * bultoObj.cantidad_piezas;
-
-      const pesoBruto = parseFloat(peso);
-      const taraCajas = parseInt(cantidad_bultos, 10) * parseFloat(bultoObj.peso_caja_vacia || 0);
-
-      if (!isNaN(pesoBruto) && pesoBruto > 0) {
-        // Peso neto = peso bruto - tara
-        peso = Math.max(0, pesoBruto - taraCajas);
-      } else {
-        // Fallback: peso aproximado neto
-        const pesoReferenciaNeto = Math.max(0, parseFloat(bultoObj.peso_caja || 0) - parseFloat(bultoObj.peso_caja_vacia || 0));
-        peso = parseInt(cantidad_bultos, 10) * pesoReferenciaNeto;
-      }
-    }
-
-    if (!codigo || piezas === undefined || piezas === null || !vencimiento || !proveedor_id) {
+    if (!codigo || !vencimiento || !proveedor_id) {
       await transaction.rollback();
-      return res.status(400).json({ error: 'El código del producto, la cantidad de piezas, el proveedor y la fecha de vencimiento son obligatorios.' });
-    }
-
-    const valorPiezas = parseInt(piezas, 10);
-    if (isNaN(valorPiezas) || valorPiezas <= 0) {
-      await transaction.rollback();
-      return res.status(400).json({ error: 'La cantidad de piezas debe ser un número entero mayor a cero.' });
+      return res.status(400).json({ error: 'El código del producto, el proveedor y la fecha de vencimiento son obligatorios.' });
     }
 
     // 1. Buscar el producto
@@ -1242,6 +1243,31 @@ exports.ingresarProveedor = async (req, res) => {
       return res.status(404).json({ error: `El producto con código ${codigo} no existe en el catálogo.` });
     }
 
+    const numCajas = parseInt(cajas !== undefined ? cajas : cantidad_bultos, 10) || 0;
+    const pesoBruto = parseFloat(peso);
+    let taraCajas = 0;
+    if (numCajas > 0 && producto.peso_caja_vacia) {
+      taraCajas = numCajas * (parseFloat(producto.peso_caja_vacia) || 0);
+    }
+
+    let kilosASumar = 0;
+    if (!isNaN(pesoBruto) && pesoBruto > 0) {
+      // Peso neto = peso bruto - tara
+      kilosASumar = Math.max(0, pesoBruto - taraCajas);
+    }
+
+    let valorPiezas = parseInt(piezas, 10) || 0;
+    if (valorPiezas <= 0 && kilosASumar > 0) {
+      const pxp = parseFloat(producto.peso_pieza) || 0;
+      valorPiezas = pxp > 0 ? Math.round(kilosASumar / pxp) : 1;
+    } else if (kilosASumar <= 0 && valorPiezas > 0) {
+      kilosASumar = valorPiezas * (parseFloat(producto.peso_pieza) || 0);
+    }
+
+    if (valorPiezas <= 0) {
+      valorPiezas = 1;
+    }
+
     // Validar el proveedor
     const prov = await Proveedor.findByPk(proveedor_id, { transaction });
     if (!prov) {
@@ -1249,25 +1275,10 @@ exports.ingresarProveedor = async (req, res) => {
       return res.status(400).json({ error: `El proveedor con ID ${proveedor_id} no existe.` });
     }
 
-    // Buscar su generador polimórfico
-    const gen = await Generador.findOne({
-      where: { tipo: 'proveedor', id_asociado: proveedor_id },
-      transaction
-    });
-    if (!gen) {
-      await transaction.rollback();
-      return res.status(400).json({ error: `No se encontró el generador asociado para el proveedor.` });
-    }
-
-    // Peso ingresado manualmente o calculado como fallback si no se provee
-    let kilosASumar = parseFloat(peso);
-    if (isNaN(kilosASumar) || kilosASumar < 0) {
-      kilosASumar = valorPiezas * (parseFloat(producto.peso_pieza) || 0);
-    }
-
-    if (isNaN(valorPiezas) || valorPiezas <= 0) {
-      const pxp = parseFloat(producto.peso_pieza) || 0;
-      valorPiezas = (pxp > 0 && kilosASumar >= pxp) ? Math.round(kilosASumar / pxp) : 0;
+    let usuarioId = req.usuarioId || (req.usuario ? req.usuario.id : null);
+    if (!usuarioId && usuario) {
+      const u = await Usuario.findOne({ where: { nombre: usuario }, transaction });
+      if (u) usuarioId = u.id;
     }
 
     const id_ubicacion = req.ubicacionId;
@@ -1280,8 +1291,8 @@ exports.ingresarProveedor = async (req, res) => {
       piezas: 0,
       vencimiento: vencimiento,
       peso_calculado: kilosASumar,
-      bulto_id: bulto_id || null,
-      cantidad_bultos: cantidad_bultos || null,
+      bulto_id: null,
+      cantidad_bultos: numCajas > 0 ? numCajas : null,
       fecha: new Date()
     }, { transaction });
 
@@ -1320,13 +1331,9 @@ exports.ingresarProveedor = async (req, res) => {
       skipAuditLog: true
     });
 
-    let conceptoMovimiento = `Ingreso de ${valorPiezas} piezas (${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento})`;
-    if (bulto_id) {
-      const { Bulto } = require('../models');
-      const bultoObjForLog = await Bulto.findByPk(bulto_id, { transaction });
-      const bultoNombre = bultoObjForLog ? bultoObjForLog.nombre : `Bulto #${bulto_id}`;
-      conceptoMovimiento = `Ingreso por Bultos (${cantidad_bultos} bulto/s "${bultoNombre}", total ${valorPiezas} pz, ${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento})`;
-    }
+    let conceptoMovimiento = numCajas > 0
+      ? `Ingreso por Cajas (${numCajas} caja/s, total ${valorPiezas} pz, ${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento})`
+      : `Ingreso de ${valorPiezas} piezas (${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento})`;
 
     // 5. Crear manualmente el registro en MovimientoStock con el delta real
     const { MovimientoStock } = sequelize.models;
@@ -1349,7 +1356,7 @@ exports.ingresarProveedor = async (req, res) => {
     // 6. Crear un registro en la tabla de procesos como trazabilidad complementaria en el historial general
     await Proceso.create({
       id_ubicacion,
-      generador_id: gen.id,
+      usuario_id: usuarioId,
       proceso: 'Ingreso Proveedor',
       fecha: new Date(),
       codigo: codigo,
@@ -1415,55 +1422,23 @@ exports.ingresarProveedorLote = async (req, res) => {
       return res.status(400).json({ error: `El proveedor con ID ${proveedor_id} no existe.` });
     }
 
-    // Buscar su generador polimórfico
-    const gen = await Generador.findOne({
-      where: { tipo: 'proveedor', id_asociado: proveedor_id },
-      transaction
-    });
-    if (!gen) {
-      if (!transaction.finished) await transaction.rollback();
-      return res.status(400).json({ error: `No se encontró el generador asociado para el proveedor.` });
+    let usuarioId = req.usuarioId || (req.usuario ? req.usuario.id : null);
+    if (!usuarioId && usuario) {
+      const u = await Usuario.findOne({ where: { nombre: usuario }, transaction });
+      if (u) usuarioId = u.id;
     }
 
-    const { Bulto, MovimientoStock } = require('../models');
+    const { MovimientoStock } = require('../models');
 
     const ingresosRegistrados = [];
 
     for (const item of items) {
-      let { codigo, piezas, vencimiento, peso, bulto_id, cantidad_bultos, tipo } = item;
-
-      let bultoObj = null;
-
-      if (tipo === 'bulto') {
-        if (!bulto_id) {
-          if (!transaction.finished) await transaction.rollback();
-          return res.status(400).json({ error: 'El tipo de bulto es obligatorio para los ítems tipo bulto.' });
-        }
-        bultoObj = await Bulto.findByPk(bulto_id, { transaction });
-        if (!bultoObj) {
-          if (!transaction.finished) await transaction.rollback();
-          return res.status(404).json({ error: `El bulto con ID ${bulto_id} no existe.` });
-        }
-        codigo = bultoObj.codigo_producto;
-        piezas = parseInt(cantidad_bultos, 10) * bultoObj.cantidad_piezas;
-
-        const pesoBruto = parseFloat(peso);
-        const taraCajas = parseInt(cantidad_bultos, 10) * parseFloat(bultoObj.peso_caja_vacia || 0);
-
-        if (!isNaN(pesoBruto) && pesoBruto > 0) {
-          peso = Math.max(0, pesoBruto - taraCajas);
-        } else {
-          const pesoReferenciaNeto = Math.max(0, parseFloat(bultoObj.peso_caja || 0) - parseFloat(bultoObj.peso_caja_vacia || 0));
-          peso = parseInt(cantidad_bultos, 10) * pesoReferenciaNeto;
-        }
-      }
+      let { codigo, piezas, vencimiento, peso, cajas, cantidad_bultos, nro_factura } = item;
 
       if (!codigo || !vencimiento) {
         if (!transaction.finished) await transaction.rollback();
         return res.status(400).json({ error: 'El código del producto y la fecha de vencimiento son obligatorios para todos los ítems.' });
       }
-
-      let valorPiezas = parseInt(piezas, 10) || 0;
 
       // Buscar el producto
       const producto = await Producto.findByPk(codigo, { transaction });
@@ -1472,19 +1447,28 @@ exports.ingresarProveedorLote = async (req, res) => {
         return res.status(404).json({ error: `El producto con código ${codigo} no existe en el catálogo.` });
       }
 
-      let kilosASumar = parseFloat(peso);
-      if (isNaN(kilosASumar) || kilosASumar < 0) {
-        kilosASumar = (!isNaN(valorPiezas) && valorPiezas > 0) ? valorPiezas * (parseFloat(producto.peso_pieza) || 0) : 0;
+      const numCajas = parseInt(cajas !== undefined ? cajas : cantidad_bultos, 10) || 0;
+      const pesoBruto = parseFloat(peso);
+      let taraCajas = 0;
+      if (numCajas > 0 && producto.peso_caja_vacia) {
+        taraCajas = numCajas * (parseFloat(producto.peso_caja_vacia) || 0);
       }
 
-      if (isNaN(valorPiezas) || valorPiezas <= 0) {
+      let kilosASumar = 0;
+      if (!isNaN(pesoBruto) && pesoBruto > 0) {
+        kilosASumar = Math.max(0, pesoBruto - taraCajas);
+      }
+
+      let valorPiezas = parseInt(piezas, 10) || 0;
+      if (valorPiezas <= 0 && kilosASumar > 0) {
         const pxp = parseFloat(producto.peso_pieza) || 0;
-        valorPiezas = (pxp > 0 && kilosASumar >= pxp) ? Math.round(kilosASumar / pxp) : 0;
+        valorPiezas = pxp > 0 ? Math.round(kilosASumar / pxp) : 1;
+      } else if (kilosASumar <= 0 && valorPiezas > 0) {
+        kilosASumar = valorPiezas * (parseFloat(producto.peso_pieza) || 0);
       }
 
-      if (!codigo || !vencimiento) {
-        if (!transaction.finished) await transaction.rollback();
-        return res.status(400).json({ error: 'El código del producto y la fecha de vencimiento son obligatorios para todos los ítems.' });
+      if (valorPiezas <= 0) {
+        valorPiezas = 1;
       }
 
       const id_ubicacion = req.ubicacionId;
@@ -1497,8 +1481,8 @@ exports.ingresarProveedorLote = async (req, res) => {
         piezas: 0,
         vencimiento: vencimiento,
         peso_calculado: kilosASumar,
-        bulto_id: tipo === 'bulto' ? bulto_id : null,
-        cantidad_bultos: tipo === 'bulto' ? cantidad_bultos : null,
+        bulto_id: null,
+        cantidad_bultos: numCajas > 0 ? numCajas : null,
         nro_factura: nro_factura,
         fecha: new Date()
       }, { transaction });
@@ -1538,11 +1522,10 @@ exports.ingresarProveedorLote = async (req, res) => {
         skipAuditLog: true
       });
 
-      let conceptoMovimiento = `Ingreso de ${valorPiezas} piezas (${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento}, Factura: ${nro_factura})`;
-      if (tipo === 'bulto') {
-        const bultoNombre = bultoObj ? bultoObj.nombre : `Bulto #${bulto_id}`;
-        conceptoMovimiento = `Ingreso por Bultos (${cantidad_bultos} bulto/s "${bultoNombre}", total ${valorPiezas} pz, ${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento}, Factura: ${nro_factura})`;
-      }
+      const detalleFactura = nro_factura ? `, Factura: ${nro_factura}` : '';
+      let conceptoMovimiento = numCajas > 0
+        ? `Ingreso por Cajas (${numCajas} caja/s, total ${valorPiezas} pz, ${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento}${detalleFactura})`
+        : `Ingreso de ${valorPiezas} piezas (${kilosASumar.toFixed(3)} kg) de proveedor ${prov.nombre} (vence ${vencimiento}${detalleFactura})`;
 
       // Crear movimiento de stock
       await MovimientoStock.create({
@@ -1564,7 +1547,7 @@ exports.ingresarProveedorLote = async (req, res) => {
       // Crear proceso de trazabilidad
       await Proceso.create({
         id_ubicacion,
-        generador_id: gen.id,
+        usuario_id: usuarioId,
         proceso: 'Ingreso Proveedor',
         fecha: new Date(),
         codigo: codigo,
@@ -1622,11 +1605,6 @@ exports.obtenerIngresosProveedores = async (req, res) => {
           model: Proveedor,
           as: 'Proveedor',
           attributes: ['id', 'nombre']
-        },
-        {
-          model: Bulto,
-          as: 'Bulto',
-          attributes: ['id', 'nombre', 'cantidad_piezas']
         }
       ],
       order: [['fecha', 'DESC'], ['id', 'DESC']]
@@ -1678,19 +1656,6 @@ exports.obtenerMovimientosPorProducto = async (req, res) => {
   }
 };
 
-// Obtener todos los snapshots de stock
-exports.obtenerSnapshots = async (req, res) => {
-  try {
-    const { StockSnapshot } = require('../models');
-    const snapshots = await StockSnapshot.findAll({
-      order: [['fecha_corte', 'DESC'], ['id', 'DESC']]
-    });
-    res.json(snapshots);
-  } catch (error) {
-    console.error('Error al obtener snapshots de stock:', error);
-    res.status(500).json({ error: 'Error interno al obtener snapshots de stock' });
-  }
-};
 
 // Obtener sucursales habilitadas para un producto
 exports.obtenerSucursalesHabilitadas = async (req, res) => {

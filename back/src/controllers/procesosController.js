@@ -1,6 +1,6 @@
-const { Proceso, Producto, Fraccionado, Colaborador, Sucursal, Proveedor, Generador, ProductoVencimiento, LogConversion, ProductoStock, Ubicacion, sequelize } = require('../models');
+const { Proceso, Producto, Fraccionado, Usuario, ProductoVencimiento, LogConversion, ProductoStock, Ubicacion, sequelize } = require('../models');
 
-// Obtener todos los procesos (con datos del producto y generador asociado)
+// Obtener todos los procesos (con datos del producto y usuario asociado)
 exports.obtenerProcesos = async (req, res) => {
   try {
     const id_ubicacion = req.ubicacionId;
@@ -12,13 +12,9 @@ exports.obtenerProcesos = async (req, res) => {
           attributes: ['nombre']
         },
         {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['id', 'nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['id', 'sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['id', 'nombre'] }
-          ]
+          model: Usuario,
+          as: 'Usuario',
+          attributes: ['id', 'nombre', 'rol']
         }
       ],
       order: [['id', 'DESC']]
@@ -43,13 +39,9 @@ exports.obtenerProcesoPorId = async (req, res) => {
           attributes: ['nombre']
         },
         {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['id', 'nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['id', 'sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['id', 'nombre'] }
-          ]
+          model: Usuario,
+          as: 'Usuario',
+          attributes: ['id', 'nombre', 'rol']
         }
       ]
     });
@@ -68,7 +60,7 @@ exports.crearProceso = async (req, res) => {
   const transaction = await sequelize.transaction();
   try {
     const {
-      generador_id, proceso, fecha, codigo, piezas,
+      usuario_id, proceso, fecha, codigo, piezas,
       peso_bruto, recorte, decomiso, kg_a_desc, kg_a_sumar
     } = req.body;
 
@@ -84,25 +76,11 @@ exports.crearProceso = async (req, res) => {
       return res.status(400).json({ error: `El producto con código ${codigo} no existe.` });
     }
 
-    // Validar y resolver generador
-    let resolvedGeneradorId = generador_id;
-    if (!resolvedGeneradorId && req.body.generador_tipo && req.body.id_asociado) {
-      const generador = await Generador.findOne({
-        where: { tipo: req.body.generador_tipo, id_asociado: req.body.id_asociado },
-        transaction
-      });
-      if (generador) {
-        resolvedGeneradorId = generador.id;
-      } else {
-        await transaction.rollback();
-        return res.status(400).json({ error: `El generador de tipo ${req.body.generador_tipo} con ID de asociado ${req.body.id_asociado} no existe.` });
-      }
-    } else if (resolvedGeneradorId) {
-      const generador = await Generador.findByPk(resolvedGeneradorId, { transaction });
-      if (!generador) {
-        await transaction.rollback();
-        return res.status(400).json({ error: `El generador con ID ${resolvedGeneradorId} no existe.` });
-      }
+    // Resolver usuario_id
+    let resolvedUsuarioId = usuario_id || req.usuarioId || (req.usuario ? req.usuario.id : null);
+    if (!resolvedUsuarioId && req.body.usuario) {
+      const u = await Usuario.findOne({ where: { nombre: req.body.usuario }, transaction });
+      if (u) resolvedUsuarioId = u.id;
     }
 
     // Parsear valores numéricos
@@ -144,7 +122,7 @@ exports.crearProceso = async (req, res) => {
     // Crear el proceso
     const nuevoProceso = await Proceso.create({
       id_ubicacion,
-      generador_id: resolvedGeneradorId,
+      usuario_id: resolvedUsuarioId,
       proceso,
       fecha: fecha || new Date(),
       codigo,
@@ -284,13 +262,9 @@ exports.crearProceso = async (req, res) => {
           attributes: ['nombre']
         },
         {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['id', 'nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['id', 'sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['id', 'nombre'] }
-          ]
+          model: Usuario,
+          as: 'Usuario',
+          attributes: ['id', 'nombre', 'rol']
         }
       ]
     });
@@ -340,27 +314,9 @@ exports.actualizarProceso = async (req, res) => {
       }
     }
 
-    // Si se cambia el generador, validar o resolver
-    let resolvedGeneradorId = req.body.generador_id;
-    if (!resolvedGeneradorId && req.body.generador_tipo && req.body.id_asociado) {
-      const generador = await Generador.findOne({
-        where: { tipo: req.body.generador_tipo, id_asociado: req.body.id_asociado }
-      });
-      if (generador) {
-        resolvedGeneradorId = generador.id;
-      } else {
-        return res.status(400).json({ error: `El generador de tipo ${req.body.generador_tipo} con ID de asociado ${req.body.id_asociado} no existe.` });
-      }
-    } else if (resolvedGeneradorId) {
-      const generadorExiste = await Generador.findByPk(resolvedGeneradorId);
-      if (!generadorExiste) {
-        return res.status(400).json({ error: `El generador con ID ${resolvedGeneradorId} no existe.` });
-      }
-    }
-
     const updateData = { ...req.body };
-    if (resolvedGeneradorId !== undefined) {
-      updateData.generador_id = resolvedGeneradorId;
+    if (req.body.usuario_id !== undefined) {
+      updateData.usuario_id = req.body.usuario_id;
     }
 
     await proceso.update(updateData);
@@ -372,13 +328,9 @@ exports.actualizarProceso = async (req, res) => {
           attributes: ['nombre']
         },
         {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['id', 'nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['id', 'sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['id', 'nombre'] }
-          ]
+          model: Usuario,
+          as: 'Usuario',
+          attributes: ['id', 'nombre', 'rol']
         }
       ]
     });
@@ -699,13 +651,9 @@ exports.confirmarProceso = async (req, res) => {
           attributes: ['nombre']
         },
         {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['id', 'nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['id', 'sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['id', 'nombre'] }
-          ]
+          model: Usuario,
+          as: 'Usuario',
+          attributes: ['id', 'nombre', 'rol']
         }
       ]
     });

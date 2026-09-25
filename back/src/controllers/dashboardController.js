@@ -1,4 +1,4 @@
-const { Proceso, Producto, ProductoStock, Colaborador, Sucursal, Proveedor, Generador, ProductoVencimiento, MovimientoStock, IngresoProveedor, sequelize } = require('../models');
+const { Proceso, Producto, ProductoStock, Usuario, Sucursal, Proveedor, ProductoVencimiento, MovimientoStock, IngresoProveedor, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // 1. Obtener la producción del día (para feteado y envasado)
@@ -63,31 +63,14 @@ exports.getProduccionOperador = async (req, res) => {
     const processes = await Proceso.findAll({
       where: { fecha: todayStr, id_ubicacion },
       include: [
-        {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['nombre'] }
-          ]
-        }
+        { model: Usuario, as: 'Usuario', attributes: ['id', 'nombre', 'rol'] }
       ]
     });
 
     const opMap = {};
 
     processes.forEach(p => {
-      let name = 'Desconocido';
-      if (p.Generador) {
-        if (p.Generador.tipo === 'colaborador') {
-          name = p.Generador.colaborador?.nombre || 'Sin Nombre';
-        } else if (p.Generador.tipo === 'sucursal') {
-          name = p.Generador.sucursal?.sucursal || 'Sucursal';
-        } else if (p.Generador.tipo === 'proveedor') {
-          name = p.Generador.proveedor?.nombre || 'Proveedor';
-        }
-      }
+      const name = p.Usuario?.nombre || 'Desconocido';
 
       if (!opMap[name]) {
         opMap[name] = {
@@ -182,15 +165,7 @@ exports.getProduccionSemanal = async (req, res) => {
         id_ubicacion
       },
       include: [
-        {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['nombre'] }
-          ]
-        }
+        { model: Usuario, as: 'Usuario', attributes: ['id', 'nombre', 'rol'] }
       ]
     });
 
@@ -206,16 +181,7 @@ exports.getProduccionSemanal = async (req, res) => {
     const semanalMap = {};
 
     processes.forEach(p => {
-      let opName = 'Desconocido';
-      if (p.Generador) {
-        if (p.Generador.tipo === 'colaborador') {
-          opName = p.Generador.colaborador?.nombre || 'Sin Nombre';
-        } else if (p.Generador.tipo === 'sucursal') {
-          opName = p.Generador.sucursal?.sucursal || 'Sucursal';
-        } else if (p.Generador.tipo === 'proveedor') {
-          opName = p.Generador.proveedor?.nombre || 'Proveedor';
-        }
-      }
+      const opName = p.Usuario?.nombre || 'Desconocido';
 
       if (!semanalMap[opName]) {
         semanalMap[opName] = {
@@ -265,27 +231,19 @@ exports.getProduccionUsuario = async (req, res) => {
     const { usuario } = req.params;
     const id_ubicacion = req.ubicacionId;
 
-    const colab = await Colaborador.findOne({
+    const user = await Usuario.findOne({
       where: sequelize.where(
         sequelize.fn('lower', sequelize.col('nombre')),
         sequelize.fn('lower', usuario)
       )
     });
 
-    if (!colab) {
-      return res.json([]);
-    }
-
-    const gen = await Generador.findOne({
-      where: { tipo: 'colaborador', id_asociado: colab.id }
-    });
-
-    if (!gen) {
+    if (!user) {
       return res.json([]);
     }
 
     const processes = await Proceso.findAll({
-      where: { generador_id: gen.id, id_ubicacion },
+      where: { usuario_id: user.id, id_ubicacion },
       include: [{ model: Producto, attributes: ['nombre'] }],
       order: [['id', 'DESC']]
     });
@@ -334,15 +292,7 @@ exports.getRecentActivity = async (req, res) => {
       },
       include: [
         { model: Producto, attributes: ['nombre'] },
-        {
-          model: Generador,
-          as: 'Generador',
-          include: [
-            { model: Colaborador, as: 'colaborador', attributes: ['nombre'] },
-            { model: Sucursal, as: 'sucursal', attributes: ['sucursal'] },
-            { model: Proveedor, as: 'proveedor', attributes: ['nombre'] }
-          ]
-        }
+        { model: Usuario, as: 'Usuario', attributes: ['id', 'nombre', 'rol'] }
       ],
       order: [['id', 'DESC']]
     });
@@ -364,12 +314,7 @@ exports.getRecentActivity = async (req, res) => {
 
     // Mapear Procesos
     procesos.forEach(p => {
-      let user = 'Sistema';
-      if (p.Generador) {
-        if (p.Generador.tipo === 'colaborador') user = p.Generador.colaborador?.nombre || 'Operario';
-        else if (p.Generador.tipo === 'sucursal') user = p.Generador.sucursal?.sucursal || 'Sucursal';
-        else if (p.Generador.tipo === 'proveedor') user = p.Generador.proveedor?.nombre || 'Proveedor';
-      }
+      const user = p.Usuario?.nombre || 'Sistema';
 
       unifiedFeed.push({
         id: `proceso-${p.id}`,

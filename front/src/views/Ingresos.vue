@@ -166,25 +166,13 @@
                     />
                   </td>
 
-                  <!-- Peso Caja (Solamente el peso de la caja vacía multiplicado por la cantidad, o el botón para agregar una) -->
+                  <!-- Peso Caja / Descuento de Tara -->
                   <td style="padding: 4px; text-align: center; vertical-align: middle;">
                     <template v-if="draftSelectedProduct">
-                      <!-- Si el producto TIENE bulto relacionado -->
-                      <div v-if="draftBultoList.length > 0" class="fw-bold" style="font-size: 0.85rem; color: var(--accent-error);">
-                        {{ ((draftRow.cajas || 0) * (draftSelectedBulto?.peso_caja_vacia || 0)).toFixed(3) }} kg
+                      <div v-if="(parseFloat(draftSelectedProduct.peso_caja_vacia) || 0) > 0" class="fw-bold" style="font-size: 0.85rem; color: var(--accent-error);">
+                        {{ ((draftRow.cajas || 0) * (parseFloat(draftSelectedProduct.peso_caja_vacia) || 0)).toFixed(3) }} kg
                       </div>
-
-                      <!-- Si el producto NO TIENE bulto relacionado -->
-                      <div v-else>
-                        <button 
-                          type="button" 
-                          class="btn btn-sm" 
-                          style="background: #2563eb; color: white; border: none; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;"
-                          @click="abrirCrearBultoInline"
-                        >
-                          <i class="ph ph-plus-circle"></i> + Agregar Bulto
-                        </button>
-                      </div>
+                      <span v-else class="text-xs text-muted" title="Sin tara configurada en el producto">0.000 kg</span>
                     </template>
                     <span v-else class="text-xs text-muted">-</span>
                   </td>
@@ -287,92 +275,6 @@
 
 
 
-    <!-- MODAL CREAR BULTO INLINE (SIN SALIR DEL MENÚ DE INGRESO) -->
-    <Teleport to="body">
-      <div v-if="showCreateBultoModal" class="modal-overlay" @mousedown.self="showCreateBultoModal = false">
-        <div class="modal-card" style="max-width: 500px;">
-          <div class="modal-header" style="background-color: var(--accent-info);">
-            <h3 class="modal-title" style="color: white; font-weight: bold;">
-              <i class="ph ph-package me-1"></i> Nuevo Formato de Bulto / Caja
-            </h3>
-            <button class="icon-btn" style="color: white;" @click="showCreateBultoModal = false"><i class="ph ph-x"></i></button>
-          </div>
-
-          <form @submit.prevent="submitCrearBultoInline">
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.85rem;">
-              
-              <div class="info-badge p-2 mb-2" style="background: var(--accent-info-light); border-radius: 0; font-size: 0.82rem;">
-                Configurando bulto para <strong>{{ newBultoForm.codigo_producto }}</strong> con proveedor <strong>{{ getProveedorNombre(newBultoForm.id_proveedor) }}</strong>.
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" style="font-weight: 700;">Nombre del Formato de Bulto *</label>
-                <input 
-                  type="text" 
-                  v-model="newBultoForm.nombre" 
-                  class="form-control" 
-                  placeholder="Ej: Caja x 12 piezas, Bulto Primario..." 
-                  required 
-                />
-              </div>
-
-              <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
-                <div class="form-group">
-                  <label class="form-label" style="font-weight: 700;">Piezas por Caja *</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    v-model.number="newBultoForm.cantidad_piezas" 
-                    class="form-control fw-bold" 
-                    required 
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" style="font-weight: 700;">Peso Estimado Caja Llena (kg)</label>
-                  <input 
-                    type="number" 
-                    step="0.001" 
-                    min="0" 
-                    v-model.number="newBultoForm.peso_caja" 
-                    class="form-control" 
-                    placeholder="0.000" 
-                  />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" style="font-weight: 700; color: var(--accent-danger);">Peso Caja Vacía / Tara a Descontar (kg) *</label>
-                <input 
-                  type="number" 
-                  step="0.001" 
-                  min="0" 
-                  v-model.number="newBultoForm.peso_caja_vacia" 
-                  class="form-control fw-bold text-red" 
-                  placeholder="0.450" 
-                  required 
-                />
-                <span class="text-xs text-muted mt-1" style="display: block;">
-                  Este peso se descontará automáticamente de la balanza por cada caja ingresada.
-                </span>
-              </div>
-
-            </div>
-
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="showCreateBultoModal = false">
-                Cancelar
-              </button>
-              <button type="submit" class="btn btn-primary" :disabled="submittingBulto">
-                <i class="ph ph-spinner spinner" v-if="submittingBulto"></i>
-                <i class="ph ph-floppy-disk" v-else></i>
-                Guardar Formato Bulto
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Teleport>
 
     <!-- MODAL FINALIZAR INGRESO (CON N° DE FACTURA Y AGRUPACIÓN DE CÓDIGOS REPETIDOS) -->
     <Teleport to="body">
@@ -466,12 +368,10 @@ const filterOrigenHistorial = ref('ALL') // 'ALL' | 'PROVEEDOR' | 'SUCURSAL'
 // Datos maestros
 const proveedores = ref([])
 const productos = ref([])
-const bultos = ref([])
 const sucursales = ref([])
 
 const loadingData = ref(false)
 const submittingBatch = ref(false)
-const submittingBulto = ref(false)
 
 // Configuración de Ingreso
 const tipoIngreso = ref('lote_proveedor')
@@ -489,7 +389,6 @@ const lastVencimiento = ref(getTodayString())
 const defaultDraftRow = () => ({
   id: null,
   codigo: '',
-  bulto_id: '',
   cajas: 1,
   piezas: 1,
   vencimiento: lastVencimiento.value,
@@ -497,17 +396,6 @@ const defaultDraftRow = () => ({
 })
 
 const draftRow = ref(defaultDraftRow())
-
-// Modal Inline Crear Bulto
-const showCreateBultoModal = ref(false)
-const newBultoForm = ref({
-  nombre: '',
-  codigo_producto: '',
-  id_proveedor: '',
-  peso_caja: 0,
-  peso_caja_vacia: 0,
-  cantidad_piezas: 1
-})
 
 // Referencias a inputs
 const codigoInputRef = ref(null)
@@ -532,10 +420,9 @@ const showAlert = (msg, type = 'success') => {
 const fetchInitialData = async () => {
   loadingData.value = true
   try {
-    const [resProv, resProd, resBultos, resSuc, resHistProv, resHistSuc] = await Promise.all([
+    const [resProv, resProd, resSuc, resHistProv, resHistSuc] = await Promise.all([
       fetch('/api/proveedores'),
       fetch('/api/productos'),
-      fetch('/api/bultos'),
       fetch('/api/sucursales'),
       fetch('/api/productos/ingresos-proveedores'),
       fetch('/api/ingreso-sucursales')
@@ -543,7 +430,6 @@ const fetchInitialData = async () => {
 
     if (resProv.ok) proveedores.value = await resProv.json()
     if (resProd.ok) productos.value = await resProd.json()
-    if (resBultos.ok) bultos.value = await resBultos.json()
     if (resSuc.ok) sucursales.value = await resSuc.json()
 
     let itemsProv = []
@@ -560,7 +446,7 @@ const fetchInitialData = async () => {
       factura: i.nro_factura || 'Sin comprobante',
       codigo_producto: i.codigo_producto || (i.Producto ? i.Producto.codigo : '-'),
       producto_nombre: i.Producto ? i.Producto.nombre : 'Producto s/d',
-      bulto_nombre: i.Bulto ? i.Bulto.nombre : (i.cantidad_bultos ? `${i.cantidad_bultos} bulto(s)` : 'Piezas sueltas'),
+      bulto_nombre: i.cantidad_bultos ? `${i.cantidad_bultos} caja(s)` : 'Piezas sueltas',
       cajas: i.cantidad_bultos || 0,
       piezas: i.piezas || 0,
       peso: parseFloat(i.peso_calculado || 0),
@@ -645,153 +531,46 @@ const draftSelectedProduct = computed(() => {
   return productosFiltrados.value.find(p => p.codigo.toLowerCase() === code.toLowerCase())
 })
 
-// Bultos del producto y proveedor activo
-const draftBultoList = computed(() => {
-  if (!draftSelectedProduct.value || !selectedProveedorId.value) return []
-  return bultos.value.filter(b => 
-    b.codigo_producto === draftSelectedProduct.value.codigo && 
-    b.id_proveedor === selectedProveedorId.value && 
-    b.activo
-  )
-})
-
-// Bulto actualmente seleccionado en el borrador (si Cajas >= 1)
-const draftSelectedBulto = computed(() => {
-  if (draftRow.value.cajas === 0 || !draftRow.value.bulto_id) return null
-  return bultos.value.find(b => b.id === parseInt(draftRow.value.bulto_id, 10)) || null
-})
-
 // PESO NETO CALCULADO DEL BORRADOR (DESCUENTO DE TARA SI CAJAS >= 1)
 const draftPesoNetoCalculado = computed(() => {
   const valPesoBruto = parseFloat(draftRow.value.peso) || 0
   const numCajas = parseInt(draftRow.value.cajas, 10) || 0
+  const prod = draftSelectedProduct.value
   
-  if (numCajas === 0 || !draftSelectedBulto.value) {
-    // Si Cajas = 0, es modo piezas sueltas sin descuento de tara
+  if (numCajas === 0 || !prod) {
     return valPesoBruto
   }
 
-  const taraUnidad = parseFloat(draftSelectedBulto.value.peso_caja_vacia) || 0
+  const taraUnidad = parseFloat(prod.peso_caja_vacia) || 0
   const taraTotal = numCajas * taraUnidad
   return Math.max(0, valPesoBruto - taraTotal)
 })
 
+// Recalcular piezas estimadas en base al peso neto y peso por pieza
+const recalcularPiezasDraft = () => {
+  const prod = draftSelectedProduct.value
+  const pesoNeto = draftPesoNetoCalculado.value
+  if (prod && pesoNeto > 0 && parseFloat(prod.peso_pieza) > 0) {
+    const pxp = parseFloat(prod.peso_pieza)
+    draftRow.value.piezas = pesoNeto < pxp ? 0 : Math.round(pesoNeto / pxp)
+  } else if (!draftRow.value.piezas || draftRow.value.piezas <= 0) {
+    draftRow.value.piezas = 1
+  }
+}
+
 // Al cambiar el código de producto en la fila borrador
 const onDraftCodigoInput = () => {
-  const prod = draftSelectedProduct.value
-  if (prod) {
-    const bList = draftBultoList.value
-    if (bList.length > 0) {
-      draftRow.value.bulto_id = bList[0].id
-      draftRow.value.piezas = (draftRow.value.cajas || 1) * bList[0].cantidad_piezas
-      if (!draftRow.value.peso || draftRow.value.peso === 0) {
-        draftRow.value.peso = parseFloat(bList[0].peso_caja) || 0
-      }
-    } else {
-      draftRow.value.bulto_id = ''
-      draftRow.value.piezas = 1
-    }
-  }
+  recalcularPiezasDraft()
 }
 
 // Al cambiar número de cajas en la fila borrador
 const onDraftCajasInput = () => {
-  const numCajas = parseInt(draftRow.value.cajas, 10) || 0
-  if (numCajas === 0) {
-    // Modo piezas sueltas
-    draftRow.value.bulto_id = ''
-  } else if (draftBultoList.value.length > 0) {
-    if (!draftRow.value.bulto_id) {
-      draftRow.value.bulto_id = draftBultoList.value[0].id
-    }
-    const b = draftSelectedBulto.value || draftBultoList.value[0]
-    draftRow.value.piezas = numCajas * b.cantidad_piezas
-    if (!draftRow.value.peso || draftRow.value.peso === 0) {
-      draftRow.value.peso = numCajas * (parseFloat(b.peso_caja) || 0)
-    }
-  }
-}
-
-// Al cambiar de bulto en la fila borrador
-const onDraftBultoChange = () => {
-  const b = draftSelectedBulto.value
-  const numCajas = parseInt(draftRow.value.cajas, 10) || 1
-  if (b) {
-    draftRow.value.piezas = numCajas * b.cantidad_piezas
-    if (!draftRow.value.peso || draftRow.value.peso === 0) {
-      draftRow.value.peso = numCajas * (parseFloat(b.peso_caja) || 0)
-    }
-  }
-}
-
-// CREAR BULTO INLINE SIN SALIR
-const abrirCrearBultoInline = () => {
-  if (!draftSelectedProduct.value || !selectedProveedorId.value) {
-    showAlert('Seleccione primero un producto de la lista.', 'error')
-    return
-  }
-
-  newBultoForm.value = {
-    nombre: `Caja ${draftSelectedProduct.value.nombre.slice(0, 20)}`,
-    codigo_producto: draftSelectedProduct.value.codigo,
-    id_proveedor: selectedProveedorId.value,
-    peso_caja: draftRow.value.peso || 15.000,
-    peso_caja_vacia: 0.450,
-    cantidad_piezas: 12
-  }
-  showCreateBultoModal.value = true
-}
-
-const submitCrearBultoInline = async () => {
-  if (!newBultoForm.value.nombre || !newBultoForm.value.cantidad_piezas) {
-    showAlert('Complete todos los campos requeridos del bulto.', 'error')
-    return
-  }
-
-  submittingBulto.value = true
-  try {
-    const res = await fetch('/api/bultos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newBultoForm.value)
-    })
-
-    const data = await res.json()
-
-    if (res.ok) {
-      showAlert('¡Formato de bulto creado exitosamente!', 'success')
-      bultos.value.unshift(data)
-      draftRow.value.bulto_id = data.id
-      onDraftBultoChange()
-      showCreateBultoModal.value = false
-    } else {
-      showAlert(data.error || 'Error al crear el bulto', 'error')
-    }
-  } catch (error) {
-    console.error('Error al crear bulto inline:', error)
-    showAlert('Error de conexión con el servidor', 'error')
-  } finally {
-    submittingBulto.value = false
-  }
+  recalcularPiezasDraft()
 }
 
 // AL CAMBIAR PESO (KILOS): CALCULAR AUTOMÁTICAMENTE PIEZAS ESTIMADAS
 const onDraftPesoInput = () => {
-  const prod = draftSelectedProduct.value
-  const pesoVal = parseFloat(draftRow.value.peso) || 0
-  const numCajas = parseInt(draftRow.value.cajas, 10) || 0
-
-  if (numCajas > 0 && draftSelectedBulto.value) {
-    draftRow.value.piezas = numCajas * draftSelectedBulto.value.cantidad_piezas
-    return
-  }
-
-  if (prod && pesoVal > 0 && parseFloat(prod.peso_pieza) > 0) {
-    const pxp = parseFloat(prod.peso_pieza)
-    draftRow.value.piezas = pesoVal < pxp ? 0 : Math.round(pesoVal / pxp)
-  } else if (!draftRow.value.piezas || draftRow.value.piezas <= 0) {
-    draftRow.value.piezas = 0
-  }
+  recalcularPiezasDraft()
 }
 
 // NAVEGACIÓN CON TECLADO (ENTER)
@@ -855,9 +634,8 @@ const confirmarFilaDraft = () => {
     return
   }
 
-  const b = draftSelectedBulto.value
   const numCajas = valCajas
-  const taraUnidad = (numCajas > 0 && b) ? (parseFloat(b.peso_caja_vacia) || 0) : 0
+  const taraUnidad = numCajas > 0 ? (parseFloat(p.peso_caja_vacia) || 0) : 0
   const valPesoNeto = draftPesoNetoCalculado.value
 
   // Agregar a items confirmados
@@ -865,9 +643,9 @@ const confirmarFilaDraft = () => {
     id: Date.now() + Math.random(),
     codigo: p.codigo,
     nombre: p.nombre,
-    tipo: numCajas > 0 && b ? 'bulto' : 'unidad',
-    bulto_id: numCajas > 0 && b ? b.id : null,
-    bulto_nombre: numCajas > 0 && b ? b.nombre : null,
+    tipo: numCajas > 0 ? 'bulto' : 'unidad',
+    bulto_id: null,
+    bulto_nombre: null,
     cajas: numCajas,
     piezas: valPiezas,
     peso_bruto: valPesoBruto,

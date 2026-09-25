@@ -73,28 +73,11 @@ const groups = [
     ]
   },
   {
-    name: 'Reportes',
-    icon: 'ph-chart-line',
-    items: [
-      { name: 'Reportes de Pedidos', path: '/reportes-pedidos', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
-      { name: 'Reporte Producción', path: '/reportes-produccion', icon: 'ph-chart-bar', roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
-      { name: 'Despacho Semanal', path: '/reportes-despacho-semanal', icon: 'ph-truck-trailer', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-      { name: 'Proyección', path: '/reportes-proyeccion', icon: 'ph-chart-line-up', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-      { name: 'Trazabilidad de Producto', path: '/reporte-trazabilidad', icon: 'ph-line-segments', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-      { name: 'Comparaciones de Variabilidad', path: '/comparaciones-variabilidad', icon: 'ph-scales', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-      { name: 'Diferencias WMS', path: '/wms-reporte-diferencias-ingreso', icon: 'ph-warning-octagon', roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
-      { name: 'Próximo Despacho [DEV]', path: '/proximo-despacho-stock', icon: 'ph-trend-up', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] }
-    ]
-  },
-
-  {
     name: 'Configuración',
     icon: 'ph-gear',
     items: [
-      { name: 'Colaboradores', path: '/colaboradores', icon: 'ph-users', roles: ['Admin'] },
       { name: 'Sucursales', path: '/sucursales', icon: 'ph-storefront', roles: ['Admin'] },
       { name: 'Proveedores', path: '/proveedores', icon: 'ph-handshake', roles: ['Admin'] },
-      { name: 'Bultos', path: '/bultos', icon: 'ph-package', roles: ['Admin'] },
       { name: 'Ubicaciones', path: '/ubicaciones', icon: 'ph-map-pin', roles: ['Admin'] },
       { name: 'Usuarios', path: '/usuarios', icon: 'ph-user-gear', roles: ['Admin'] },
       { name: 'Permisos de Roles', path: '/permisos', icon: 'ph-shield-check', roles: ['Admin'] },

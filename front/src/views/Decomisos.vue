@@ -202,16 +202,12 @@
                   </div>
                 </div>
 
-                <!-- Número de Comprobante obligatorio -->
-                <div class="form-group">
-                  <label class="form-label font-bold" style="font-size: 0.75rem;">Número de Comprobante *</label>
-                  <input 
-                    type="text" 
-                    v-model="discountForm.comprobante" 
-                    placeholder="Ej: D-0001-2345" 
-                    class="form-control" 
-                    required 
-                  />
+                <!-- Aviso Automático BlockWMS -->
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #991b1b; display: flex; align-items: center; gap: 0.55rem; margin-top: 0.5rem;">
+                  <i class="ph ph-check-circle" style="font-size: 1.35rem; color: #dc2626; flex-shrink: 0;"></i>
+                  <div>
+                    <strong>Baja Automática en BlockWMS:</strong> Al confirmar, se creará y finalizará la orden de ajuste por decomiso directamente en BlockWMS asignándole automáticamente su número de orden oficial.
+                  </div>
                 </div>
               </div>
             </div>
@@ -219,10 +215,11 @@
               <button type="button" class="btn btn-secondary" @click="closeDiscountModal" :disabled="savingDiscount">
                 <i class="ph ph-x"></i> Cancelar
               </button>
-              <button type="submit" class="btn btn-primary" style="background-color: var(--accent-danger);" :disabled="savingDiscount || !discountForm.comprobante.trim()">
+              <button type="submit" class="btn btn-primary" style="background-color: var(--accent-danger); display: inline-flex; align-items: center; gap: 0.4rem;" :disabled="savingDiscount">
                 <i class="ph ph-spinner spinner" v-if="savingDiscount"></i>
                 <i class="ph ph-trash" v-else></i>
-                {{ savingDiscount ? 'Descontando...' : (itemsToDiscount.length > 1 ? 'Confirmar Baja de Lote' : 'Descartar Decomiso') }}
+                <span v-if="savingDiscount">Procesando en BlockWMS...</span>
+                <span v-else>{{ itemsToDiscount.length > 1 ? 'Confirmar Baja de Lote' : 'Descartar Decomiso' }}</span>
               </button>
             </div>
           </form>
@@ -250,7 +247,7 @@ const selectAll = ref(false)
 const showDiscountModal = ref(false)
 const savingDiscount = ref(false)
 const itemsToDiscount = ref([])
-const discountForm = ref({ kilos: 0, comprobante: '' })
+const discountForm = ref({ kilos: 0 })
 
 const searchQuery = ref('')
 const sortKey = ref('kilos')
@@ -320,7 +317,6 @@ const openBulkDiscountModal = () => {
       kilos: p.kilos
     }))
   discountForm.value.kilos = 0 // No se usa en lote
-  discountForm.value.comprobante = ''
   showDiscountModal.value = true
 }
 
@@ -328,7 +324,6 @@ const closeDiscountModal = () => {
   showDiscountModal.value = false
   itemsToDiscount.value = []
   discountForm.value.kilos = 0
-  discountForm.value.comprobante = ''
 }
 
 const totalKilosToDiscount = computed(() => {
@@ -338,10 +333,6 @@ const totalKilosToDiscount = computed(() => {
 const handleDiscount = async () => {
   if (savingDiscount.value) return
   if (itemsToDiscount.value.length === 0) return
-  if (!discountForm.value.comprobante.trim()) {
-    showAlert('El número de comprobante es obligatorio', 'error')
-    return
-  }
 
   savingDiscount.value = true
   try {
@@ -358,14 +349,24 @@ const handleDiscount = async () => {
       }))
     }
 
+    let headers = { 'Content-Type': 'application/json' }
+    const savedSession = localStorage.getItem('wms_session')
+    if (savedSession) {
+      try {
+        const sess = JSON.parse(savedSession)
+        if (sess.sessionId) {
+          headers['X-WMS-Session-Id'] = sess.sessionId
+          headers['X-WMS-Site-Id'] = sess.siteId || '194326'
+          headers['X-WMS-Host'] = sess.host || 'http://192.168.10.2'
+        }
+      } catch (e) {}
+    }
+
     const res = await fetch('/api/productos/descontar-decomiso', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({
         items: payloadItems,
-        comprobante: discountForm.value.comprobante.trim(),
         usuario: authStore.user?.nombre || 'Sistema'
       })
     })
@@ -373,9 +374,10 @@ const handleDiscount = async () => {
     const result = await res.json()
 
     if (res.ok) {
+      const ordenNum = result.id_orden_wms || result.comprobante
       const msg = itemsToDiscount.value.length === 1 
-        ? `Descarte exitoso: se restaron ${parseFloat(discountForm.value.kilos).toFixed(3)} kg de decomiso`
-        : `Descarte de lote exitoso: se procesaron ${itemsToDiscount.value.length} productos`
+        ? `Descarte exitoso (Orden Block #${ordenNum}): se restaron ${parseFloat(discountForm.value.kilos).toFixed(3)} kg de decomiso`
+        : `Descarte de lote exitoso (Orden Block #${ordenNum}): se procesaron ${itemsToDiscount.value.length} productos`
       showAlert(msg)
       closeDiscountModal()
       fetchDecomisos()

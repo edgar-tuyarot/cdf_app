@@ -234,6 +234,23 @@
                 </option>
               </select>
             </div>
+
+            <!-- Tara / Peso Caja Vacía (Visible solo para proveedores externos, no Elaboración Propia) -->
+            <div v-if="form.proveedor_id && !isElaboracionPropia" class="form-group animate-fade">
+              <label class="form-label" style="font-weight: 700; color: var(--accent-primary);">
+                <i class="ph ph-package"></i> Tara / Caja Vacía (kg)
+              </label>
+              <input 
+                type="number" 
+                step="0.001" 
+                min="0" 
+                v-model.number="form.peso_caja_vacia" 
+                class="form-control font-mono" 
+                placeholder="0.000" 
+                :disabled="isViewingOnly || !isAdmin" 
+              />
+              <span class="text-xs text-muted" style="display: block; margin-top: 0.2rem;">Peso de la caja vacía para descuento automático de tara al ingresar mercadería.</span>
+            </div>
             
             <div class="form-group">
               <label class="form-label">Producto Fraccionado Relacionado</label>
@@ -1013,8 +1030,15 @@ const defaultForm = {
   activo: true,
   codigo_fraccionado: '',
   sucursalesHabilitadas: [],
-  proveedor_id: null
+  proveedor_id: null,
+  peso_caja_vacia: 0
 }
+
+const isElaboracionPropia = computed(() => {
+  if (!form.value.proveedor_id) return false
+  const prov = proveedores.value.find(p => p.id === form.value.proveedor_id)
+  return prov ? prov.nombre.toLowerCase().includes('elaboracion') : form.value.proveedor_id === 8
+})
 
 const form = ref({ ...defaultForm })
 const fraccionadoSearchQuery = ref('')

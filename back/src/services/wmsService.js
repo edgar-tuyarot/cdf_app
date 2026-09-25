@@ -1041,6 +1041,7 @@ const ejecutarAjusteMultipleWMS = async (params = {}) => {
 
   try {
     const config = cargarConfiguracion();
+    const siteId = String(paramSiteId || config.siteId || '194326');
     const host = (paramHost || config.host || process.env.WMS_HOST || 'http://192.168.10.2').replace(/\/+$/, '');
     const sessionId = await ensureValidWmsSession({ sessionId: paramSessionId, host: paramHost, siteId });
 

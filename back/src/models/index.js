@@ -5,6 +5,7 @@ const Producto = sequelize.define('Producto', {
   codigo: { type: DataTypes.STRING, primaryKey: true },
   nombre: { type: DataTypes.STRING, allowNull: false },
   peso_pieza: { type: DataTypes.DECIMAL(10, 3) },
+  peso_caja_vacia: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0.000, allowNull: true },
   peso_fraccion: { type: DataTypes.DECIMAL(10, 3) },
   peso_unidad: { type: DataTypes.DECIMAL(10, 3), defaultValue: 1.000 },
   tipo_calculo_piezas: {
@@ -44,13 +45,7 @@ const Producto = sequelize.define('Producto', {
   timestamps: false 
 });
 
-const Colaborador = sequelize.define('Colaborador', {
-  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  nombre: { type: DataTypes.STRING, allowNull: false }
-}, {
-  tableName: 'colaboradores',
-  timestamps: false
-});
+
 
 const Sucursal = sequelize.define('Sucursal', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -146,15 +141,6 @@ const Proveedor = sequelize.define('Proveedor', {
   timestamps: false
 });
 
-const Generador = sequelize.define('Generador', {
-  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  tipo: { type: DataTypes.STRING, allowNull: false }, // 'colaborador', 'proveedor', 'sucursal'
-  id_asociado: { type: DataTypes.INTEGER, allowNull: false }
-}, {
-  tableName: 'generadores',
-  timestamps: false
-});
-
 const IngresoRecorte = sequelize.define('IngresoRecorte', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   id_ubicacion: {
@@ -198,11 +184,11 @@ const Proceso = sequelize.define('Proceso', {
       key: 'id'
     }
   },
-  generador_id: { 
+  usuario_id: { 
     type: DataTypes.INTEGER, 
     allowNull: true,
     references: {
-      model: 'generadores',
+      model: 'usuarios',
       key: 'id'
     }
   },
@@ -264,7 +250,14 @@ const Fraccionado = sequelize.define('Fraccionado', {
    peso_a_descontar: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
 }, { 
   tableName: 'fraccionados', 
-  timestamps: false 
+  timestamps: false,
+  indexes: [
+    {
+      unique: true,
+      name: 'uq_fraccionados_ubicacion_origen',
+      fields: ['id_ubicacion', 'codigo_producto_original']
+    }
+  ]
 });
 
 const Pedido = sequelize.define('Pedido', {
@@ -570,6 +563,7 @@ const LogConversion = sequelize.define('LogConversion', {
   },
   peso_fraccionado: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0 },
   comprobante: { type: DataTypes.STRING, allowNull: false },
+  id_orden_wms: { type: DataTypes.STRING, allowNull: true },
   usuario: { type: DataTypes.STRING, defaultValue: 'Sistema' },
   fecha: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, {
@@ -581,13 +575,7 @@ const LogConversion = sequelize.define('LogConversion', {
 Producto.hasMany(Proceso, { foreignKey: 'codigo' });
 Proceso.belongsTo(Producto, { foreignKey: 'codigo' });
 
-// Relaciones de Generador polimórfico
-Generador.belongsTo(Colaborador, { foreignKey: 'id_asociado', constraints: false, as: 'colaborador' });
-Generador.belongsTo(Proveedor, { foreignKey: 'id_asociado', constraints: false, as: 'proveedor' });
-Generador.belongsTo(Sucursal, { foreignKey: 'id_asociado', constraints: false, as: 'sucursal' });
 
-Generador.hasMany(Proceso, { foreignKey: 'generador_id', as: 'Procesos' });
-Proceso.belongsTo(Generador, { foreignKey: 'generador_id', as: 'Generador' });
 
 // Relación entre IngresoProveedor y Proveedor
 Proveedor.hasMany(IngresoProveedor, { foreignKey: 'proveedor_id', as: 'Ingresos', onDelete: 'CASCADE' });
@@ -651,29 +639,7 @@ Producto.hasMany(LogConversion, { foreignKey: 'codigo_fraccionado', as: 'Convers
 LogConversion.belongsTo(Producto, { foreignKey: 'codigo_producto_original', as: 'ProductoOriginal' });
 LogConversion.belongsTo(Producto, { foreignKey: 'codigo_fraccionado', as: 'ProductoFraccionado' });
 
-// Hooks de sincronización para mantener la tabla generadores en perfecto sincronismo
-const createGeneradorHook = (tipo) => async (instance, options) => {
-  await Generador.findOrCreate({
-    where: { tipo, id_asociado: instance.id },
-    transaction: options.transaction
-  });
-};
 
-const deleteGeneradorHook = (tipo) => async (instance, options) => {
-  await Generador.destroy({
-    where: { tipo, id_asociado: instance.id },
-    transaction: options.transaction
-  });
-};
-
-Colaborador.afterCreate(createGeneradorHook('colaborador'));
-Colaborador.beforeDestroy(deleteGeneradorHook('colaborador'));
-
-Sucursal.afterCreate(createGeneradorHook('sucursal'));
-Sucursal.beforeDestroy(deleteGeneradorHook('sucursal'));
-
-Proveedor.afterCreate(createGeneradorHook('proveedor'));
-Proveedor.beforeDestroy(deleteGeneradorHook('proveedor'));
 
 // Hooks de auditoría automática de stock centralizada
 Producto.afterCreate(async (producto, options) => {
@@ -852,36 +818,6 @@ const PedidoArmadoItem = sequelize.define('PedidoArmadoItem', {
 });
 
 
-const Bulto = sequelize.define('Bulto', {
-  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  nombre: { type: DataTypes.STRING, allowNull: false },
-  codigo_producto: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    references: {
-      model: 'productos',
-      key: 'codigo'
-    },
-    onDelete: 'CASCADE'
-  },
-  id_proveedor: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'proveedores',
-      key: 'id'
-    },
-    onDelete: 'CASCADE'
-  },
-  peso_caja: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0.000 },
-  peso_caja_vacia: { type: DataTypes.DECIMAL(10, 3), defaultValue: 0.000 },
-  cantidad_piezas: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
-  activo: { type: DataTypes.BOOLEAN, defaultValue: true }
-}, {
-  tableName: 'bultos',
-  timestamps: false
-});
-
 // Relaciones PedidoArmadoItem
 Pedido.hasMany(PedidoArmadoItem, { foreignKey: 'id_pedido', as: 'ArmadoItems', onDelete: 'CASCADE' });
 PedidoArmadoItem.belongsTo(Pedido, { foreignKey: 'id_pedido', as: 'Pedido' });
@@ -895,41 +831,7 @@ SucursalProductoPermiso.belongsTo(Sucursal, { foreignKey: 'id_sucursal', as: 'Su
 Producto.hasMany(SucursalProductoPermiso, { foreignKey: 'codigo_producto', as: 'SucursalPermisos' });
 SucursalProductoPermiso.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'Producto' });
 
-// Relaciones Bulto
-Producto.hasMany(Bulto, { foreignKey: 'codigo_producto', as: 'Bultos' });
-Bulto.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'Producto' });
-Proveedor.hasMany(Bulto, { foreignKey: 'id_proveedor', as: 'Bultos' });
-Bulto.belongsTo(Proveedor, { foreignKey: 'id_proveedor', as: 'Proveedor' });
-Bulto.hasMany(IngresoProveedor, { foreignKey: 'bulto_id', as: 'Ingresos' });
-IngresoProveedor.belongsTo(Bulto, { foreignKey: 'bulto_id', as: 'Bulto' });
 
-// StockSnapshot Definition
-const StockSnapshot = sequelize.define('StockSnapshot', {
-  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  codigo_producto: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    references: { model: 'productos', key: 'codigo' },
-    onDelete: 'CASCADE'
-  },
-  id_ubicacion: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: { model: 'ubicaciones', key: 'id' },
-    onDelete: 'SET NULL'
-  },
-  fecha_corte: { type: DataTypes.DATE, allowNull: false },
-  stock_kilos: { type: DataTypes.DECIMAL(10, 3), allowNull: false, defaultValue: 0.000 },
-  observaciones: { type: DataTypes.STRING, allowNull: true },
-  usuario: { type: DataTypes.STRING, defaultValue: 'Sistema' },
-  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
-}, {
-  tableName: 'stock_snapshots',
-  timestamps: false
-});
-
-Producto.hasMany(StockSnapshot, { foreignKey: 'codigo_producto', as: 'StockSnapshots' });
-StockSnapshot.belongsTo(Producto, { foreignKey: 'codigo_producto', as: 'Producto' });
 
 
 
@@ -963,6 +865,10 @@ const Usuario = sequelize.define('Usuario', {
 
 Usuario.belongsTo(Ubicacion, { foreignKey: 'id_ubicacion', as: 'Ubicacion' });
 Ubicacion.hasMany(Usuario, { foreignKey: 'id_ubicacion' });
+
+// Relación directa entre Proceso y Usuario
+Proceso.belongsTo(Usuario, { foreignKey: 'usuario_id', as: 'Usuario' });
+Usuario.hasMany(Proceso, { foreignKey: 'usuario_id', as: 'Procesos' });
 
 Sucursal.belongsTo(Ubicacion, { foreignKey: 'id_ubicacion', as: 'Ubicacion' });
 Ubicacion.hasMany(Sucursal, { foreignKey: 'id_ubicacion' });
@@ -1216,12 +1122,6 @@ const Registro = sequelize.define('Registro', {
       }
     } catch (e) {}
 
-    try {
-      await StockSnapshot.sync();
-      console.log('[Migration] Tabla "stock_snapshots" verificada/creada exitosamente.');
-    } catch (e) {
-      console.error('[Migration] Error al verificar tabla stock_snapshots:', e);
-    }
 
     try {
       const objTableDef = await queryInterface.describeTable('sucursal_producto_stock_objetivos').catch(() => null);
@@ -1261,6 +1161,20 @@ const Registro = sequelize.define('Registro', {
       console.log('[Migration] Tabla "sucursal_producto_stock_objetivos" verificada/creada exitosamente.');
     } catch (e) {
       console.error('[Migration] Error al verificar tabla sucursal_producto_stock_objetivos:', e);
+    }
+
+    try {
+      const prodTableDef = await queryInterface.describeTable('productos').catch(() => null);
+      if (prodTableDef && !prodTableDef.peso_caja_vacia) {
+        await queryInterface.addColumn('productos', 'peso_caja_vacia', {
+          type: DataTypes.DECIMAL(10, 3),
+          allowNull: true,
+          defaultValue: 0.000
+        });
+        console.log('[Migration] Columna "peso_caja_vacia" agregada exitosamente a "productos".');
+      }
+    } catch (e) {
+      console.error('[Migration] Error al verificar columna peso_caja_vacia:', e);
     }
 
     try {
@@ -1314,10 +1228,8 @@ const Registro = sequelize.define('Registro', {
 module.exports = {
   sequelize,
   Producto,
-  Colaborador,
   Sucursal,
   Proveedor,
-  Generador,
   IngresoRecorte,
   Proceso,
   Fraccionado,
@@ -1338,11 +1250,9 @@ module.exports = {
   SucursalProductoPermiso,
   SucursalProductoStockObjetivo,
   RolPermiso,
-  Bulto,
   OrdenCompra,
   OrdenCompraItem,
-  Registro,
-  StockSnapshot
+  Registro
 };
 
 

@@ -189,16 +189,12 @@
                   </div>
                 </div>
 
-                <!-- Número de Comprobante obligatorio -->
-                <div class="form-group">
-                  <label class="form-label font-bold" style="font-size: 0.75rem;">Número de Comprobante *</label>
-                  <input 
-                    type="text" 
-                    v-model="convertForm.comprobante" 
-                    placeholder="Ej: C-0001-4567" 
-                    class="form-control" 
-                    required 
-                  />
+                <!-- Aviso Automático BlockWMS -->
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #166534; display: flex; align-items: center; gap: 0.55rem; margin-top: 0.5rem;">
+                  <i class="ph ph-check-circle" style="font-size: 1.35rem; color: #16a34a; flex-shrink: 0;"></i>
+                  <div>
+                    <strong>Ajuste Automático en BlockWMS:</strong> Al confirmar, se creará y finalizará la orden de ajuste directamente en BlockWMS asignándole automáticamente su número de orden oficial.
+                  </div>
                 </div>
               </div>
             </div>
@@ -206,10 +202,11 @@
               <button type="button" class="btn btn-secondary" @click="closeConvertModal" :disabled="savingConvert">
                 <i class="ph ph-x"></i> Cancelar
               </button>
-              <button type="submit" class="btn btn-primary" style="background-color: var(--accent-success);" :disabled="savingConvert || !convertForm.comprobante.trim()">
+              <button type="submit" class="btn btn-primary" style="background-color: var(--accent-success); display: inline-flex; align-items: center; gap: 0.4rem;" :disabled="savingConvert">
                 <i class="ph ph-spinner spinner" v-if="savingConvert"></i>
                 <i class="ph ph-arrows-left-right" v-else></i>
-                {{ savingConvert ? 'Convirtiendo...' : (itemsToConvert.length > 1 ? 'Confirmar Conversión Lote' : 'Convertir a Picadas') }}
+                <span v-if="savingConvert">Procesando en BlockWMS...</span>
+                <span v-else>{{ itemsToConvert.length > 1 ? 'Confirmar Conversión Lote' : 'Convertir a Picadas' }}</span>
               </button>
             </div>
           </form>
@@ -243,7 +240,7 @@ const selectAll = ref(false)
 const showConvertModal = ref(false)
 const savingConvert = ref(false)
 const itemsToConvert = ref([])
-const convertForm = ref({ kilos: 0, comprobante: '' })
+const convertForm = ref({ kilos: 0 })
 
 const searchQuery = ref('')
 const sortKey = ref('kilos')
@@ -321,7 +318,6 @@ const closeConvertModal = () => {
   showConvertModal.value = false
   itemsToConvert.value = []
   convertForm.value.kilos = 0
-  convertForm.value.comprobante = ''
 }
 
 const totalKilosToConvert = computed(() => {
@@ -331,10 +327,6 @@ const totalKilosToConvert = computed(() => {
 const handleConvert = async () => {
   if (savingConvert.value) return
   if (itemsToConvert.value.length === 0) return
-  if (!convertForm.value.comprobante.trim()) {
-    showAlert('El número de comprobante es obligatorio', 'error')
-    return
-  }
   
   savingConvert.value = true
   try {
@@ -351,14 +343,24 @@ const handleConvert = async () => {
       }))
     }
 
+    let headers = { 'Content-Type': 'application/json' }
+    const savedSession = localStorage.getItem('wms_session')
+    if (savedSession) {
+      try {
+        const sess = JSON.parse(savedSession)
+        if (sess.sessionId) {
+          headers['X-WMS-Session-Id'] = sess.sessionId
+          headers['X-WMS-Site-Id'] = sess.siteId || '194326'
+          headers['X-WMS-Host'] = sess.host || 'http://192.168.10.2'
+        }
+      } catch (e) {}
+    }
+
     const res = await fetch('/api/productos/convertir-recorte', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({
         items: payloadItems,
-        comprobante: convertForm.value.comprobante.trim(),
         usuario: authStore.user?.nombre || 'Sistema'
       })
     })
@@ -366,9 +368,10 @@ const handleConvert = async () => {
     const result = await res.json()
 
     if (res.ok) {
+      const ordenNum = result.id_orden_wms || result.comprobante
       const msg = itemsToConvert.value.length === 1
-        ? `Conversión exitosa: se crearon picadas desde ${itemsToConvert.value[0].nombre}`
-        : `Conversión de lote exitosa: se procesaron ${itemsToConvert.value.length} productos`
+        ? `Conversión exitosa (Orden Block #${ordenNum}): se crearon picadas desde ${itemsToConvert.value[0].nombre}`
+        : `Conversión de lote exitosa (Orden Block #${ordenNum}): se procesaron ${itemsToConvert.value.length} productos`
       showAlert(msg)
       closeConvertModal()
       fetchRecortes()

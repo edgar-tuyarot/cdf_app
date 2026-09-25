@@ -46,17 +46,15 @@ const selectedOrden = ref(null)
 const loadData = async () => {
   loading.value = true
   try {
-    const [resOrdenes, resProv, resProd, resBultos] = await Promise.all([
+    const [resOrdenes, resProv, resProd] = await Promise.all([
       fetch('/api/ordenes-compra'),
       fetch('/api/proveedores'),
-      fetch('/api/productos'),
-      fetch('/api/bultos')
+      fetch('/api/productos')
     ])
 
     if (resOrdenes.ok) ordenes.value = await resOrdenes.json()
     if (resProv.ok) proveedores.value = await resProv.json()
     if (resProd.ok) productos.value = await resProd.json()
-    if (resBultos.ok) bultos.value = await resBultos.json()
   } catch (error) {
     console.error('Error al cargar datos de órdenes de compra:', error)
     showAlert('Error al conectar con el servidor', 'danger')

@@ -177,25 +177,11 @@ const permissionGroups = [
     ]
   },
   {
-    name: 'Reportes',
-    icon: 'ph-chart-bar',
-    items: [
-      { name: 'Reportes de Pedidos', path: 'reportes-pedidos' },
-      { name: 'Reporte Producción', path: 'reportes-produccion' },
-      { name: 'Despacho Semanal', path: 'reportes-despacho-semanal' },
-      { name: 'Proyección', path: 'reportes-proyeccion' },
-      { name: 'Trazabilidad de Producto', path: 'reporte-trazabilidad' },
-      { name: 'Comparaciones de Variabilidad', path: 'comparaciones-variabilidad' }
-    ]
-  },
-  {
     name: 'Configuración y Sistema',
     icon: 'ph-gear',
     items: [
-      { name: 'Colaboradores', path: 'colaboradores' },
       { name: 'Sucursales', path: 'sucursales' },
       { name: 'Proveedores', path: 'proveedores' },
-      { name: 'Bultos', path: 'bultos' },
       { name: 'Ubicaciones', path: 'ubicaciones' },
       { name: 'Usuarios', path: 'usuarios' },
       { name: 'Permisos de Roles', path: 'permisos' },

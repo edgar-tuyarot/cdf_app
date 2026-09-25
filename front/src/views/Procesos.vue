@@ -64,6 +64,7 @@
             <tr>
               <th @click="sortBy('id')" class="sortable">ID <i v-if="sortKey === 'id'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
               <th @click="sortBy('fecha')" class="sortable">Fecha <i v-if="sortKey === 'fecha'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
+              <th @click="sortBy('usuario')" class="sortable">Operario <i v-if="sortKey === 'usuario'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
               <th>Producto</th>
               <th @click="sortBy('piezas')" class="sortable text-right">Piezas <i v-if="sortKey === 'piezas'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
               <th @click="sortBy('peso_bruto')" class="sortable text-right">Bruto (kg) <i v-if="sortKey === 'peso_bruto'" :class="['ph', sortOrder === 1 ? 'ph-caret-up' : 'ph-caret-down']"></i></th>
@@ -77,6 +78,11 @@
             <tr v-for="p in filteredAndSortedProcesos" :key="p.id" @click="openModal(p)" style="cursor: pointer;">
               <td><strong>{{ p.id }}</strong></td>
               <td>{{ formatDate(p.fecha) }}</td>
+              <td>
+                <span class="badge" style="background: var(--bg-secondary); border: 1px solid var(--bevel-dark); font-weight: 700;">
+                  <i class="ph ph-user me-1"></i>{{ p.Usuario?.nombre || 'Desconocido' }}
+                </span>
+              </td>
               <td>
                 <span class="text-xs" :title="p.codigo">
                   <strong>{{ p.codigo }}</strong> - {{ p.Producto?.nombre || 'Desconocido' }}
@@ -101,9 +107,9 @@
             </div>
 
             <div class="card-row origin-row" style="margin-top: 0.25rem;">
-              <span :class="['badge generator-badge', getGeneradorBadgeClass(p.Generador?.tipo || 'colaborador')]">
-                <i :class="['ph', getGeneradorIcon(p.Generador?.tipo || 'colaborador')]"></i>
-                {{ getGeneradorName(p) }}
+              <span class="badge" style="background: var(--bg-secondary); border: 1px solid var(--bevel-dark); font-weight: 700;">
+                <i class="ph ph-user me-1"></i>
+                {{ p.Usuario?.nombre || 'Desconocido' }}
               </span>
             </div>
 
@@ -171,38 +177,21 @@
         <form @submit.prevent="submitForm" style="display: flex; flex-direction: column; gap: 1.25rem;">
           
           <!-- FILA 1: DATOS DEL PROCESAMIENTO -->
-          <div v-if="!isColaborador" class="modal-section">
+          <div class="modal-section">
             <span class="modal-section-title">1. Datos del Procesamiento</span>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-              <div class="form-group">
-                <label class="form-label">Tipo de Origen *</label>
-                <select v-model="form.generador_tipo" class="form-control" required @change="handleTipoOrigenChange">
-                  <option value="colaborador">👤 Colaborador</option>
-                  <option value="sucursal">🏬 Sucursal</option>
-                  <option value="proveedor">🚚 Proveedor</option>
+              <div class="form-group" v-if="isAdminOrReferente">
+                <label class="form-label">Operario Responsable *</label>
+                <select ref="origenInput" v-model="form.usuario_id" class="form-control" required>
+                  <option :value="null" disabled>Seleccione un usuario</option>
+                  <option v-for="u in usuarios" :key="u.id" :value="u.id">
+                    👤 {{ u.nombre }} ({{ u.rol }})
+                  </option>
                 </select>
               </div>
-
-              <div class="form-group animate-fade">
-                <label class="form-label">Origen / Entidad *</label>
-                <select ref="origenInput" v-model="form.id_asociado" class="form-control" required>
-                  <option :value="null" disabled>Seleccione una opción</option>
-                  <template v-if="form.generador_tipo === 'colaborador'">
-                    <option v-for="c in colaboradores" :key="c.id" :value="c.id">
-                      {{ c.nombre }}
-                    </option>
-                  </template>
-                  <template v-else-if="form.generador_tipo === 'sucursal'">
-                    <option v-for="s in sucursales" :key="s.id" :value="s.id">
-                      {{ s.sucursal }} {{ s.numero ? '#' + s.numero : '' }}
-                    </option>
-                  </template>
-                  <template v-else-if="form.generador_tipo === 'proveedor'">
-                    <option v-for="pr in proveedores" :key="pr.id" :value="pr.id">
-                      {{ pr.nombre }}
-                    </option>
-                  </template>
-                </select>
+              <div class="form-group" v-else>
+                <label class="form-label">Operario Responsable</label>
+                <input type="text" class="form-control" :value="authStore.user?.usuario || 'Yo'" disabled />
               </div>
 
               <div class="form-group">
@@ -358,9 +347,7 @@ const authStore = useAuthStore()
 // Datos
 const procesos = ref([])
 const productos = ref([])
-const colaboradores = ref([])
-const sucursales = ref([])
-const proveedores = ref([])
+const usuarios = ref([])
 const origenInput = ref(null)
 const loadingData = ref(true)
 const submitting = ref(false)
@@ -369,32 +356,9 @@ const editId = ref(null)
 const itemToDelete = ref(null)
 const showModal = ref(false)
 
-const isColaborador = computed(() => authStore.user?.rol?.toLowerCase() === 'colaborador')
+const isAdminOrReferente = computed(() => ['admin', 'referente'].includes((authStore.user?.rol || '').toLowerCase()))
+const isColaborador = computed(() => (authStore.user?.rol || '').toLowerCase() === 'colaborador')
 const showOnlyMyProcesos = ref(true)
-
-const getMatchedCollaboratorId = () => {
-  if (colaboradores.value.length === 0) return null
-  const username = (authStore.user?.usuario || '').toLowerCase().trim()
-  if (!username) return colaboradores.value[0].id
-
-  const exact = colaboradores.value.find(c => c.nombre.toLowerCase().trim() === username)
-  if (exact) return exact.id
-
-  const partial = colaboradores.value.find(c => {
-    const name = c.nombre.toLowerCase().trim()
-    return name.includes(username) || username.includes(name)
-  })
-  if (partial) return partial.id
-
-  return colaboradores.value[0].id
-}
-
-watch(colaboradores, (newVal) => {
-  if (isColaborador.value && !form.value.id_asociado && newVal.length > 0) {
-    form.value.generador_tipo = 'colaborador'
-    form.value.id_asociado = getMatchedCollaboratorId()
-  }
-})
 
 const alert = ref({ show: false, message: '', type: 'success' })
 const pesoEnvasadoConBandeja = ref(0)
@@ -419,8 +383,7 @@ const closeModal = () => {
 const getTodayString = () => new Date().toISOString().split('T')[0]
 
 const defaultForm = {
-  generador_tipo: 'colaborador',
-  id_asociado: null,
+  usuario_id: authStore.user?.id_usuario || null,
   proceso: 'Fraccionamiento',
   fecha: getTodayString(),
   codigo: '',
@@ -483,56 +446,21 @@ const showAlert = (msg, type = 'success') => {
   setTimeout(() => { alert.value.show = false }, 3500)
 }
 
-const fetchColaboradores = async () => {
-  try {
-    const res = await fetch('/api/colaboradores')
-    if (res.ok) {
-      colaboradores.value = await res.json()
-    }
-  } catch (error) {
-    console.error('Error fetching colaboradores:', error)
-  }
-}
-
-const fetchSucursales = async () => {
-  try {
-    const res = await fetch('/api/sucursales')
-    if (res.ok) {
-      sucursales.value = await res.json()
-    }
-  } catch (error) {
-    console.error('Error fetching sucursales:', error)
-  }
-}
-
-const fetchProveedores = async () => {
-  try {
-    const res = await fetch('/api/proveedores')
-    if (res.ok) {
-      proveedores.value = await res.json()
-    }
-  } catch (error) {
-    console.error('Error fetching proveedores:', error)
-  }
-}
-
 const fetchInitialData = async () => {
   loadingData.value = true
   try {
-    await Promise.all([
-      fetchColaboradores(),
-      fetchSucursales(),
-      fetchProveedores()
-    ])
-    const resProd = await fetch('/api/productos')
-    if (resProd.ok) {
-      productos.value = await resProd.json()
+    const promises = [
+      fetch('/api/productos').then(r => r.ok ? r.json() : []),
+      fetch('/api/procesos').then(r => r.ok ? r.json() : [])
+    ]
+    if (isAdminOrReferente.value) {
+      promises.push(fetch('/api/usuarios').then(r => r.ok ? r.json() : []))
     }
-    const resProc = await fetch('/api/procesos')
-    if (resProc.ok) {
-      procesos.value = await resProc.json()
-    } else {
-      showAlert('Error al cargar historial de procesos', 'error')
+    const [resProd, resProc, resUsers] = await Promise.all(promises)
+    productos.value = resProd || []
+    procesos.value = resProc || []
+    if (resUsers) {
+      usuarios.value = resUsers
     }
   } catch (error) {
     console.error('Error fetching data:', error)
@@ -547,8 +475,9 @@ const submitForm = async () => {
     showAlert('Debe seleccionar un producto válido', 'error')
     return
   }
-  if (!form.value.id_asociado) {
-    showAlert('Debe seleccionar un origen válido', 'error')
+  const resolvedUserId = form.value.usuario_id || authStore.user?.id_usuario
+  if (!resolvedUserId) {
+    showAlert('Debe seleccionar un operario responsable', 'error')
     return
   }
   if (!form.value.peso_bruto || form.value.peso_bruto <= 0) {
@@ -557,6 +486,10 @@ const submitForm = async () => {
   }
 
   submitting.value = true
+  const payload = {
+    ...form.value,
+    usuario_id: resolvedUserId
+  }
   const url = isEditing.value ? `/api/procesos/${editId.value}` : '/api/procesos'
   const method = isEditing.value ? 'PUT' : 'POST'
 
@@ -564,7 +497,7 @@ const submitForm = async () => {
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form.value)
+      body: JSON.stringify(payload)
     })
 
     const dataRes = await res.json()
@@ -584,43 +517,6 @@ const submitForm = async () => {
   }
 }
 
-const handleTipoOrigenChange = () => {
-  form.value.id_asociado = null
-  if (isColaborador.value) {
-    form.value.generador_tipo = 'colaborador'
-    form.value.id_asociado = getMatchedCollaboratorId()
-  } else if (form.value.generador_tipo === 'colaborador' && colaboradores.value.length > 0) {
-    const userMatched = colaboradores.value.find(c => c.nombre.toLowerCase() === (authStore.user?.usuario || '').toLowerCase())
-    form.value.id_asociado = userMatched ? userMatched.id : colaboradores.value[0].id
-  } else if (form.value.generador_tipo === 'sucursal' && sucursales.value.length > 0) {
-    form.value.id_asociado = sucursales.value[0].id
-  } else if (form.value.generador_tipo === 'proveedor' && proveedores.value.length > 0) {
-    form.value.id_asociado = proveedores.value[0].id
-  }
-}
-
-const getGeneradorName = (p) => {
-  if (!p.Generador) return p.colaborador || 'Desconocido'
-  if (p.Generador.tipo === 'colaborador') return p.Generador.colaborador?.nombre || 'Desconocido'
-  if (p.Generador.tipo === 'sucursal') return p.Generador.sucursal?.sucursal || 'Desconocido'
-  if (p.Generador.tipo === 'proveedor') return p.Generador.proveedor?.nombre || 'Desconocido'
-  return 'Desconocido'
-}
-
-const getGeneradorIcon = (tipo) => {
-  if (tipo === 'colaborador') return 'ph-user'
-  if (tipo === 'sucursal') return 'ph-storefront'
-  if (tipo === 'proveedor') return 'ph-handshake'
-  return 'ph-question'
-}
-
-const getGeneradorBadgeClass = (tipo) => {
-  if (tipo === 'colaborador') return 'badge-colab'
-  if (tipo === 'sucursal') return 'badge-sucursal'
-  if (tipo === 'proveedor') return 'badge-proveedor'
-  return ''
-}
-
 const loadProcesoToForm = (proceso) => {
   isEditing.value = true
   editId.value = proceso.id
@@ -633,8 +529,7 @@ const loadProcesoToForm = (proceso) => {
   pesoEnvasadoConBandeja.value = parseFloat((valSumar + calculatedBandeja).toFixed(3))
 
   form.value = {
-    generador_tipo: proceso.Generador?.tipo || 'colaborador',
-    id_asociado: proceso.Generador?.id_asociado || proceso.colaborador_id || null,
+    usuario_id: proceso.usuario_id || proceso.Usuario?.id || authStore.user?.id_usuario || null,
     proceso: proceso.proceso,
     fecha: proceso.fecha ? proceso.fecha.split('T')[0] : getTodayString(),
     codigo: proceso.codigo,
@@ -658,10 +553,10 @@ const resetForm = () => {
   editId.value = null
   form.value = { 
     ...defaultForm, 
+    usuario_id: authStore.user?.id_usuario || null,
     fecha: getTodayString() 
   }
   pesoEnvasadoConBandeja.value = 0
-  handleTipoOrigenChange()
   productSearch.value = ''
   selectedMainProduct.value = null
 }
@@ -710,10 +605,12 @@ const filteredAndSortedProcesos = computed(() => {
   let result = procesos.value.filter(p => p.proceso === 'Fraccionamiento')
 
   if (isColaborador.value && showOnlyMyProcesos.value) {
-    const username = (authStore.user?.usuario || '').toLowerCase().trim()
+    const myId = authStore.user?.id_usuario
+    const myName = (authStore.user?.usuario || '').toLowerCase().trim()
     result = result.filter(p => {
-      const genName = getGeneradorName(p).toLowerCase().trim()
-      return genName.includes(username) || username.includes(genName)
+      if (p.usuario_id && myId) return p.usuario_id === myId
+      const uName = (p.Usuario?.nombre || '').toLowerCase().trim()
+      return uName.includes(myName) || myName.includes(uName)
     })
   }
 
@@ -721,12 +618,12 @@ const filteredAndSortedProcesos = computed(() => {
     const query = searchQuery.value.toLowerCase().trim()
     result = result.filter(p => {
       const idMatch = p.id ? p.id.toString().includes(query) : false
-      const genName = getGeneradorName(p)
-      const colabMatch = genName.toLowerCase().includes(query)
+      const userName = p.Usuario?.nombre || ''
+      const userMatch = userName.toLowerCase().includes(query)
       const procMatch = p.proceso ? p.proceso.toLowerCase().includes(query) : false
       const codMatch = p.codigo ? p.codigo.toLowerCase().includes(query) : false
       const prodNameMatch = p.Producto?.nombre ? p.Producto.nombre.toLowerCase().includes(query) : false
-      return idMatch || colabMatch || procMatch || codMatch || prodNameMatch
+      return idMatch || userMatch || procMatch || codMatch || prodNameMatch
     })
   }
 
@@ -735,9 +632,9 @@ const filteredAndSortedProcesos = computed(() => {
       let valA = a[sortKey.value]
       let valB = b[sortKey.value]
 
-      if (sortKey.value === 'colaborador') {
-        valA = getGeneradorName(a)
-        valB = getGeneradorName(b)
+      if (sortKey.value === 'usuario') {
+        valA = a.Usuario?.nombre || ''
+        valB = b.Usuario?.nombre || ''
       }
 
       if (valA === undefined || valA === null) valA = ''

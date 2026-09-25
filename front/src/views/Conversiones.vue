@@ -5,9 +5,9 @@
         <h2 class="page-title">Conversión de Fraccionados</h2>
         <p class="page-description">Administra las plantillas de conversión y procesa la división de productos fraccionados en stock.</p>
       </div>
-      <div class="header-actions mt-2" style="display: flex; gap: 0.5rem;">
+      <div class="header-actions mt-2" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
         <button 
-          v-if="selectedItems.length > 0 && activeTab === 'templates'" 
+          v-if="selectedItems.length > 0" 
           class="btn btn-primary animate-fade" 
           @click="openBulkProcesarModal"
         >
@@ -17,9 +17,14 @@
           <i class="ph ph-spinner spinner" v-if="loadingFraccionados"></i>
           <i class="ph ph-arrows-clockwise" v-else></i> Actualizar Conversiones
         </button>
-        <button class="btn btn-primary" @click="openModal()">
-          <i class="ph ph-plus"></i> Nueva Conversión
-        </button>
+        <router-link 
+          to="/productos" 
+          class="btn btn-primary" 
+          style="display: flex; align-items: center; gap: 0.35rem; text-decoration: none;" 
+          title="Vincular o configurar productos fraccionados en el Catálogo"
+        >
+          <i class="ph ph-sliders"></i> Gestionar en Catálogo
+        </router-link>
       </div>
     </div>
 
@@ -28,230 +33,257 @@
       {{ alert.message }}
     </div>
 
-    <!-- PESTAÑAS DE VISTA (TABS) -->
-    <div class="card-tabs no-print" style="display: flex; gap: 0.25rem; margin-bottom: -1px; position: relative; z-index: 2;">
-      <button 
-        :class="['btn', activeTab === 'templates' ? 'btn-primary' : 'btn-secondary']" 
-        @click="activeTab = 'templates'"
-        style="border-radius: 0; padding: 0.5rem 1rem; border-bottom: none; font-weight: bold;"
-      >
-        <i class="ph ph-arrows-left-right" style="margin-right: 0.3rem;"></i> Plantillas de Conversión
-      </button>
-      <button 
-        :class="['btn', activeTab === 'logs' ? 'btn-primary' : 'btn-secondary']" 
-        @click="activeTab = 'logs'"
-        style="border-radius: 0; padding: 0.5rem 1rem; border-bottom: none; font-weight: bold;"
-      >
-        <i class="ph ph-clock-counter-clockwise" style="margin-right: 0.3rem;"></i> Log de Conversiones Realizadas
-      </button>
-    </div>
-
-    <!-- HISTORIAL: LISTADO DE FRACCIONADOS EN CARDS -->
-    <div class="card" v-if="activeTab === 'templates'">
+    <!-- TABLA 1: CONVERSIONES PENDIENTES DE PROCESAR -->
+    <div class="card mb-4">
       <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <span class="card-title" style="color: white; font-weight: bold;">Plantillas de Conversión Activas</span>
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+          <span class="card-title" style="color: white; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;">
+            <i class="ph ph-scales" style="font-size: 1.15rem;"></i> Conversiones Pendientes de Procesar ({{ filteredAndSortedFraccionados.length }})
+          </span>
           
+          <!-- Totales rápidos -->
+          <div style="display: flex; gap: 0.75rem; font-size: 0.78rem; background: rgba(0,0,0,0.2); padding: 3px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.15); color: white;">
+            <span>A Descontar: <strong style="color: #fca5a5;">{{ totalKilosADescontarPendientes.toFixed(3) }} kg</strong></span>
+            <span>|</span>
+            <span>A Ingresar: <strong style="color: #86efac;">{{ totalKilosAFraccionarPendientes.toFixed(3) }} kg</strong></span>
+          </div>
+
           <!-- Seleccionar Lote Completo -->
-          <label v-if="filteredAndSortedFraccionados.length > 0" style="color: white; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3);">
+          <label v-if="filteredAndSortedFraccionados.length > 0" style="color: white; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3);">
             <input 
               type="checkbox" 
               v-model="selectAll" 
               @change="toggleSelectAll" 
-              style="transform: scale(1.2); cursor: pointer;"
+              style="transform: scale(1.15); cursor: pointer;"
             />
-            Seleccionar Lote Completo ({{ filteredAndSortedFraccionados.length }})
+            Seleccionar todos ({{ filteredAndSortedFraccionados.length }})
           </label>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-          <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Buscar conversión..." 
-            style="border: none; outline: none; font-size: 0.85rem; background: transparent; width: 140px; color: var(--text-primary);"
-          />
-          <button v-if="searchQuery" @click="searchQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
-            <i class="ph ph-x-circle"></i>
-          </button>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <label style="font-size: 0.78rem; color: white; display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none;">
+            <input type="checkbox" v-model="mostrarTodasLasPlantillas" style="cursor: pointer;" />
+            Ver todas las plantillas (incluidas en 0 kg)
+          </label>
+
+          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
+            <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
+            <input 
+              type="text" 
+              v-model="searchPendientesQuery" 
+              placeholder="Filtrar pendientes..." 
+              style="border: none; outline: none; font-size: 0.82rem; background: transparent; width: 140px; color: var(--text-primary);"
+            />
+            <button v-if="searchPendientesQuery" @click="searchPendientesQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
+              <i class="ph ph-x-circle"></i>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- CONTENEDOR DE CARDS DE CONVERSIÓN -->
-      <div class="cards-container" style="max-height: 580px; overflow-y: auto; background: var(--bg-secondary); padding: 1rem;">
-        
-        <!-- Cargando -->
-        <div v-if="loadingFraccionados" class="loading-state">
-          <i class="ph ph-spinner spinner icon-xl"></i>
-          Cargando historial de conversiones...
-        </div>
-
-        <!-- GRID DE CARDS -->
-        <div 
-          v-if="!loadingFraccionados && filteredAndSortedFraccionados.length > 0" 
-          style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 1rem;"
-        >
-          <div 
-            v-for="f in filteredAndSortedFraccionados" 
-            :key="f.id" 
-            class="conversion-card" 
-            :style="{ 
-              borderColor: selectedItems.includes(f.id) ? '#0284c7' : 'var(--bevel-dark)',
-              background: selectedItems.includes(f.id) ? 'rgba(2, 132, 199, 0.06)' : 'var(--bg-window)',
-              boxShadow: selectedItems.includes(f.id) ? '0 0 0 2px #0284c7' : '0 2px 5px rgba(0,0,0,0.05)'
-            }"
-            style="border: 2px solid; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.15s ease;"
-          >
-            <!-- Header de la Card -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--bevel-light); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
-              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; flex: 1; min-width: 0; margin-right: 0.5rem;">
+      <div class="table-container" style="max-height: 440px; overflow-y: auto;">
+        <table v-if="!loadingFraccionados && filteredAndSortedFraccionados.length > 0">
+          <thead>
+            <tr>
+              <th style="width: 38px; text-align: center;">
+                <input 
+                  type="checkbox" 
+                  v-model="selectAll" 
+                  @change="toggleSelectAll" 
+                  style="cursor: pointer;"
+                />
+              </th>
+              <th style="width: 65px;" class="sortable" @click="sortBy('id')">
+                ID <i class="ph" :class="getSortIcon('id')"></i>
+              </th>
+              <th>Producto Origen (Madre)</th>
+              <th style="width: 130px;" class="text-right sortable" @click="sortBy('peso_a_descontar')">
+                A Descontar <i class="ph" :class="getSortIcon('peso_a_descontar')"></i>
+              </th>
+              <th style="width: 30px; text-align: center;"></th>
+              <th>Producto Destino (Fraccionado)</th>
+              <th style="width: 130px;" class="text-right sortable" @click="sortBy('peso_a_fraccionar')">
+                A Fraccionar <i class="ph" :class="getSortIcon('peso_a_fraccionar')"></i>
+              </th>
+              <th class="text-right" style="width: 110px;">Diferencia</th>
+              <th class="text-center" style="width: 170px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr 
+              v-for="f in filteredAndSortedFraccionados" 
+              :key="f.id"
+              :class="{ 'selected-row': selectedItems.includes(f.id) }"
+            >
+              <td style="text-align: center;">
                 <input 
                   type="checkbox" 
                   :value="f.id" 
                   v-model="selectedItems" 
                   @change="updateSelectAllState" 
-                  style="transform: scale(1.25); cursor: pointer; flex-shrink: 0;"
+                  style="cursor: pointer;"
                 />
-                <span class="badge" style="background: var(--bg-secondary); border: 1px solid var(--bevel-dark); font-weight: 900; font-size: 0.8rem; font-family: monospace; flex-shrink: 0;">
-                  ID #{{ f.id }}
+              </td>
+              <td>
+                <span class="badge" style="background: var(--bg-secondary); border: 1px solid var(--bevel-dark); font-weight: 800; font-family: monospace;">
+                  #{{ f.id }}
                 </span>
-                <span 
-                  v-if="f.ProductoOriginal?.nombre" 
-                  style="font-weight: 800; font-size: 0.82rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                  :title="f.ProductoOriginal.nombre.slice(4).trim()"
-                >
-                  {{ f.ProductoOriginal.nombre.slice(4).trim() }}
-                </span>
-              </label>
-
-              <div style="display: flex; gap: 0.25rem;">
-                <button 
-                  title="Editar Plantilla"
-                  @click.stop="openModal(f)"
-                  style="border: none; background: transparent; cursor: pointer; padding: 4px; color: var(--accent-primary); font-size: 1.15rem;"
-                >
-                  <i class="ph ph-pencil-simple"></i>
-                </button>
-                <button 
-                  title="Eliminar Plantilla"
-                  @click.stop="confirmDelete(f)"
-                  style="border: none; background: transparent; cursor: pointer; padding: 4px; color: var(--accent-error); font-size: 1.15rem;"
-                >
-                  <i class="ph ph-trash"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Flujo Origen -> Destino -->
-            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.5rem; align-items: center; margin-bottom: 0.85rem;">
-              
-              <!-- Producto Origen -->
-              <div style="background: var(--bg-secondary); border: 1.5px solid #fca5a5; border-radius: 6px; padding: 0.6rem;">
-                <div style="font-size: 0.68rem; font-weight: 900; color: #dc2626; text-transform: uppercase; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.2rem;">
-                  <i class="ph ph-minus-circle"></i> ORIGEN
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.55rem;">
+                  <span class="badge" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--bevel-dark); font-family: monospace; font-weight: 800; font-size: 0.85rem; padding: 2px 7px; border-radius: 4px; white-space: nowrap;">
+                    {{ f.codigo_producto_original }}
+                  </span>
+                  <span style="font-weight: 600; color: var(--text-primary);">
+                    {{ f.ProductoOriginal?.nombre || 'Desconocido' }}
+                  </span>
                 </div>
-                <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-primary); font-family: monospace; letter-spacing: 0.02em;">
-                  {{ f.codigo_producto_original }}
-                </div>
-                <div style="font-size: 0.9rem; font-weight: 900; color: #dc2626; margin-top: 0.4rem;">
-                  -{{ parseFloat(f.peso_a_descontar).toFixed(3) }} kg
-                </div>
-              </div>
-
-              <!-- Flecha Indicadora -->
-              <div style="display: flex; flex-direction: column; align-items: center; color: #0284c7; font-size: 1.3rem;">
+              </td>
+              <td class="text-right fw-bold text-red font-mono" style="font-size: 0.92rem;">
+                -{{ parseFloat(f.peso_a_descontar).toFixed(3) }} kg
+              </td>
+              <td style="text-align: center; color: #0284c7; font-size: 1.1rem;">
                 <i class="ph ph-arrow-right-bold"></i>
-              </div>
-
-              <!-- Producto Destino (Fraccionado) -->
-              <div style="background: var(--bg-secondary); border: 1.5px solid #86efac; border-radius: 6px; padding: 0.6rem;">
-                <div style="font-size: 0.68rem; font-weight: 900; color: #16a34a; text-transform: uppercase; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.2rem;">
-                  <i class="ph ph-plus-circle"></i> DESTINO
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.55rem;">
+                  <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-family: monospace; font-weight: 800; font-size: 0.85rem; padding: 2px 7px; border-radius: 4px; white-space: nowrap;">
+                    {{ f.codigo_fraccionado }}
+                  </span>
+                  <span style="font-weight: 600; color: var(--text-primary);">
+                    {{ f.ProductoFraccionado?.nombre || 'Desconocido' }}
+                  </span>
                 </div>
-                <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-primary); font-family: monospace; letter-spacing: 0.02em;">
-                  {{ f.codigo_fraccionado }}
+              </td>
+              <td class="text-right fw-bold text-green font-mono" style="font-size: 0.92rem;">
+                +{{ parseFloat(f.peso_a_fraccionar).toFixed(3) }} kg
+              </td>
+              <td class="text-right font-mono" style="font-size: 0.85rem;">
+                <span 
+                  :style="{ color: (parseFloat(f.peso_a_fraccionar) - parseFloat(f.peso_a_descontar)) >= 0 ? '#16a34a' : '#dc2626' }"
+                  style="font-weight: 700;"
+                >
+                  {{ (parseFloat(f.peso_a_fraccionar) - parseFloat(f.peso_a_descontar)) >= 0 ? '+' : '' }}{{ (parseFloat(f.peso_a_fraccionar) - parseFloat(f.peso_a_descontar)).toFixed(3) }} kg
+                </span>
+              </td>
+              <td class="text-center">
+                <div style="display: flex; gap: 0.35rem; justify-content: center; align-items: center;">
+                  <button 
+                    class="btn btn-sm btn-primary" 
+                    @click.stop="confirmProcesar(f)"
+                    :disabled="parseFloat(f.peso_a_fraccionar) <= 0 || parseFloat(f.peso_a_fraccionar) < parseFloat(f.peso_a_descontar)"
+                    style="padding: 2px 8px; font-size: 0.76rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;"
+                    title="Procesar conversión de esta fila"
+                  >
+                    <i class="ph ph-gear"></i> Procesar
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-secondary" 
+                    title="Ajustar kilos pendientes"
+                    @click.stop="openModal(f)"
+                    style="padding: 2px 6px; font-size: 0.8rem; color: var(--accent-primary);"
+                  >
+                    <i class="ph ph-pencil-simple"></i>
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-secondary" 
+                    title="Desvincular del catálogo"
+                    @click.stop="confirmDelete(f)"
+                    style="padding: 2px 6px; font-size: 0.8rem; color: var(--accent-error);"
+                  >
+                    <i class="ph ph-trash"></i>
+                  </button>
                 </div>
-                <div style="font-size: 0.9rem; font-weight: 900; color: #16a34a; margin-top: 0.4rem;">
-                  +{{ parseFloat(f.peso_a_fraccionar).toFixed(3) }} kg
-                </div>
-              </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-            </div>
-
-            <!-- Advertencia si Peso a Convertir < Peso a Descontar -->
-            <div v-if="parseFloat(f.peso_a_fraccionar) < parseFloat(f.peso_a_descontar)" style="background: #fef2f2; border: 1.5px solid #ef4444; padding: 0.4rem 0.6rem; border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.76rem; color: #991b1b; display: flex; align-items: center; gap: 0.4rem;">
-              <i class="ph ph-warning-circle" style="font-size: 1.1rem; flex-shrink: 0;"></i>
-              <span><strong>Inválido:</strong> El peso a convertir es menor al peso a descontar.</span>
-            </div>
-
-            <!-- Botón Acción Individual -->
-            <button 
-              class="btn btn-primary"
-              @click.stop="confirmProcesar(f)"
-              :disabled="parseFloat(f.peso_a_fraccionar) < parseFloat(f.peso_a_descontar)"
-              style="width: 100%; font-weight: 900; font-size: 0.82rem; padding: 6px; display: flex; align-items: center; justify-content: center; gap: 0.4rem;"
-            >
-              <i class="ph ph-gear"></i> Procesar Conversión ({{ parseFloat(f.peso_a_fraccionar).toFixed(3) }} kg)
-            </button>
-          </div>
+        <!-- Cargando -->
+        <div v-if="loadingFraccionados" class="loading-state">
+          <i class="ph ph-spinner spinner icon-xl"></i>
+          Cargando conversiones pendientes...
         </div>
 
-        <!-- Historial Vacío -->
+        <!-- Vacío -->
         <div v-if="!loadingFraccionados && filteredAndSortedFraccionados.length === 0" class="empty-state">
-          <i class="ph ph-arrows-left-right icon-xl"></i>
-          No hay conversiones con valores a convertir.
+          <i class="ph ph-check-circle icon-xl text-green"></i>
+          No hay conversiones pendientes de procesar en este momento.
         </div>
       </div>
     </div>
 
 
-    <!-- LOG DE CONVERSIONES REALIZADAS -->
-    <div class="card" v-if="activeTab === 'logs'">
+    <!-- TABLA 2: HISTORIAL DE CONVERSIONES REALIZADAS -->
+    <div class="card mb-4">
       <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-        <span class="card-title" style="color: white; font-weight: bold;">Historial de Procesamientos de Conversiones</span>
-        <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
-          <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Buscar comprobante..." 
-            style="border: none; outline: none; font-size: 0.85rem; background: transparent; width: 140px; color: var(--text-primary);"
-          />
-          <button v-if="searchQuery" @click="searchQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
-            <i class="ph ph-x-circle"></i>
-          </button>
+        <span class="card-title" style="color: white; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;">
+          <i class="ph ph-clock-counter-clockwise" style="font-size: 1.15rem;"></i> Historial de Conversiones Realizadas ({{ filteredLogs.length }})
+        </span>
+
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
+            <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.8rem;"></i>
+            <input 
+              type="text" 
+              v-model="searchLogsQuery" 
+              placeholder="Buscar comprobante, orden, SKU..." 
+              style="border: none; outline: none; font-size: 0.82rem; background: transparent; width: 190px; color: var(--text-primary);"
+            />
+            <button v-if="searchLogsQuery" @click="searchLogsQuery = ''" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">
+              <i class="ph ph-x-circle"></i>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="table-container" style="max-height: 520px; overflow-y: auto;">
+      <div class="table-container" style="max-height: 480px; overflow-y: auto;">
         <table v-if="!loadingLogs && filteredLogs.length > 0">
           <thead>
             <tr>
-              <th>Fecha y Hora</th>
-              <th>Comprobante</th>
+              <th style="width: 135px;">Fecha y Hora</th>
+              <th style="width: 125px;">Comprobante</th>
+              <th style="width: 125px; text-align: center;">Orden Block (WMS)</th>
               <th>Producto Original (Origen)</th>
-              <th class="text-right">Peso Descontado</th>
+              <th class="text-right" style="width: 120px;">Descontado</th>
               <th>Producto Fraccionado (Destino)</th>
-              <th class="text-right">Peso Fraccionado</th>
-              <th>Operario</th>
-              <th class="text-center">Acciones</th>
+              <th class="text-right" style="width: 120px;">Ingresado</th>
+              <th style="width: 100px;">Operario</th>
+              <th class="text-center" style="width: 90px;">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="l in filteredLogs" :key="l.id">
               <td class="font-mono text-xs">{{ formatDateTime(l.fecha) }}</td>
-              <td><strong>{{ l.comprobante }}</strong></td>
-              <td>
-                <span class="fw-bold">{{ l.codigo_producto_original }}</span>
-                <div class="text-muted text-xs">{{ l.ProductoOriginal?.nombre || 'Desconocido' }}</div>
+              <td><strong class="font-mono">{{ l.comprobante }}</strong></td>
+              <td style="text-align: center;">
+                <span v-if="l.id_orden_wms" class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-weight: 800; font-family: monospace;">
+                  <i class="ph ph-check-circle" style="color: #0284c7; margin-right: 2px;"></i>#{{ l.id_orden_wms }}
+                </span>
+                <span v-else class="text-muted text-xs">—</span>
               </td>
-              <td class="text-right fw-bold text-red">{{ parseFloat(l.peso_descontado).toFixed(3) }} kg</td>
               <td>
-                <span class="fw-bold">{{ l.codigo_fraccionado }}</span>
-                <div class="text-muted text-xs text-green">{{ l.ProductoFraccionado?.nombre || 'Desconocido' }}</div>
+                <div style="display: flex; align-items: center; gap: 0.55rem;">
+                  <span class="badge" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--bevel-dark); font-family: monospace; font-weight: 800; font-size: 0.82rem; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">
+                    {{ l.codigo_producto_original }}
+                  </span>
+                  <span style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">
+                    {{ l.ProductoOriginal?.nombre || 'Desconocido' }}
+                  </span>
+                </div>
               </td>
-              <td class="text-right fw-bold text-blue">{{ parseFloat(l.peso_fraccionado).toFixed(3) }} kg</td>
+              <td class="text-right fw-bold text-red font-mono">-{{ parseFloat(l.peso_descontado).toFixed(3) }} kg</td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.55rem;">
+                  <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-family: monospace; font-weight: 800; font-size: 0.82rem; padding: 2px 6px; border-radius: 4px; white-space: nowrap;">
+                    {{ l.codigo_fraccionado }}
+                  </span>
+                  <span style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">
+                    {{ l.ProductoFraccionado?.nombre || 'Desconocido' }}
+                  </span>
+                </div>
+              </td>
+              <td class="text-right fw-bold text-green font-mono">+{{ parseFloat(l.peso_fraccionado).toFixed(3) }} kg</td>
               <td class="text-xs">{{ l.usuario || 'Sistema' }}</td>
               <td class="text-center">
                 <button 
@@ -281,62 +313,38 @@
       </div>
     </div>
 
-    <!-- Modal Formulario -->
+    <!-- Modal Formulario: Ajustar Kilos de Conversión -->
     <Teleport to="body">
       <div v-if="showModal" class="modal-overlay" @mousedown.self="closeModal">
         <div class="modal-card" style="max-width: 500px;">
-          <div class="modal-header" :style="isEditingFraccionado ? 'background-color: var(--accent-orange);' : 'background-color: var(--accent-primary);'">
-            <h3 class="modal-title" style="color: white; font-weight: bold;">
-              {{ isEditingFraccionado ? 'Editar Conversión #' + editFraccionadoId : 'Nueva Conversión (Fraccionados)' }}
+          <div class="modal-header" style="background-color: var(--accent-orange);">
+            <h3 class="modal-title" style="color: white; font-weight: bold; display: flex; align-items: center; gap: 0.4rem;">
+              <i class="ph ph-scales"></i> Ajustar Kilos de Conversión #{{ editFraccionadoId }}
             </h3>
             <button class="icon-btn" style="color: white;" @click="closeModal"><i class="ph ph-x"></i></button>
           </div>
           <form @submit.prevent="submitFraccionadoForm">
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.85rem;">
               
-              <!-- Producto Original -->
-              <div class="form-group">
-                <label class="form-label">Producto Original (Origen) *</label>
-                <div style="position: relative; display: flex; align-items: center;">
-                  <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
-                  <input 
-                    type="text" 
-                    v-model="origSearchQuery" 
-                    list="catalog-products-list-orig" 
-                    @input="handleOrigProductInput" 
-                    class="form-control" 
-                    placeholder="Escribe código o nombre para buscar..." 
-                    required 
-                    style="padding-left: 2rem; height: 32px;"
-                  />
+              <!-- Información de Productos Origen y Destino (Gobernados por el Catálogo) -->
+              <div style="background: var(--bg-secondary); border: 1.5px solid var(--bevel-dark); padding: 0.75rem 1rem; border-radius: 6px; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+                  <span style="color: var(--text-secondary); font-weight: 700;">Origen (Madre):</span>
+                  <span style="font-weight: 800; font-family: monospace;">{{ fraccionadoForm.codigo_producto_original }} - {{ selectedOrigProduct?.nombre || '' }}</span>
                 </div>
-                <datalist id="catalog-products-list-orig">
-                  <option 
-                    v-for="p in productos" 
-                    :key="p.codigo" 
-                    :value="p.codigo"
-                  >
-                    {{ p.nombre }}
-                  </option>
-                </datalist>
-                
-                <!-- Vista previa del producto seleccionado -->
-                <div 
-                  v-if="selectedOrigProduct" 
-                  class="selected-product-badge mt-2 animate-fade"
-                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-primary-light); border: 1px solid var(--accent-primary); font-size: 0.8rem; color: var(--text-primary);"
-                >
-                  <i class="ph ph-circle-wavy-check text-blue" style="font-size: 1rem;"></i>
-                  <span>
-                    Seleccionado: <strong>{{ selectedOrigProduct.nombre }}</strong>
-                  </span>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem;">
+                  <span style="color: var(--text-secondary); font-weight: 700;">Destino (Fraccionado):</span>
+                  <span style="font-weight: 800; font-family: monospace; color: var(--accent-primary);">{{ fraccionadoForm.codigo_fraccionado }} - {{ selectedDestProduct?.nombre || '' }}</span>
+                </div>
+                <div style="font-size: 0.74rem; color: var(--text-muted); border-top: 1px dashed var(--bevel-dark); padding-top: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                  <i class="ph ph-info" style="font-size: 0.95rem; color: #0284c7;"></i> La relación de productos se define y gestiona desde el Catálogo de Productos.
                 </div>
               </div>
 
               <!-- Pesos y Conversión -->
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                 <div class="form-group">
-                  <label class="form-label">Peso a Descontar (kg) *</label>
+                  <label class="form-label" style="font-weight: 700;">Peso a Descontar (kg) *</label>
                   <input 
                     type="number" 
                     step="0.001" 
@@ -348,7 +356,7 @@
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Peso a Fraccionar (kg) *</label>
+                  <label class="form-label" style="font-weight: 700;">Peso a Fraccionar (kg) *</label>
                   <input 
                     type="number" 
                     step="0.001" 
@@ -360,44 +368,6 @@
                 </div>
               </div>
 
-              <!-- Producto Fraccionado Resultante -->
-              <div class="form-group">
-                <label class="form-label">Producto Fraccionado (Destino) *</label>
-                <div style="position: relative; display: flex; align-items: center;">
-                  <i class="ph ph-magnifying-glass" style="position: absolute; left: 0.6rem; color: var(--text-muted); pointer-events: none;"></i>
-                  <input 
-                    type="text" 
-                    v-model="destSearchQuery" 
-                    list="catalog-products-list-dest" 
-                    @input="handleDestProductInput" 
-                    class="form-control" 
-                    placeholder="Escribe código o nombre para buscar..." 
-                    required 
-                    style="padding-left: 2rem; height: 32px;"
-                  />
-                </div>
-                <datalist id="catalog-products-list-dest">
-                  <option 
-                    v-for="p in productos" 
-                    :key="p.codigo" 
-                    :value="p.codigo"
-                  >
-                    {{ p.nombre }}
-                  </option>
-                </datalist>
-                
-                <!-- Vista previa del producto seleccionado -->
-                <div 
-                  v-if="selectedDestProduct" 
-                  class="selected-product-badge mt-2 animate-fade"
-                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.6rem; background-color: var(--accent-primary-light); border: 1px solid var(--accent-primary); font-size: 0.8rem; color: var(--text-primary);"
-                >
-                  <i class="ph ph-circle-wavy-check text-blue" style="font-size: 1rem;"></i>
-                  <span>
-                    Seleccionado: <strong>{{ selectedDestProduct.nombre }}</strong>
-                  </span>
-                </div>
-              </div>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" @click="closeModal">
@@ -406,7 +376,7 @@
               <button type="submit" class="btn btn-primary" :disabled="submittingFraccionado">
                 <i class="ph ph-spinner spinner" v-if="submittingFraccionado"></i>
                 <i class="ph ph-floppy-disk" v-else></i>
-                {{ submittingFraccionado ? 'Guardando...' : (isEditingFraccionado ? 'Actualizar' : 'Convertir / Guardar') }}
+                {{ submittingFraccionado ? 'Guardando...' : 'Actualizar Kilos' }}
               </button>
             </div>
           </form>
@@ -414,54 +384,7 @@
       </div>
     </Teleport>
 
-    <!-- Modal de Acciones de Conversión -->
-    <Teleport to="body">
-      <div v-if="selectedRowItem" class="win-dialog-overlay" @mousedown.self="selectedRowItem = null">
-        <div class="win-dialog" style="max-width: 400px; width: 90vw;">
-          <div class="win-dialog-titlebar" style="background-color: var(--accent-primary);">
-            <span class="win-dialog-titlebar-text" style="color: white; font-weight: bold;">Opciones de Conversión</span>
-            <button class="win-dialog-close" style="color: white;" @click="selectedRowItem = null"><i class="ph ph-x"></i></button>
-          </div>
-          <div class="win-dialog-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; align-items: stretch;">
-            <div style="margin-bottom: 0.5rem; font-size: 0.9rem; text-align: center; line-height: 1.4;">
-              Conversión de <strong>{{ selectedRowItem.codigo_producto_original }}</strong><br>
-              a <strong>{{ selectedRowItem.codigo_fraccionado }}</strong>
-            </div>
-            
-            <button 
-              class="btn btn-primary" 
-              style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem; background-color: var(--accent-success); border-color: var(--accent-success); color: white;" 
-              :disabled="parseFloat(selectedRowItem.peso_a_fraccionar) <= 0"
-              @click="handleRowAction('procesar')"
-            >
-              <i class="ph ph-gear" style="font-size: 1.2rem;"></i>
-              Procesar Conversión ({{ parseFloat(selectedRowItem.peso_a_fraccionar).toFixed(3) }} kg)
-            </button>
-            
-            <button 
-              class="btn btn-secondary" 
-              style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem;" 
-              @click="handleRowAction('editar')"
-            >
-              <i class="ph ph-pencil-simple" style="font-size: 1.2rem; color: var(--accent-primary);"></i>
-              Editar Plantilla
-            </button>
-            
-            <button 
-              class="btn btn-danger" 
-              style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem; background-color: var(--accent-error); border-color: var(--accent-error); color: white;" 
-              @click="handleRowAction('eliminar')"
-            >
-              <i class="ph ph-trash" style="font-size: 1.2rem;"></i>
-              Eliminar Plantilla
-            </button>
-          </div>
-          <div class="win-dialog-footer" style="justify-content: center; padding: 0.75rem;">
-            <button class="win-dialog-btn" @click="selectedRowItem = null" style="min-width: 100px;">Cancelar</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+
 
     <!-- Modal Confirmación Eliminar -->
     <Teleport to="body">
@@ -474,7 +397,8 @@
           <div class="win-dialog-body">
             <i class="ph ph-warning-circle win-dialog-icon text-red"></i>
             <p class="win-dialog-msg">
-              ¿Estás seguro de que deseas eliminar el registro de conversión ID #<strong>{{ itemToDelete.id }}</strong> ({{ itemToDelete.codigo_producto_original }} -> {{ itemToDelete.codigo_fraccionado }})?<br><br>Esta acción no se puede deshacer.
+              ¿Estás seguro de que deseas eliminar la conversión del producto <strong>{{ itemToDelete.codigo_producto_original }}</strong> ({{ itemToDelete.ProductoOriginal?.nombre || '' }})?<br><br>
+              Esta acción <strong>desvinculará el producto fraccionado en el Catálogo de Productos</strong> y eliminará esta plantilla de conversión.
             </p>
           </div>
           <div class="win-dialog-footer">
@@ -557,27 +481,23 @@
               </div>
             </div>
             
-            <div class="form-group mt-2">
-              <label class="form-label font-bold">Número de Comprobante *</label>
-              <input 
-                type="text" 
-                v-model="comprobanteProcesar" 
-                placeholder="Ej: 0001-0004562" 
-                class="form-control" 
-                required 
-                style="height: 36px;"
-              />
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 0.82rem; color: #166534; display: flex; align-items: center; gap: 0.55rem; margin-top: 0.5rem;">
+              <i class="ph ph-check-circle" style="font-size: 1.35rem; color: #16a34a; flex-shrink: 0;"></i>
+              <div>
+                <strong>Ajuste Automático en BlockWMS:</strong> Al confirmar, se creará y finalizará la orden de ajuste directamente en BlockWMS asignándole automáticamente su número de orden oficial.
+              </div>
             </div>
           </div>
           <div class="win-dialog-footer">
             <button 
               class="win-dialog-btn win-dialog-btn-ok" 
-              style="background-color: var(--accent-success); color: white;" 
+              style="background-color: var(--accent-success); color: white; display: inline-flex; align-items: center; gap: 0.4rem;" 
               @click="handleProcesar" 
-              :disabled="processingFrac || !comprobanteProcesar.trim()"
+              :disabled="processingFrac"
             >
               <i class="ph ph-spinner spinner" v-if="processingFrac"></i>
-              {{ itemsToProcesar.length > 1 ? 'Sí, Procesar Lote' : 'Sí, Procesar' }}
+              <span v-if="processingFrac">Procesando en BlockWMS...</span>
+              <span v-else>{{ itemsToProcesar.length > 1 ? 'Sí, Procesar Lote' : 'Sí, Procesar' }}</span>
             </button>
             <button class="win-dialog-btn" @click="closeProcesarModal" :disabled="processingFrac">No</button>
           </div>
@@ -649,7 +569,6 @@ const itemToDelete = ref(null)
 const itemToRevert = ref(null)
 const revertingLog = ref(false)
 const itemsToProcesar = ref([])
-const comprobanteProcesar = ref('')
 const processingFrac = ref(false)
 const showModal = ref(false)
 
@@ -729,9 +648,24 @@ const handleDestProductInput = () => {
 }
 
 // Búsqueda y Ordenación
-const searchQuery = ref('')
+const searchPendientesQuery = ref('')
+const searchLogsQuery = ref('')
+const mostrarTodasLasPlantillas = ref(false)
 const sortKey = ref('id')
 const sortOrder = ref(-1) // Más reciente primero
+
+const getSortIcon = (key) => {
+  if (sortKey.value !== key) return 'ph-caret-up-down'
+  return sortOrder.value === 1 ? 'ph-caret-up' : 'ph-caret-down'
+}
+
+const totalKilosADescontarPendientes = computed(() => {
+  return filteredAndSortedFraccionados.value.reduce((acc, f) => acc + (parseFloat(f.peso_a_descontar) || 0), 0)
+})
+
+const totalKilosAFraccionarPendientes = computed(() => {
+  return filteredAndSortedFraccionados.value.reduce((acc, f) => acc + (parseFloat(f.peso_a_fraccionar) || 0), 0)
+})
 
 const showAlert = (msg, type = 'success') => {
   alert.value = { show: true, message: msg, type }
@@ -890,7 +824,6 @@ const confirmProcesar = (item) => {
   }
 
   itemsToProcesar.value = [item]
-  comprobanteProcesar.value = ''
 }
 
 const openBulkProcesarModal = () => {
@@ -904,12 +837,10 @@ const openBulkProcesarModal = () => {
   }
 
   itemsToProcesar.value = items
-  comprobanteProcesar.value = ''
 }
 
 const closeProcesarModal = () => {
   itemsToProcesar.value = []
-  comprobanteProcesar.value = ''
 }
 
 const totalKilosADescontar = computed(() => {
@@ -923,12 +854,8 @@ const totalKilosAFraccionar = computed(() => {
 const handleProcesar = async () => {
   if (processingFrac.value) return
   if (itemsToProcesar.value.length === 0) return
-  if (!comprobanteProcesar.value.trim()) {
-    showAlert('El número de comprobante es obligatorio', 'error')
-    return
-  }
 
-  // Validación final previa al envío
+  // Validación previa al envío
   const invalid = itemsToProcesar.value.filter(item => (parseFloat(item.peso_a_fraccionar) || 0) < (parseFloat(item.peso_a_descontar) || 0))
   if (invalid.length > 0) {
     showAlert('Validación fallida: El peso a convertir no puede ser menor al peso a descontar', 'error')
@@ -956,7 +883,6 @@ const handleProcesar = async () => {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          comprobante: comprobanteProcesar.value.trim(),
           usuario: authStore.user?.nombre || 'Sistema'
         })
       })
@@ -966,7 +892,6 @@ const handleProcesar = async () => {
         headers,
         body: JSON.stringify({
           ids: itemsToProcesar.value.map(item => item.id),
-          comprobante: comprobanteProcesar.value.trim(),
           usuario: authStore.user?.nombre || 'Sistema'
         })
       })
@@ -975,9 +900,10 @@ const handleProcesar = async () => {
     const dataRes = await res.json()
 
     if (res.ok) {
+      const ordenNum = dataRes.id_orden_wms || dataRes.comprobante
       const msg = itemsToProcesar.value.length === 1
-        ? `Fraccionamiento exitoso: Se sumaron ${parseFloat(itemsToProcesar.value[0].peso_a_fraccionar).toFixed(3)} kg al stock fraccionado de ${dataRes.productoDestinoActualizado?.nombre || itemsToProcesar.value[0].codigo_fraccionado}`
-        : `Procesamiento de lote exitoso: Se procesaron ${itemsToProcesar.value.length} conversiones`
+        ? `Fraccionamiento exitoso (Orden Block #${ordenNum}): Se sumaron ${parseFloat(itemsToProcesar.value[0].peso_a_fraccionar).toFixed(3)} kg al stock de ${dataRes.productoDestinoActualizado?.nombre || itemsToProcesar.value[0].codigo_fraccionado}`
+        : `Procesamiento de lote exitoso (Orden Block #${ordenNum}): Se procesaron ${itemsToProcesar.value.length} conversiones`
       showAlert(msg)
       closeProcesarModal()
       fetchFraccionados()
@@ -1062,15 +988,17 @@ const sortBy = (key) => {
 const filteredAndSortedFraccionados = computed(() => {
   let result = [...fraccionados.value]
 
-  // SOLO mostrar cards que tengan valores a convertir
-  result = result.filter(f => {
-    const pFrac = parseFloat(f.peso_a_fraccionar) || 0
-    const pDesc = parseFloat(f.peso_a_descontar) || 0
-    return pFrac > 0 || pDesc > 0
-  })
+  // Si no está marcado ver todas, SOLO mostrar las que tengan valores pendientes de convertir
+  if (!mostrarTodasLasPlantillas.value) {
+    result = result.filter(f => {
+      const pFrac = parseFloat(f.peso_a_fraccionar) || 0
+      const pDesc = parseFloat(f.peso_a_descontar) || 0
+      return pFrac > 0 || pDesc > 0
+    })
+  }
 
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim()
+  if (searchPendientesQuery.value.trim()) {
+    const query = searchPendientesQuery.value.toLowerCase().trim()
     result = result.filter(f => {
       const idMatch = f.id ? f.id.toString().includes(query) : false
       const origCodeMatch = f.codigo_producto_original ? f.codigo_producto_original.toLowerCase().includes(query) : false
@@ -1112,17 +1040,18 @@ const filteredLogs = computed(() => {
     return pFrac > 0 && Boolean(l.codigo_fraccionado)
   })
 
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim()
+  if (searchLogsQuery.value.trim()) {
+    const query = searchLogsQuery.value.toLowerCase().trim()
     result = result.filter(l => {
       const idMatch = l.id ? l.id.toString().includes(query) : false
       const compMatch = l.comprobante ? l.comprobante.toLowerCase().includes(query) : false
+      const wmsMatch = l.id_orden_wms ? l.id_orden_wms.toLowerCase().includes(query) : false
       const origCodeMatch = l.codigo_producto_original ? l.codigo_producto_original.toLowerCase().includes(query) : false
       const origNameMatch = l.ProductoOriginal?.nombre ? l.ProductoOriginal.nombre.toLowerCase().includes(query) : false
       const destCodeMatch = l.codigo_fraccionado ? l.codigo_fraccionado.toLowerCase().includes(query) : false
       const destNameMatch = l.ProductoFraccionado?.nombre ? l.ProductoFraccionado.nombre.toLowerCase().includes(query) : false
       const userMatch = l.usuario ? l.usuario.toLowerCase().includes(query) : false
-      return idMatch || compMatch || origCodeMatch || origNameMatch || destCodeMatch || destNameMatch || userMatch
+      return idMatch || compMatch || wmsMatch || origCodeMatch || origNameMatch || destCodeMatch || destNameMatch || userMatch
     })
   }
 

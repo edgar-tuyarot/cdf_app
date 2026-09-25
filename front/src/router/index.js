@@ -107,12 +107,7 @@ const router = createRouter({
       component: () => import('../views/Decomisos.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente'] },
     },
-    {
-      path: '/colaboradores',
-      name: 'colaboradores',
-      component: () => import('../views/Colaboradores.vue'),
-      meta: { requiresAuth: true, roles: ['Admin'] },
-    },
+
     {
       path: '/sucursales',
       name: 'sucursales',
@@ -123,12 +118,6 @@ const router = createRouter({
       path: '/proveedores',
       name: 'proveedores',
       component: () => import('../views/Proveedores.vue'),
-      meta: { requiresAuth: true, roles: ['Admin'] },
-    },
-    {
-      path: '/bultos',
-      name: 'bultos',
-      component: () => import('../views/Bultos.vue'),
       meta: { requiresAuth: true, roles: ['Admin'] },
     },
     {
@@ -172,52 +161,6 @@ const router = createRouter({
       component: () => import('../views/CrearPedidoSucursal.vue'),
       meta: { requiresAuth: true },
     },
-    {
-      path: '/reportes-pedidos',
-      name: 'reportes-pedidos',
-      component: () => import('../views/ReportesPedidos.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
-    },
-    {
-      path: '/reportes-produccion',
-      name: 'reportes-produccion',
-      component: () => import('../views/ReportesProduccion.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Feteador', 'Envasador', 'Colaborador'] },
-    },
-    {
-      path: '/reportes-despacho-semanal',
-      name: 'reportes-despacho-semanal',
-      component: () => import('../views/ReportesDespachoSemanal.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-    },
-    {
-      path: '/reportes-proyeccion',
-      name: 'reportes-proyeccion',
-      component: () => import('../views/ReportesProyeccion.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-    },
-    {
-      path: '/reportes-semanal',
-      redirect: '/reportes-despacho-semanal',
-    },
-    {
-      path: '/reporte-trazabilidad',
-      name: 'reporte-trazabilidad',
-      component: () => import('../views/ReportesTrazabilidad.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-    },
-    {
-      path: '/comparaciones-variabilidad',
-      name: 'comparaciones-variabilidad',
-      component: () => import('../views/ComparacionesVariabilidad.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-    },
-    {
-      path: '/proximo-despacho-stock',
-      name: 'proximo-despacho-stock',
-      component: () => import('../views/ProximoDespachoStock.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
-    },
 
     {
       path: '/stock-debug',
@@ -260,12 +203,6 @@ const router = createRouter({
       path: '/ordenes-compra',
       name: 'ordenes-compra',
       component: () => import('../views/OrdenesCompra.vue'),
-      meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
-    },
-    {
-      path: '/wms-reporte-diferencias-ingreso',
-      name: 'wms-reporte-diferencias-ingreso',
-      component: () => import('../views/WmsReporteDiferenciasIngreso.vue'),
       meta: { requiresAuth: true, roles: ['Admin', 'Referente', 'Preparador', 'Colaborador', 'Usuario'] },
     },
   ],
