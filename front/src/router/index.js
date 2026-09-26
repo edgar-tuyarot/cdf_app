@@ -162,12 +162,7 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
 
-    {
-      path: '/stock-debug',
-      name: 'stock-debug',
-      component: () => import('../views/StockDebug.vue'),
-      meta: { requiresAuth: true },
-    },
+
     {
       path: '/block-config',
       name: 'block-config',

@@ -83,8 +83,6 @@ const groups = [
       { name: 'Permisos de Roles', path: '/permisos', icon: 'ph-shield-check', roles: ['Admin'] },
       { name: 'Registros', path: '/registros', icon: 'ph-note-pencil', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
       { name: 'Block', path: '/block-config', icon: 'ph-shield-check', roles: ['Admin', 'Referente'] },
-
-      { name: 'Debug Stock PHP', path: '/stock-debug', icon: 'ph-bug', roles: ['Admin', 'Referente', 'Preparador', 'Feteador', 'Envasador', 'Colaborador', 'Usuario'] },
     ]
   }
 ]

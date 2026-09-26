@@ -186,8 +186,7 @@ const permissionGroups = [
       { name: 'Usuarios', path: 'usuarios' },
       { name: 'Permisos de Roles', path: 'permisos' },
       { name: 'Registros y Bitácora', path: 'registros' },
-      { name: 'Configuración Block WMS', path: 'block-config' },
-      { name: 'Debug Stock PHP', path: 'stock-debug' }
+      { name: 'Configuración Block WMS', path: 'block-config' }
     ]
   }
 ]

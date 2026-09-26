@@ -32,7 +32,6 @@ const permisosRoutes = require('./src/routes/permisos');
 const ubicacionesRoutes = require('./src/routes/ubicaciones');
 const usuariosRoutes = require('./src/routes/usuarios');
 const ordenesCompraRoutes = require('./src/routes/ordenesCompra');
-const stockDebugRoutes = require('./src/routes/stockDebug');
 const wmsRoutes = require('./src/routes/wms');
 const registrosRoutes = require('./src/routes/registros');
 const productosController = require('./src/controllers/productosController');
@@ -62,8 +61,7 @@ app.use('/api/dashboard', dashboardRoutes);
 // Alias mantenido para compatibilidad con métricas de operario en Dashboard.vue
 app.use('/api/produccion', dashboardRoutes);
 
-// --- Integración Externa Block WMS y Diagnóstico ---
-app.use('/api/stock', stockDebugRoutes);
+// --- Integración Externa Block WMS y Autenticación ---
 app.use('/api/wms', wmsRoutes);
 app.use('/api/auth', authRoutes);
 

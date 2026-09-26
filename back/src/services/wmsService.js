@@ -23,7 +23,7 @@ const cargarConfiguracion = () => {
         password: json.password !== undefined ? json.password : (process.env.WMS_PASS || ''),
         siteId: json.siteId || process.env.WMS_SITE_ID || '194326',
         sessionId: (json.sessionId || process.env.PHP_SESSION_ID || '').trim(),
-        soloBorrador: json.soloBorrador !== undefined ? json.soloBorrador : (process.env.WMS_SOLO_BORRADOR === 'true')
+        soloBorrador: json.soloBorrador !== undefined ? json.soloBorrador : (process.env.WMS_SOLO_BORRADOR !== undefined ? process.env.WMS_SOLO_BORRADOR === 'true' : true)
       };
     }
   } catch (e) {
@@ -35,7 +35,7 @@ const cargarConfiguracion = () => {
     password: process.env.WMS_PASS || '',
     siteId: process.env.WMS_SITE_ID || '194326',
     sessionId: (process.env.PHP_SESSION_ID || '').trim(),
-    soloBorrador: process.env.WMS_SOLO_BORRADOR === 'true'
+    soloBorrador: process.env.WMS_SOLO_BORRADOR !== undefined ? (process.env.WMS_SOLO_BORRADOR === 'true') : true
   };
 };
 
@@ -1022,7 +1022,7 @@ const ejecutarAjusteMultipleWMS = async (params = {}) => {
   const {
     items = [],
     observaciones = 'Conversión Fraccionado desde App CDF',
-    soloBorrador = false,
+    soloBorrador = true,
     sessionId: paramSessionId,
     siteId: paramSiteId,
     host: paramHost

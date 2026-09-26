@@ -88,6 +88,12 @@
             <span>Sumar Conversiones Pendientes en Límite</span>
           </label>
 
+          <!-- Toggle Ocultar Stock Físico 0 -->
+          <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; cursor: pointer; color: white; user-select: none; background: rgba(255,255,255,0.12); padding: 0.15rem 0.5rem; border-radius: 4px;">
+            <input type="checkbox" v-model="ocultarStockCero" style="cursor: pointer;" />
+            <span>Ocultar Stock Físico 0</span>
+          </label>
+
           <!-- Buscador -->
           <div style="display: flex; align-items: center; gap: 0.3rem; background: var(--bg-window); padding: 0.1rem 0.3rem; box-shadow: var(--inset-shadow); height: 26px;">
             <i class="ph ph-magnifying-glass" style="color: var(--text-secondary); font-size: 0.9rem;"></i>
@@ -208,7 +214,7 @@
         <!-- Estado Vacío -->
         <div v-else-if="!loading && filteredAndSorted.length === 0" class="empty-state">
           <i class="ph ph-shopping-cart icon-xl text-muted"></i>
-          No se registran demandas en pedidos pendientes de procesamiento.
+          {{ items.length > 0 ? 'No hay productos que coincidan con los filtros aplicados.' : 'No se registran demandas en pedidos pendientes de procesamiento.' }}
         </div>
       </div>
     </div>
@@ -222,12 +228,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const items = ref([])
 const fraccionados = ref([])
 const incluirConversiones = ref(true) // Toggle para considerar conversiones configuradas
+const ocultarStockCero = ref(localStorage.getItem('demanda_ocultar_stock_cero') === 'true')
 const loading = ref(true)
+
+watch(ocultarStockCero, (val) => {
+  localStorage.setItem('demanda_ocultar_stock_cero', val)
+})
 const searchQuery = ref('')
 const sortKey = ref('codigo_producto')
 const sortOrder = ref(1)
@@ -346,6 +357,10 @@ const getLimite = (row) => {
 // Filtrado y Ordenamiento
 const filteredAndSorted = computed(() => {
   let result = [...items.value]
+
+  if (ocultarStockCero.value) {
+    result = result.filter(row => parseFloat(row.stock || 0) > 0)
+  }
 
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.toLowerCase().trim()
